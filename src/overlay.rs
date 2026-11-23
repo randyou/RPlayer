@@ -131,7 +131,7 @@ pub fn show_lyrics(
                 ui.painter().rect_filled(
                     capsule.expand(16.0),
                     CornerRadius::ZERO,
-                    Color32::from_rgb(242, 242, 242),
+                    Color32::from_rgb(160, 160, 160),
                 );
                 let outer = ctx
                     .input(|input| input.viewport().outer_rect)
@@ -257,6 +257,12 @@ pub fn show_lyrics(
                     }
                 }
                 }
+
+                let drag = ui.interact(
+                    capsule,
+                    Id::new("lyrics-drag"),
+                    Sense::click_and_drag(),
+                );
 
                 let close_rect = Rect::from_min_size(
                     Pos2::new(capsule.right() - 36.0, capsule.top() + 10.0),
