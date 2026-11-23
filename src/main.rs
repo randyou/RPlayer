@@ -6,6 +6,7 @@ mod app;
 mod audio;
 mod eq;
 mod lyrics;
+mod lyrics_fetch;
 mod model;
 mod overlay;
 mod platform;
@@ -24,7 +25,10 @@ fn main() -> eframe::Result<()> {
     let mut viewport = egui::ViewportBuilder::default()
         .with_title("RPlayer")
         .with_inner_size([1200.0, 780.0])
-        .with_min_inner_size([940.0, 640.0]);
+        .with_min_inner_size([940.0, 640.0])
+        // The GL context needs alpha support for the transparent desktop
+        // lyrics overlay, even though the main panels paint every pixel.
+        .with_transparent(true);
 
     if let Some(icon) = icon {
         viewport = viewport.with_icon(Arc::new(icon));

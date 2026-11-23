@@ -145,6 +145,18 @@ impl RPlayerApp {
                         {
                             self.toggle_mini(ui.ctx());
                         }
+                        if widgets::icon_button_tinted(
+                            ui,
+                            Icon::Settings,
+                            32.0,
+                            theme::c().muted,
+                            self.settings_open,
+                            "设置",
+                        )
+                        .clicked()
+                        {
+                            self.settings_open = !self.settings_open;
+                        }
                     });
                 });
 
@@ -239,20 +251,39 @@ impl RPlayerApp {
             });
     }
 
-    fn lyrics_panel(&self, ui: &mut Ui, track: &model::Track, content_height: f32) {
+    fn lyrics_panel(&mut self, ui: &mut Ui, track: &model::Track, content_height: f32) {
+        ui.add_space(2.0);
+        ui.horizontal(|ui| {
+            ui.label(
+                RichText::new("歌词")
+                    .size(10.0)
+                    .strong()
+                    .color(theme::c().faint),
+            );
+            if widgets::icon_button(
+                ui,
+                Icon::Download,
+                22.0,
+                "从 LRCLIB 下载当前歌词",
+            )
+            .clicked()
+            {
+                self.download_current_lyrics(ui.ctx());
+            }
+            if self.lyrics_fetching == Some(track.id) {
+                ui.label(
+                    RichText::new("正在下载…")
+                        .size(10.0)
+                        .color(theme::c().accent),
+                );
+            }
+        });
+        ui.add_space(10.0);
+
         let lyrics = self
             .lyrics
             .as_ref()
             .filter(|_| self.lyrics_for == Some(track.id));
-
-        ui.add_space(2.0);
-        ui.label(
-            RichText::new("歌词")
-                .size(10.0)
-                .strong()
-                .color(theme::c().faint),
-        );
-        ui.add_space(10.0);
 
         let Some(lyrics) = lyrics else {
             lyrics_placeholder(ui);
@@ -263,11 +294,8 @@ impl RPlayerApp {
             return;
         }
 
-        let Some(active) = lyrics.active_index(self.current_position()) else {
-            lyrics_placeholder(ui);
-            return;
-        };
-        let start = active.saturating_sub(4);
+        let active = lyrics.active_index(self.current_position());
+        let start = active.map(|active| active.saturating_sub(4)).unwrap_or(0);
         let visible = 9;
         let line_height = 30.0;
         let top_gap = ((content_height - 160.0 - visible as f32 * line_height) * 0.5).max(0.0);
@@ -279,10 +307,12 @@ impl RPlayerApp {
                 ui.add_space(10.0);
                 continue;
             }
-            let is_active = index == active;
+            let is_active = active == Some(index);
             let color = if is_active {
                 theme::c().accent
-            } else if index.abs_diff(active) == 1 {
+            } else if active.is_none() && index == start {
+                theme::c().text
+            } else if active.is_some_and(|active| index.abs_diff(active) == 1) {
                 theme::c().text
             } else {
                 theme::c().faint

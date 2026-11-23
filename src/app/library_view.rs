@@ -139,14 +139,21 @@ impl RPlayerApp {
                     ui.add_space(8.0);
                 }
 
-                let columns = Columns::for_width(ui.available_width());
-                self.table_header(ui, columns);
+                Frame::NONE
+                    .fill(theme::c().panel)
+                    .stroke(Stroke::new(1.0_f32, theme::c().border_soft))
+                    .corner_radius(CornerRadius::same(14))
+                    .inner_margin(Margin::symmetric(0, 4))
+                    .show(ui, |ui| {
+                        let columns = Columns::for_width(ui.available_width());
+                        self.table_header(ui, columns);
 
-                if ids.is_empty() {
-                    self.no_results_state(ui);
-                } else {
-                    self.track_table(ui, ids, columns);
-                }
+                        if ids.is_empty() {
+                            self.no_results_state(ui);
+                        } else {
+                            self.track_table(ui, ids, columns);
+                        }
+                    });
             });
     }
 
@@ -185,7 +192,7 @@ impl RPlayerApp {
                     .inner_margin(Margin::symmetric(4, 3))
                     .show(ui, |ui| {
                         ui.allocate_ui_with_layout(
-                            Vec2::new(126.0, 30.0),
+                            Vec2::new(157.0, 30.0),
                             Layout::left_to_right(Align::Center),
                             |ui| {
                             ui.spacing_mut().item_spacing.x = 1.0;
@@ -243,6 +250,18 @@ impl RPlayerApp {
                             .clicked()
                             {
                                 self.toggle_mini(ui.ctx());
+                            }
+                            if widgets::icon_button_tinted(
+                                ui,
+                                Icon::Settings,
+                                30.0,
+                                theme::c().muted,
+                                self.settings_open,
+                                "设置",
+                            )
+                            .clicked()
+                            {
+                                self.settings_open = !self.settings_open;
                             }
                         });
                     });
@@ -686,6 +705,10 @@ impl RPlayerApp {
                         }
 
                         ui.separator();
+                        if ui.button("从 LRCLIB 下载歌词").clicked() {
+                            self.request_lyrics(ui.ctx(), id, true);
+                            ui.close_menu();
+                        }
                         if ui.button("在文件夹中显示").clicked() {
                             self.reveal_in_file_manager(&track.path);
                             ui.close_menu();

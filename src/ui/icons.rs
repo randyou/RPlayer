@@ -45,6 +45,8 @@ pub enum Icon {
     Lyrics,
     MiniPlayer,
     Expand,
+    Settings,
+    Download,
 }
 
 struct Canvas {
@@ -358,6 +360,28 @@ pub fn paint(painter: &Painter, rect: Rect, icon: Icon, color: Color32) {
             c.line((0.22, 0.78), (0.78, 0.22));
             c.polyline(&[(0.52, 0.22), (0.78, 0.22), (0.78, 0.48)]);
             c.polyline(&[(0.48, 0.78), (0.22, 0.78), (0.22, 0.52)]);
+        }
+        Icon::Settings => {
+            c.ring(0.50, 0.50, 0.19);
+            for tooth in 0..8 {
+                let angle = tooth as f32 * std::f32::consts::TAU / 8.0;
+                c.line(
+                    (
+                        0.50 + 0.28 * angle.cos(),
+                        0.50 + 0.28 * angle.sin(),
+                    ),
+                    (
+                        0.50 + 0.39 * angle.cos(),
+                        0.50 + 0.39 * angle.sin(),
+                    ),
+                );
+            }
+            c.disc(0.50, 0.50, 0.06);
+        }
+        Icon::Download => {
+            c.line((0.50, 0.18), (0.50, 0.61));
+            c.polyline(&[(0.32, 0.46), (0.50, 0.63), (0.68, 0.46)]);
+            c.polyline(&[(0.20, 0.72), (0.20, 0.82), (0.80, 0.82), (0.80, 0.72)]);
         }
     }
 }

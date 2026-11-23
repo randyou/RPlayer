@@ -31,6 +31,7 @@ pub struct OverlayState {
     pub lyric_current: String,
     pub lyric_next: String,
     pub has_lyrics: bool,
+    pub lyrics_opacity: f32,
     pub cover_id: Option<u64>,
     pub cover: Option<Arc<ColorImage>>,
 }
@@ -42,6 +43,7 @@ pub enum OverlayCommand {
     Next,
     ToggleFavorite,
     Seek(f64),
+    SetLyricsOpacity(f32),
     CloseLyrics,
     CloseMini,
     OpenMain,
@@ -107,7 +109,7 @@ pub fn show_lyrics(
                         if dark {
                             theme::white_alpha(0.10)
                         } else {
-                            theme::black_alpha(0.06)
+                            theme::black_alpha(0.08)
                         },
                     ),
                     egui::StrokeKind::Inside,
@@ -236,8 +238,30 @@ pub fn show_lyrics(
                 if drag.dragged() {
                     ctx.send_viewport_cmd(ViewportCommand::StartDrag);
                 }
+                let mut opacity = snapshot.lyrics_opacity;
                 drag.on_hover_cursor(egui::CursorIcon::Grab)
                     .context_menu(|ui| {
+                        ui.label(
+                            RichText::new("背景透明度")
+                                .size(11.0)
+                                .color(theme::c().muted),
+                        );
+                        let response = ui.add(
+                            egui::Slider::new(&mut opacity, 0.35..=1.0)
+                                .show_value(false)
+                                .trailing_fill(true),
+                        );
+                        ui.label(
+                            RichText::new(format!("{:.0}%", opacity * 100.0))
+                                .size(10.0)
+                                .color(theme::c().faint),
+                        );
+                        if response.changed() {
+                            if let Ok(mut queue) = commands.lock() {
+                                queue.push(OverlayCommand::SetLyricsOpacity(opacity));
+                            }
+                        }
+                        ui.separator();
                         if ui.button("关闭桌面歌词").clicked() {
                             close = true;
                             ui.close_menu();

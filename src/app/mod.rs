@@ -5,11 +5,12 @@ mod equalizer;
 mod library_view;
 mod now_playing;
 mod player_bar;
+mod settings;
 mod sidebar;
 
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
-use std::sync::mpsc::{Receiver, TryRecvError};
+use std::sync::mpsc::{self, Receiver, Sender, TryRecvError};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -21,6 +22,7 @@ use egui::{
 
 use crate::audio::AudioEngine;
 use crate::eq::EqShared;
+use crate::lyrics_fetch::{self, FetchError, FetchResult};
 use crate::model::{self, Library, SortField, SortState, Track};
 use crate::overlay::{
     self, OverlayCommand, OverlayState,
@@ -99,6 +101,12 @@ pub(super) enum ToastKind {
     Error,
 }
 
+struct LyricsFetchEvent {
+    track_id: u64,
+    manual: bool,
+    result: Result<FetchResult, FetchError>,
+}
+
 pub(super) struct Toast {
     text: String,
     kind: ToastKind,
@@ -130,6 +138,7 @@ pub struct RPlayerApp {
     lyrics_placed: bool,
     mini_placed: bool,
     lyrics_region: bool,
+    lyrics_alpha_applied: f32,
     mini_region: bool,
     lyrics_viewport_active: bool,
     mini_viewport_active: bool,
@@ -157,6 +166,12 @@ pub struct RPlayerApp {
     eq_dirty: bool,
     desktop_lyrics_open: bool,
     mini_open: bool,
+    settings_open: bool,
+    lyrics_tx: Sender<LyricsFetchEvent>,
+    lyrics_rx: Receiver<LyricsFetchEvent>,
+    lyrics_fetching: Option<u64>,
+    lyrics_attempted: HashSet<u64>,
+    prefs_dirty: bool,
 }
 
 impl RPlayerApp {
@@ -177,6 +192,7 @@ impl RPlayerApp {
 
         let volume = library.volume.clamp(0.0, 1.0);
         let desktop_lyrics_open = library.desktop_lyrics;
+        let (lyrics_tx, lyrics_rx) = mpsc::channel();
         let eq = EqShared::new(library.eq.clone());
         let (audio, audio_error) = match AudioEngine::new(volume, eq.clone()) {
             Ok(engine) => (Some(engine), None),
@@ -208,6 +224,7 @@ impl RPlayerApp {
             lyrics_placed: false,
             mini_placed: false,
             lyrics_region: false,
+            lyrics_alpha_applied: 0.0,
             mini_region: false,
             lyrics_viewport_active: false,
             mini_viewport_active: false,
@@ -235,6 +252,12 @@ impl RPlayerApp {
             eq_dirty: false,
             desktop_lyrics_open,
             mini_open: false,
+            settings_open: false,
+            lyrics_tx,
+            lyrics_rx,
+            lyrics_fetching: None,
+            lyrics_attempted: HashSet::new(),
+            prefs_dirty: false,
         };
 
         if let Some(err) = audio_error {
@@ -548,10 +571,14 @@ impl RPlayerApp {
             Ok(()) => {
                 self.current = Some(id);
                 self.library.mark_played(id);
-                self.lyrics = crate::lyrics::load(&track.path);
+                self.lyrics = crate::lyrics::load(&track.path)
+                    .or_else(|| crate::lyrics::load_cached(id));
                 self.lyrics_for = Some(id);
                 self.load_cover(ctx, id);
                 self.persist();
+                if self.library.auto_lyrics && self.lyrics.is_none() {
+                    self.request_lyrics(ctx, id, false);
+                }
                 true
             }
             Err(err) => {
@@ -719,6 +746,90 @@ impl RPlayerApp {
     }
 
     // ---------------------------------------------------------------------
+    // Online lyrics (LRCLIB)
+    // ---------------------------------------------------------------------
+
+    fn request_lyrics(&mut self, ctx: &egui::Context, track_id: u64, manual: bool) {
+        if self.lyrics_fetching == Some(track_id) {
+            return;
+        }
+        if !manual && self.lyrics_attempted.contains(&track_id) {
+            return;
+        }
+        let Some(track) = self.library.track(track_id).cloned() else {
+            return;
+        };
+
+        self.lyrics_attempted.insert(track_id);
+        self.lyrics_fetching = Some(track_id);
+        if manual {
+            self.toast("正在从 LRCLIB 搜索歌词…", ToastKind::Info);
+        }
+
+        let sender = self.lyrics_tx.clone();
+        let ctx = ctx.clone();
+        std::thread::spawn(move || {
+            let result = lyrics_fetch::fetch(&track);
+            let _ = sender.send(LyricsFetchEvent {
+                track_id,
+                manual,
+                result,
+            });
+            ctx.request_repaint();
+        });
+    }
+
+    fn poll_lyrics_fetch(&mut self) {
+        loop {
+            let event = match self.lyrics_rx.try_recv() {
+                Ok(event) => event,
+                Err(TryRecvError::Empty | TryRecvError::Disconnected) => break,
+            };
+            if self.lyrics_fetching == Some(event.track_id) {
+                self.lyrics_fetching = None;
+            }
+
+            match event.result {
+                Ok(result) => {
+                    let lyrics = crate::lyrics::parse_lrc(&result.text);
+                    if lyrics.is_empty() {
+                        if event.manual {
+                            self.toast("下载到的歌词内容为空", ToastKind::Error);
+                        }
+                        continue;
+                    }
+                    let _ = crate::lyrics::store_cached(event.track_id, &result.text);
+                    if self.current == Some(event.track_id) {
+                        self.lyrics = Some(lyrics);
+                        self.lyrics_for = Some(event.track_id);
+                        self.toast(
+                            format!(
+                                "已从 {} 下载{}",
+                                result.source,
+                                if result.synced { "逐行歌词" } else { "歌词" }
+                            ),
+                            ToastKind::Success,
+                        );
+                    }
+                }
+                Err(error) => {
+                    if event.manual {
+                        self.toast(format!("歌词下载失败：{error}"), ToastKind::Error);
+                    }
+                }
+            }
+        }
+    }
+
+    fn download_current_lyrics(&mut self, ctx: &egui::Context) {
+        if let Some(id) = self.current {
+            self.request_lyrics(ctx, id, true);
+        } else {
+            self.toast("先播放一首歌曲再下载歌词", ToastKind::Info);
+        }
+    }
+
+    // ---------------------------------------------------------------------
     // Overlay windows (desktop lyrics + mini player)
     // ---------------------------------------------------------------------
 
@@ -738,6 +849,7 @@ impl RPlayerApp {
             duration: track.map(|track| track.duration).unwrap_or_default(),
             playing: self.is_playing(),
             favorite,
+            lyrics_opacity: self.library.desktop_lyrics_opacity,
             ..OverlayState::default()
         };
 
@@ -794,6 +906,10 @@ impl RPlayerApp {
                     }
                 }
                 OverlayCommand::Seek(seconds) => self.seek_to(seconds),
+                OverlayCommand::SetLyricsOpacity(opacity) => {
+                    self.library.desktop_lyrics_opacity = opacity.clamp(0.35, 1.0);
+                    self.prefs_dirty = true;
+                }
                 OverlayCommand::CloseLyrics => {
                     self.desktop_lyrics_open = false;
                     self.library.desktop_lyrics = false;
@@ -853,6 +969,12 @@ impl RPlayerApp {
                     "RPlayer 桌面歌词",
                     26,
                 );
+            }
+            let opacity = self.library.desktop_lyrics_opacity.clamp(0.35, 1.0);
+            if (self.lyrics_alpha_applied - opacity).abs() > 0.005 {
+                if crate::platform::set_window_alpha("RPlayer 桌面歌词", opacity) {
+                    self.lyrics_alpha_applied = opacity;
+                }
             }
         } else if self.lyrics_viewport_active {
             self.lyrics_viewport_active = false;
@@ -1026,9 +1148,11 @@ impl RPlayerApp {
         if self.desktop_lyrics_open {
             self.lyrics_placed = false;
             self.lyrics_region = false;
+            self.lyrics_alpha_applied = 0.0;
         } else {
             self.lyrics_viewport_active = false;
             self.lyrics_region = false;
+            self.lyrics_alpha_applied = 0.0;
             ctx.send_viewport_cmd_to(overlay::lyrics_viewport(), ViewportCommand::Close);
         }
         self.persist();
@@ -1294,6 +1418,8 @@ impl RPlayerApp {
         if ctx.input(|i| i.key_pressed(Key::Escape)) {
             if self.dialog != Dialog::None {
                 self.dialog = Dialog::None;
+            } else if self.settings_open {
+                self.settings_open = false;
             } else if self.eq_open {
                 self.eq_open = false;
             } else if self.queue_open {
@@ -1346,6 +1472,9 @@ impl RPlayerApp {
         } else if find && self.current.is_some() {
             self.expanded = !self.expanded;
             self.queue_open = false;
+        }
+        if modifiers.command && ctx.input(|input| input.key_pressed(Key::Comma)) {
+            self.settings_open = !self.settings_open;
         }
         if modifiers.command && theme_key {
             self.toggle_theme(ctx);
@@ -1435,7 +1564,7 @@ impl RPlayerApp {
         let playing = self.is_playing();
         let delay = if playing {
             33
-        } else if self.scanning || self.toast.is_some() {
+        } else if self.scanning || self.toast.is_some() || self.lyrics_fetching.is_some() {
             120
         } else {
             500
@@ -1549,6 +1678,13 @@ impl RPlayerApp {
             });
     }
 
+    fn flush_prefs(&mut self, ctx: &egui::Context) {
+        if self.prefs_dirty && !ctx.input(|input| input.pointer.any_down()) {
+            self.persist();
+            self.prefs_dirty = false;
+        }
+    }
+
     fn handle_close(&mut self, ctx: &egui::Context) {
         if !self.closing_saved && ctx.input(|i| i.viewport().close_requested()) {
             self.persist();
@@ -1572,6 +1708,7 @@ impl eframe::App for RPlayerApp {
         self.handle_overlay_commands(ctx);
         self.poll_scan();
         self.poll_audio(ctx);
+        self.poll_lyrics_fetch();
         self.handle_shortcuts(ctx);
         self.handle_close(ctx);
         self.sync_overlay();
@@ -1603,10 +1740,12 @@ impl eframe::App for RPlayerApp {
         if self.expanded && self.current.is_some() {
             self.now_playing(ctx);
             self.equalizer_window(ctx);
+            self.settings_window(ctx);
             self.render_dialog(ctx);
             self.render_toast(ctx);
             self.render_drop_overlay(ctx);
             self.show_overlays(ctx);
+            self.flush_prefs(ctx);
             self.request_repaint(ctx);
             return;
         }
@@ -1616,10 +1755,12 @@ impl eframe::App for RPlayerApp {
         self.central_panel(ctx, &ids, total_seconds);
         self.queue_window(ctx);
         self.equalizer_window(ctx);
+        self.settings_window(ctx);
         self.render_dialog(ctx);
         self.render_toast(ctx);
         self.render_drop_overlay(ctx);
         self.show_overlays(ctx);
+        self.flush_prefs(ctx);
         self.request_repaint(ctx);
     }
 

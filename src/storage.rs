@@ -10,7 +10,7 @@ use crate::model::Library;
 
 pub const APP_DIR_NAME: &str = "RPlayer";
 pub const LIBRARY_FILE: &str = "library.json";
-pub const SCHEMA_VERSION: u32 = 3;
+pub const SCHEMA_VERSION: u32 = 4;
 
 /// Per-user data directory:
 /// - Windows: `%APPDATA%\RPlayer`
@@ -24,6 +24,14 @@ pub fn data_dir() -> PathBuf {
 
 pub fn library_path() -> PathBuf {
     data_dir().join(LIBRARY_FILE)
+}
+
+/// Cached lyrics downloaded from LRCLIB live under the app data directory so
+/// they survive restarts and never require write access to the music folder.
+pub fn lyrics_cache_path(track_id: u64) -> PathBuf {
+    data_dir()
+        .join("lyrics")
+        .join(format!("{track_id:016x}.lrc"))
 }
 
 /// On-disk wrapper with a schema version so future migrations are possible.
@@ -42,7 +50,16 @@ pub fn load_library() -> Library {
                 let mut library = file.library;
                 library.version = file.schema.max(1);
                 library.volume = library.volume.clamp(0.0, 1.0);
+                library.desktop_lyrics_opacity =
+                    library.desktop_lyrics_opacity.clamp(0.35, 1.0);
                 library.eq = library.eq.sanitized();
+                // v0.4 makes the paper theme the default. Older files only had
+                // a boolean, so migrate once; the user can switch back instantly.
+                if file.schema < 4 {
+                    library.light_theme = true;
+                    library.desktop_lyrics_opacity = 0.85;
+                    library.auto_lyrics = true;
+                }
                 library
             }
             Err(err) => {
@@ -89,6 +106,8 @@ mod tests {
         lib.folders.push(PathBuf::from("D:/Music"));
         lib.eq = crate::eq::EqSettings::from_preset(4);
         lib.light_theme = true;
+        lib.desktop_lyrics_opacity = 0.6;
+        lib.auto_lyrics = false;
         let payload = LibraryFile {
             schema: SCHEMA_VERSION,
             library: lib,
@@ -99,6 +118,8 @@ mod tests {
         assert_eq!(decoded.library.volume, 0.33);
         assert_eq!(decoded.library.folders.len(), 1);
         assert!(decoded.library.light_theme);
+        assert!((decoded.library.desktop_lyrics_opacity - 0.6).abs() < 0.01);
+        assert!(!decoded.library.auto_lyrics);
         assert_eq!(decoded.library.eq.preset, Some(4));
         assert!(decoded.library.eq.enabled);
     }

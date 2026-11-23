@@ -69,6 +69,26 @@ pub fn load(path: &Path) -> Option<Lyrics> {
     None
 }
 
+/// Loads a previously downloaded lyric file from the app cache.
+pub fn load_cached(track_id: u64) -> Option<Lyrics> {
+    let bytes = fs::read(crate::storage::lyrics_cache_path(track_id)).ok()?;
+    let lyrics = parse_lrc(&decode_text(&bytes));
+    if lyrics.is_empty() {
+        None
+    } else {
+        Some(lyrics)
+    }
+}
+
+/// Persists downloaded lyrics for the next launch.
+pub fn store_cached(track_id: u64, text: &str) -> std::io::Result<()> {
+    let path = crate::storage::lyrics_cache_path(track_id);
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    fs::write(path, text.as_bytes())
+}
+
 fn embedded_lyrics(tag: &Tag) -> Option<&str> {
     tag.get_string(&ItemKey::Lyrics)
         .or_else(|| tag.get_string(&ItemKey::Comment).filter(|text| text.contains('[')))

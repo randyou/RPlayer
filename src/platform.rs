@@ -169,5 +169,46 @@ pub fn apply_round_window(_title: &str, _radius: u32) -> bool {
     true
 }
 
+/// Makes a borderless overlay translucent as a whole. Windows' GL surface does
+/// not always preserve per-pixel alpha for child viewports, but a layered
+/// window with a constant alpha reliably shows the desktop through the lyric
+/// card and keeps the text crisp at normal opacity levels.
+#[cfg(target_os = "windows")]
+pub fn set_window_alpha(title: &str, opacity: f32) -> bool {
+    #[link(name = "user32")]
+    extern "system" {
+        fn FindWindowW(class_name: *const u16, window_name: *const u16) -> isize;
+        fn GetWindowLongPtrW(hwnd: isize, index: i32) -> isize;
+        fn SetWindowLongPtrW(hwnd: isize, index: i32, value: isize) -> isize;
+        fn SetLayeredWindowAttributes(
+            hwnd: isize,
+            color_key: u32,
+            alpha: u8,
+            flags: u32,
+        ) -> i32;
+    }
+
+    const GWL_EXSTYLE: i32 = -20;
+    const WS_EX_LAYERED: isize = 0x0008_0000;
+    const LWA_ALPHA: u32 = 0x0000_0002;
+
+    let wide: Vec<u16> = title.encode_utf16().chain(std::iter::once(0)).collect();
+    let hwnd = unsafe { FindWindowW(std::ptr::null(), wide.as_ptr()) };
+    if hwnd == 0 {
+        return false;
+    }
+    let style = unsafe { GetWindowLongPtrW(hwnd, GWL_EXSTYLE) };
+    if style & WS_EX_LAYERED == 0 {
+        unsafe { SetWindowLongPtrW(hwnd, GWL_EXSTYLE, style | WS_EX_LAYERED) };
+    }
+    let alpha = (opacity.clamp(0.0, 1.0) * 255.0).round() as u8;
+    unsafe { SetLayeredWindowAttributes(hwnd, 0, alpha, LWA_ALPHA) != 0 }
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn set_window_alpha(_title: &str, _opacity: f32) -> bool {
+    true
+}
+
 #[cfg(not(target_os = "windows"))]
 pub fn apply_titlebar(_dark: bool) {}

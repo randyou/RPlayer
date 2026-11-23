@@ -129,6 +129,10 @@ pub struct Library {
     pub light_theme: bool,
     /// Whether the desktop lyrics overlay should open with the app.
     pub desktop_lyrics: bool,
+    /// Background opacity of the desktop lyrics card (0.35–1.0).
+    pub desktop_lyrics_opacity: f32,
+    /// Fetch missing lyrics from LRCLIB automatically when a track starts.
+    pub auto_lyrics: bool,
     /// Ten-band equalizer settings.
     pub eq: crate::eq::EqSettings,
 }
@@ -136,15 +140,17 @@ pub struct Library {
 impl Default for Library {
     fn default() -> Self {
         Self {
-            version: 3,
+            version: 4,
             folders: Vec::new(),
             tracks: Vec::new(),
             playlists: Vec::new(),
             volume: 0.72,
             favorites: Vec::new(),
             recent: Vec::new(),
-            light_theme: false,
+            light_theme: true,
             desktop_lyrics: false,
+            desktop_lyrics_opacity: 0.85,
+            auto_lyrics: true,
             eq: crate::eq::EqSettings::default(),
         }
     }
