@@ -198,6 +198,8 @@ RPlayer/
 
 完整的产品定位、竞品调研、P0/P1/P2 需求、现状差距与版本路线图见 [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md)。
 
+下一个版本的具体范围、页面设计、在线封面方案与验收标准见 [docs/V0.5_PLAN.md](docs/V0.5_PLAN.md)。
+
 ## 版本记录
 
 ### v0.4.0
