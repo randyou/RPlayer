@@ -327,20 +327,24 @@ impl RPlayerApp {
         ui.add_space(12.0);
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 10.0;
-            if !ids.is_empty() && widgets::primary_button(ui, "播放全部").clicked() {
+            if !ids.is_empty() && widgets::primary_button_icon(ui, crate::ui::icons::Icon::Play, "播放全部").clicked() {
                 self.play_queue(ui.ctx(), ids.to_vec(), 0);
             }
             let table_view = !matches!(
                 self.view,
                 View::Folders | View::Albums | View::Artists
             );
-            if table_view && widgets::secondary_button(ui, "添加").clicked() {
+            if table_view && widgets::secondary_button_icon(ui, crate::ui::icons::Icon::Plus, "添加").clicked() {
                 self.open_folder_picker();
             }
 
             if table_view {
-                let label = if self.batch_mode { "完成" } else { "批量操作" };
-                if widgets::secondary_button(ui, label).clicked() {
+                let (label, icon) = if self.batch_mode {
+                    ("完成", crate::ui::icons::Icon::Check)
+                } else {
+                    ("批量操作", crate::ui::icons::Icon::List)
+                };
+                if widgets::secondary_button_icon(ui, icon, label).clicked() {
                     self.batch_mode = !self.batch_mode;
                     if !self.batch_mode {
                         self.checked.clear();
@@ -1085,7 +1089,7 @@ impl RPlayerApp {
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing.x = 10.0;
                 ui.add_space(((ui.available_width() - total_width) / 2.0).max(0.0));
-                if widgets::primary_button(ui, "添加音乐文件夹").clicked() {
+                if widgets::primary_button_icon(ui, crate::ui::icons::Icon::Folder, "添加音乐文件夹").clicked() {
                     self.open_folder_picker();
                 }
                 if !self.library.folders.is_empty()

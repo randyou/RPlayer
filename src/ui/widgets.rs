@@ -552,3 +552,116 @@ pub fn divider(ui: &mut Ui) {
     let (rect, _) = ui.allocate_exact_size(Vec2::new(width, 1.0), Sense::hover());
     ui.painter().rect_filled(rect, 0, theme::c().border_soft);
 }
+
+/// Primary button with a hand-painted vector icon before the label.
+pub fn primary_button_icon(ui: &mut Ui, icon: Icon, text: &str) -> Response {
+    let (rect, response) = ui.allocate_exact_size(Vec2::new(112.0, 40.0), Sense::click());
+    let hovered = response.hovered();
+    let fill = if hovered {
+        theme::c().accent.gamma_multiply(1.06)
+    } else {
+        theme::c().accent
+    };
+    ui.painter()
+        .rect_filled(rect, CornerRadius::same(10), fill);
+    paint_icon_label(
+        ui,
+        rect,
+        icon,
+        text,
+        theme::c().on_accent,
+        14.0,
+        true,
+    );
+    let response = response.on_hover_cursor(CursorIcon::PointingHand);
+    mark(&response, WidgetType::Button, text, None);
+    response
+}
+
+/// Secondary button with a hand-painted vector icon before the label.
+pub fn secondary_button_icon(ui: &mut Ui, icon: Icon, text: &str) -> Response {
+    let (rect, response) = ui.allocate_exact_size(Vec2::new(92.0, 38.0), Sense::click());
+    let hovered = response.hovered();
+    ui.painter().rect_filled(
+        rect,
+        CornerRadius::same(10),
+        if hovered { theme::c().hover } else { theme::c().card },
+    );
+    ui.painter().rect_stroke(
+        rect,
+        CornerRadius::same(10),
+        Stroke::new(1.0_f32, theme::c().border),
+        egui::StrokeKind::Inside,
+    );
+    paint_icon_label(
+        ui,
+        rect,
+        icon,
+        text,
+        theme::c().text,
+        13.0,
+        false,
+    );
+    let response = response.on_hover_cursor(CursorIcon::PointingHand);
+    mark(&response, WidgetType::Button, text, None);
+    response
+}
+
+/// Full-width primary button with an icon, used by the sidebar.
+pub fn primary_button_full_icon(ui: &mut Ui, icon: Icon, text: &str) -> Response {
+    let width = ui.available_width().max(120.0);
+    let (rect, response) = ui.allocate_exact_size(Vec2::new(width, 42.0), Sense::click());
+    let hovered = response.hovered();
+    let fill = if hovered {
+        theme::c().accent.gamma_multiply(1.06)
+    } else {
+        theme::c().accent
+    };
+    ui.painter()
+        .rect_filled(rect, CornerRadius::same(10), fill);
+    paint_icon_label(
+        ui,
+        rect,
+        icon,
+        text,
+        theme::c().on_accent,
+        14.0,
+        true,
+    );
+    let response = response.on_hover_cursor(CursorIcon::PointingHand);
+    mark(&response, WidgetType::Button, text, None);
+    response
+}
+
+fn paint_icon_label(
+    ui: &Ui,
+    rect: Rect,
+    icon: Icon,
+    text: &str,
+    color: Color32,
+    font_size: f32,
+    strong: bool,
+) {
+    let font = if strong {
+        FontId::proportional(font_size)
+    } else {
+        FontId::proportional(font_size)
+    };
+    let galley = ui
+        .painter()
+        .layout_no_wrap(text.to_owned(), font, color);
+    let icon_size = 16.0;
+    let gap = 7.0;
+    let total = icon_size + gap + galley.size().x;
+    let left = rect.center().x - total / 2.0;
+    let icon_rect = Rect::from_min_size(
+        Pos2::new(left, rect.center().y - icon_size / 2.0),
+        Vec2::splat(icon_size),
+    );
+    icons::paint(ui.painter(), icon_rect, icon, color);
+    let text_pos = Pos2::new(
+        left + icon_size + gap,
+        rect.center().y - galley.size().y / 2.0,
+    );
+    ui.painter().galley(text_pos, galley, color);
+}

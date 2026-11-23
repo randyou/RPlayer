@@ -505,7 +505,7 @@ impl RPlayerApp {
                 ui.add_space(10.0);
                 ui.horizontal(|ui| {
                     ui.spacing_mut().item_spacing.x = 10.0;
-                    if widgets::primary_button(ui, "播放全部").clicked() {
+                    if widgets::primary_button_icon(ui, crate::ui::icons::Icon::Play, "播放全部").clicked() {
                         self.play_queue(ui.ctx(), group.ids.clone(), 0);
                     }
                     if widgets::secondary_button(ui, "加入队列").clicked() {
@@ -582,7 +582,7 @@ impl RPlayerApp {
                 ui.add_space(10.0);
                 ui.horizontal(|ui| {
                     ui.spacing_mut().item_spacing.x = 10.0;
-                    if widgets::primary_button(ui, "播放全部").clicked() {
+                    if widgets::primary_button_icon(ui, crate::ui::icons::Icon::Play, "播放全部").clicked() {
                         self.play_queue(ui.ctx(), group.ids.clone(), 0);
                     }
                     if widgets::secondary_button(ui, "加入队列").clicked() {

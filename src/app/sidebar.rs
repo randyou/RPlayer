@@ -44,7 +44,7 @@ impl RPlayerApp {
         });
 
         ui.add_space(16.0);
-        if widgets::primary_button_full(ui, "添加音乐文件夹").clicked() {
+        if widgets::primary_button_full_icon(ui, crate::ui::icons::Icon::Folder, "添加音乐文件夹").clicked() {
             self.open_folder_picker();
         }
         ui.add_space(14.0);
@@ -414,7 +414,7 @@ impl RPlayerApp {
 
         ui.add_space(2.0);
         ui.horizontal(|ui| {
-            ui.label(RichText::new("v0.8.0").size(10.0).color(theme::c().faint));
+            ui.label(RichText::new("v0.8.1").size(10.0).color(theme::c().faint));
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                 let about = ui
                     .add(
