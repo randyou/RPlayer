@@ -32,6 +32,12 @@ enum Outcome {
     AddFolder,
     RemoveFolder(PathBuf),
     Rescan,
+    LyricsMatch {
+        id: u64,
+        title: String,
+        artist: String,
+        album: String,
+    },
 }
 
 pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
@@ -235,6 +241,35 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                     }
                 }
 
+                Dialog::LyricsMatch { id, title, artist, album } => {
+                    dialog_header(
+                        ui,
+                        "重新匹配歌词",
+                        "修改搜索条件，RPlayer 会清除当前缓存并按新条件重新搜索。",
+                    );
+                    ui.add_space(12.0);
+                    tag_field(ui, "歌名", title);
+                    tag_field(ui, "艺术家", artist);
+                    tag_field(ui, "专辑", album);
+                    ui.add_space(6.0);
+                    ui.label(
+                        RichText::new("留空艺术家/专辑可扩大搜索范围；结果仍可能不唯一。")
+                            .size(10.5)
+                            .color(theme::c().faint),
+                    );
+                    ui.add_space(14.0);
+                    let action = dialog_footer(ui, "搜索并应用", false);
+                    if action == FooterAction::Cancel {
+                        outcome = Outcome::Close;
+                    } else if action == FooterAction::Confirm && !title.trim().is_empty() {
+                        outcome = Outcome::LyricsMatch {
+                            id: *id,
+                            title: title.clone(),
+                            artist: artist.clone(),
+                            album: album.clone(),
+                        };
+                    }
+                }
                 Dialog::Folders => {
                     dialog_header(
                         ui,
@@ -348,7 +383,7 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                                 .color(theme::c().text),
                         );
                         ui.label(
-                            RichText::new("0.10.4 · 本地音乐播放器")
+                            RichText::new("0.10.5 · 本地音乐播放器")
                                 .size(11.0)
                                 .color(theme::c().muted),
                         );
@@ -429,6 +464,10 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                     app.toast(format!("写入标签失败：{err:#}"), super::ToastKind::Error);
                 }
             }
+            app.dialog = Dialog::None;
+        }
+        Outcome::LyricsMatch { id, title, artist, album } => {
+            app.request_lyrics_custom(ctx, id, title, artist, album);
             app.dialog = Dialog::None;
         }
         Outcome::BatchTags {

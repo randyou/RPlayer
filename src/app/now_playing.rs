@@ -301,7 +301,7 @@ impl RPlayerApp {
                                 )
                                 .clicked()
                                 {
-                                    self.download_current_lyrics(ui.ctx());
+                                    if let Some(id) = self.current { self.open_lyrics_match(id); }
                                 }
                             });
                             ui.add_space(12.0);
@@ -337,7 +337,7 @@ impl RPlayerApp {
             )
             .clicked()
             {
-                self.download_current_lyrics(ui.ctx());
+                if let Some(id) = self.current { self.open_lyrics_match(id); }
             }
             if self.lyrics_fetching == Some(track.id) {
                 ui.label(
@@ -490,7 +490,7 @@ impl RPlayerApp {
                             )
                             .clicked()
                         {
-                            self.request_lyrics(ui.ctx(), track.id, true);
+                            self.open_lyrics_match(track.id);
                         }
                         if ui
                             .add(
@@ -506,7 +506,7 @@ impl RPlayerApp {
                             )
                             .clicked()
                         {
-                            self.download_current_lyrics(ui.ctx());
+                            if let Some(id) = self.current { self.open_lyrics_match(id); }
                         }
                     });
                 });

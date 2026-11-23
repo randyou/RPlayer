@@ -243,7 +243,7 @@ impl RPlayerApp {
             )
             .clicked()
             {
-                self.request_lyrics(ui.ctx(), track.id, true);
+                self.open_lyrics_match(track.id);
             }
             if widgets::icon_button(ui, Icon::Refresh, 28.0, "重新匹配封面").clicked() {
                 self.refresh_cover(ui.ctx());

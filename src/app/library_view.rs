@@ -907,6 +907,10 @@ impl RPlayerApp {
                         }
 
                         ui.separator();
+                        if ui.button("重新匹配歌词…").clicked() {
+                            self.open_lyrics_match(id);
+                            ui.close_menu();
+                        }
                         if ui.button("从 LRCLIB 下载歌词").clicked() {
                             self.request_lyrics(ui.ctx(), id, true);
                             ui.close_menu();

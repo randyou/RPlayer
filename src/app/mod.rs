@@ -144,6 +144,12 @@ pub(super) enum Dialog {
         genre: String,
         year: String,
     },
+    LyricsMatch {
+        id: u64,
+        title: String,
+        artist: String,
+        album: String,
+    },
     Folders,
     About,
 }
@@ -1163,6 +1169,56 @@ impl RPlayerApp {
         self.play_mode = self.play_mode.next();
         self.shuffle_bag.clear();
         self.shuffle_exhausted = false;
+    }
+
+    fn open_lyrics_match(&mut self, id: u64) {
+        let Some(track) = self.library.track(id) else { return; };
+        self.dialog = Dialog::LyricsMatch {
+            id,
+            title: track.title.clone(),
+            artist: track.artist.clone(),
+            album: track.album.clone(),
+        };
+        self.focus_pending = true;
+    }
+
+    fn request_lyrics_custom(
+        &mut self,
+        ctx: &egui::Context,
+        track_id: u64,
+        title: String,
+        artist: String,
+        album: String,
+    ) {
+        if self.lyrics_fetching == Some(track_id) {
+            return;
+        }
+        let Some(mut track) = self.library.track(track_id).cloned() else {
+            return;
+        };
+        if title.trim().is_empty() {
+            self.toast("歌名不能为空", ToastKind::Error);
+            return;
+        }
+        track.title = title.trim().to_string();
+        track.artist = artist.trim().to_string();
+        track.album = album.trim().to_string();
+        // A wrong cached match must not survive a failed re-match.
+        let _ = std::fs::remove_file(crate::storage::lyrics_cache_path(track_id));
+        self.lyrics_attempted.insert(track_id);
+        self.lyrics_fetching = Some(track_id);
+        self.toast("正在按新条件搜索歌词…", ToastKind::Info);
+        let sender = self.lyrics_tx.clone();
+        let ctx = ctx.clone();
+        std::thread::spawn(move || {
+            let result = lyrics_fetch::fetch(&track);
+            let _ = sender.send(LyricsFetchEvent {
+                track_id,
+                manual: true,
+                result,
+            });
+            ctx.request_repaint();
+        });
     }
 
     fn load_lyrics_for(&mut self, track: &Track, id: u64) {
