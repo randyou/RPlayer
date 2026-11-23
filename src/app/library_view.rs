@@ -434,6 +434,16 @@ impl RPlayerApp {
                                 }
                             }
                         }
+                        if widgets::chip(ui, "加入播放队列", false).clicked() {
+                            let ids: Vec<u64> = self.checked.iter().copied().collect();
+                            let added = self.append_to_queue(&ids);
+                            if added > 0 {
+                                self.toast(
+                                    format!("已加入播放队列：{added} 首"),
+                                    super::ToastKind::Info,
+                                );
+                            }
+                        }
                     });
                 }
             });

@@ -153,6 +153,32 @@ impl RPlayerApp {
                 self.queue_open = !self.queue_open;
             }
         }
+        if egui::DragAndDrop::has_any_payload(ui.ctx()) {
+            let (zone, dropped) = ui.dnd_drop_zone::<Vec<u64>, _>(
+                Frame::NONE
+                    .fill(theme::accent_alpha(0.08))
+                    .stroke(Stroke::new(1.0_f32, theme::accent_alpha(0.25)))
+                    .corner_radius(egui::CornerRadius::same(8))
+                    .inner_margin(Margin::symmetric(8, 4)),
+                |ui| {
+                    ui.label(
+                        RichText::new("拖到此处加入播放队列")
+                            .size(10.0)
+                            .color(theme::c().accent),
+                    );
+                },
+            );
+            let _ = zone;
+            if let Some(payload) = dropped {
+                let added = self.append_to_queue(payload.as_slice());
+                if added > 0 {
+                    self.toast(
+                        format!("已加入播放队列：{added} 首"),
+                        super::ToastKind::Info,
+                    );
+                }
+            }
+        }
 
         // Playlists
         ui.add_space(8.0);
@@ -295,6 +321,10 @@ impl RPlayerApp {
                     ui.close_menu();
                 }
                 ui.separator();
+                if ui.button("编辑规则…").clicked() {
+                    self.edit_smart_playlist(*id);
+                    ui.close_menu();
+                }
                 if ui.button("删除智能歌单").clicked() {
                     self.library.remove_smart_playlist(*id);
                     if self.view == View::Smart(*id) {

@@ -23,6 +23,7 @@ pub(super) const OPS: [&str; 6] = ["包含", "是", ">=", "<=", ">", "<"];
 
 #[derive(Debug, Clone)]
 pub(super) struct SmartDraft {
+    pub id: Option<u64>,
     pub name: String,
     pub match_all: bool,
     pub limit: usize,
@@ -32,6 +33,7 @@ pub(super) struct SmartDraft {
 impl Default for SmartDraft {
     fn default() -> Self {
         Self {
+            id: None,
             name: "我的智能歌单".to_string(),
             match_all: true,
             limit: 0,
@@ -43,6 +45,19 @@ impl Default for SmartDraft {
 impl RPlayerApp {
     pub(super) fn open_smart_builder(&mut self) {
         self.smart_builder = Some(SmartDraft::default());
+    }
+
+    pub(super) fn edit_smart_playlist(&mut self, id: u64) {
+        let Some(playlist) = self.library.smart_playlist(id) else {
+            return;
+        };
+        self.smart_builder = Some(SmartDraft {
+            id: Some(id),
+            name: playlist.name.clone(),
+            match_all: playlist.match_all,
+            limit: playlist.limit,
+            rules: playlist.rules.clone(),
+        });
     }
 
     pub(super) fn smart_ids(&self, playlist: &SmartPlaylist) -> Vec<u64> {
@@ -128,7 +143,11 @@ impl RPlayerApp {
             .show(ctx, |ui| {
                 ui.horizontal(|ui| {
                     ui.label(
-                        RichText::new("新建智能歌单")
+                        RichText::new(if draft.id.is_some() {
+                            "编辑智能歌单"
+                        } else {
+                            "新建智能歌单"
+                        })
                             .size(18.0)
                             .strong()
                             .color(theme::c().text),
@@ -234,15 +253,36 @@ impl RPlayerApp {
 
         if save && !draft.name.trim().is_empty() && !draft.rules.is_empty() {
             let name = draft.name.trim().to_string();
-            let id = self.library.create_smart_playlist(
-                name.clone(),
-                draft.match_all,
-                draft.rules.clone(),
-                draft.limit,
-            );
+            let id = if let Some(id) = draft.id {
+                if let Some(playlist) = self
+                    .library
+                    .smart_playlists
+                    .iter_mut()
+                    .find(|playlist| playlist.id == id)
+                {
+                    playlist.name = name.clone();
+                    playlist.match_all = draft.match_all;
+                    playlist.rules = draft.rules.clone();
+                    playlist.limit = draft.limit;
+                }
+                id
+            } else {
+                self.library.create_smart_playlist(
+                    name.clone(),
+                    draft.match_all,
+                    draft.rules.clone(),
+                    draft.limit,
+                )
+            };
             self.view = View::Smart(id);
             self.persist();
-            self.toast(format!("已创建智能歌单「{name}」"), ToastKind::Success);
+            self.toast(
+                format!(
+                    "{}智能歌单「{name}」",
+                    if draft.id.is_some() { "已更新" } else { "已创建" }
+                ),
+                ToastKind::Success,
+            );
         } else if !cancel {
             self.smart_builder = Some(draft);
         }
