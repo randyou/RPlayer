@@ -21,6 +21,14 @@ enum Outcome {
     DeletePlaylist(u64),
     RemoveTrack(u64),
     SaveTags(crate::tag_edit::TagEdit),
+    BatchTags {
+        ids: Vec<u64>,
+        title: String,
+        artist: String,
+        album: String,
+        genre: String,
+        year: String,
+    },
     AddFolder,
     RemoveFolder(PathBuf),
     Rescan,
@@ -183,6 +191,47 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                         outcome = Outcome::Close;
                     } else if action == FooterAction::Confirm && !edit.title.trim().is_empty() {
                         outcome = Outcome::SaveTags(edit.clone());
+                    }
+                }
+
+                Dialog::BatchTags {
+                    ids,
+                    title,
+                    artist,
+                    album,
+                    genre,
+                    year,
+                } => {
+                    dialog_header(
+                        ui,
+                        "批量编辑标签",
+                        "只写入填写了内容的字段；每首歌写入前都会备份原字段。",
+                    );
+                    ui.add_space(10.0);
+                    ui.label(
+                        RichText::new(format!("将应用到 {} 首歌曲", ids.len()))
+                            .size(11.0)
+                            .color(theme::c().accent),
+                    );
+                    ui.add_space(10.0);
+                    tag_field(ui, "标题", title);
+                    tag_field(ui, "艺术家", artist);
+                    tag_field(ui, "专辑", album);
+                    tag_field(ui, "流派", genre);
+                    tag_field(ui, "年份", year);
+                    ui.add_space(12.0);
+                    let action = dialog_footer(ui, "批量保存", false);
+                    if action == FooterAction::Cancel {
+                        outcome = Outcome::Close;
+                    } else if action == FooterAction::Confirm {
+                        outcome = Outcome::BatchTags {
+                            ids: ids.clone(),
+                            title: title.clone(),
+                            artist: artist.clone(),
+                            album: album.clone(),
+                            genre: genre.clone(),
+                            year: year.clone(),
+                        };
                     }
                 }
 
@@ -376,6 +425,54 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                     app.toast(format!("写入标签失败：{err:#}"), super::ToastKind::Error);
                 }
             }
+            app.dialog = Dialog::None;
+        }
+        Outcome::BatchTags {
+            ids,
+            title,
+            artist,
+            album,
+            genre,
+            year,
+        } => {
+            let mut ok = 0usize;
+            let mut failed = 0usize;
+            for id in ids {
+                let Some(track) = app.library.track(id).cloned() else {
+                    continue;
+                };
+                let mut edit = crate::tag_edit::TagEdit::from_track(&track);
+                if !title.trim().is_empty() {
+                    edit.title = title.clone();
+                }
+                if !artist.trim().is_empty() {
+                    edit.artist = artist.clone();
+                }
+                if !album.trim().is_empty() {
+                    edit.album = album.clone();
+                }
+                if !genre.trim().is_empty() {
+                    edit.genre = genre.clone();
+                }
+                if !year.trim().is_empty() {
+                    edit.year = year.clone();
+                }
+                match crate::tag_edit::save(&edit) {
+                    Ok(updated) => {
+                        app.replace_track(updated);
+                        ok += 1;
+                    }
+                    Err(_) => failed += 1,
+                }
+            }
+            app.toast(
+                format!("批量标签：成功 {ok} 首，失败 {failed} 首"),
+                if failed == 0 {
+                    super::ToastKind::Success
+                } else {
+                    super::ToastKind::Error
+                },
+            );
             app.dialog = Dialog::None;
         }
         Outcome::AddFolder => {

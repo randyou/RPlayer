@@ -111,6 +111,14 @@ pub(super) enum Dialog {
     EditTags {
         edit: crate::tag_edit::TagEdit,
     },
+    BatchTags {
+        ids: Vec<u64>,
+        title: String,
+        artist: String,
+        album: String,
+        genre: String,
+        year: String,
+    },
     Folders,
     About,
 }

@@ -444,6 +444,19 @@ impl RPlayerApp {
                                 );
                             }
                         }
+                        if widgets::chip(ui, "编辑标签…", false).clicked() {
+                            let ids: Vec<u64> = self.checked.iter().copied().collect();
+                            if !ids.is_empty() {
+                                self.dialog = Dialog::BatchTags {
+                                    ids,
+                                    title: String::new(),
+                                    artist: String::new(),
+                                    album: String::new(),
+                                    genre: String::new(),
+                                    year: String::new(),
+                                };
+                            }
+                        }
                     });
                 }
             });
