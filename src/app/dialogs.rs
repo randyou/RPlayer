@@ -20,6 +20,7 @@ enum Outcome {
     RenamePlaylist(u64, String),
     DeletePlaylist(u64),
     RemoveTrack(u64),
+    SaveTags(crate::tag_edit::TagEdit),
     AddFolder,
     RemoveFolder(PathBuf),
     Rescan,
@@ -153,6 +154,35 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                         outcome = Outcome::RemoveTrack(id);
                     } else if action == FooterAction::Cancel {
                         outcome = Outcome::Close;
+                    }
+                }
+
+                Dialog::EditTags { edit } => {
+                    dialog_header(ui, "编辑标签", "写入音频文件前会记录原始字段。");
+                    ui.add_space(10.0);
+                    ui.label(
+                        RichText::new(edit.path.to_string_lossy())
+                            .size(9.5)
+                            .color(theme::c().faint),
+                    );
+                    ui.add_space(10.0);
+                    tag_field(ui, "标题", &mut edit.title);
+                    tag_field(ui, "艺术家", &mut edit.artist);
+                    tag_field(ui, "专辑", &mut edit.album);
+                    tag_field(ui, "流派", &mut edit.genre);
+                    tag_field(ui, "年份", &mut edit.year);
+                    ui.add_space(8.0);
+                    ui.label(
+                        RichText::new("保存后立即重新读取文件标签；失败时原字段记录在 tag_backups.jsonl。")
+                            .size(10.0)
+                            .color(theme::c().faint),
+                    );
+                    ui.add_space(12.0);
+                    let action = dialog_footer(ui, "保存标签", false);
+                    if action == FooterAction::Cancel {
+                        outcome = Outcome::Close;
+                    } else if action == FooterAction::Confirm && !edit.title.trim().is_empty() {
+                        outcome = Outcome::SaveTags(edit.clone());
                     }
                 }
 
@@ -336,6 +366,18 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
             app.remove_track(id);
             app.dialog = Dialog::None;
         }
+        Outcome::SaveTags(edit) => {
+            match crate::tag_edit::save(&edit) {
+                Ok(track) => {
+                    app.replace_track(track);
+                    app.toast("标签已保存", super::ToastKind::Success);
+                }
+                Err(err) => {
+                    app.toast(format!("写入标签失败：{err:#}"), super::ToastKind::Error);
+                }
+            }
+            app.dialog = Dialog::None;
+        }
         Outcome::AddFolder => {
             app.open_folder_picker();
         }
@@ -363,6 +405,26 @@ fn dialog_header(ui: &mut Ui, title: &str, subtitle: &str) {
         ui.add_space(3.0);
         ui.add(Label::new(RichText::new(subtitle).size(11.5).color(theme::c().muted)).wrap());
     }
+}
+
+fn tag_field(ui: &mut Ui, label: &str, value: &mut String) {
+    ui.horizontal(|ui| {
+        ui.label(RichText::new(label).size(11.0).color(theme::c().muted));
+        Frame::NONE
+            .fill(theme::c().card)
+            .stroke(Stroke::new(1.0_f32, theme::c().border))
+            .corner_radius(CornerRadius::same(8))
+            .inner_margin(Margin::symmetric(8, 5))
+            .show(ui, |ui| {
+                ui.add(
+                    TextEdit::singleline(value)
+                        .frame(false)
+                        .text_color(theme::c().text)
+                        .desired_width(f32::INFINITY),
+                );
+            });
+    });
+    ui.add_space(3.0);
 }
 
 fn name_field(ui: &mut Ui, name: &mut String, hint: &str) -> egui::Response {

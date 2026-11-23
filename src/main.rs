@@ -18,6 +18,7 @@ mod scanner;
 mod session;
 mod stats;
 mod storage;
+mod tag_edit;
 mod theme;
 mod ui;
 mod watch;

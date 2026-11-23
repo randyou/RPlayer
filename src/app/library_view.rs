@@ -892,6 +892,15 @@ impl RPlayerApp {
                             self.reveal_in_file_manager(&track.path);
                             ui.close_menu();
                         }
+                        if ui.button("编辑标签…").clicked() {
+                            if let Some(track) = self.library.track(id) {
+                                self.dialog = Dialog::EditTags {
+                                    edit: crate::tag_edit::TagEdit::from_track(track),
+                                };
+                                self.focus_pending = true;
+                            }
+                            ui.close_menu();
+                        }
                         if ui.button("从音乐库移除…").clicked() {
                             self.dialog = Dialog::ConfirmRemoveTrack { id };
                             ui.close_menu();

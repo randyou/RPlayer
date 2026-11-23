@@ -107,6 +107,9 @@ pub(super) enum Dialog {
     ConfirmRemoveTrack {
         id: u64,
     },
+    EditTags {
+        edit: crate::tag_edit::TagEdit,
+    },
     Folders,
     About,
 }
@@ -1552,6 +1555,18 @@ impl RPlayerApp {
         }
         self.persist();
         self.toast(format!("已删除播放列表「{name}」"), ToastKind::Info);
+    }
+
+    fn replace_track(&mut self, updated: Track) {
+        if let Some(index) = self
+            .library
+            .tracks
+            .iter()
+            .position(|track| track.id == updated.id)
+        {
+            self.library.tracks[index] = updated;
+            self.persist();
+        }
     }
 
     fn remove_track(&mut self, id: u64) {
