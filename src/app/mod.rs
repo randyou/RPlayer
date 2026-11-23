@@ -1,6 +1,7 @@
 //! Application state, playback orchestration and the root layout.
 
 mod dialogs;
+mod equalizer;
 mod library_view;
 mod now_playing;
 mod player_bar;
@@ -9,19 +10,24 @@ mod sidebar;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{Receiver, TryRecvError};
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use eframe::egui;
 use egui::{
-    Align2, Color32, Frame, Id, Key, Margin, RichText, Stroke, TextureHandle, TextureOptions, Vec2,
-    ViewportCommand,
+    Align2, Color32, Frame, Id, Key, Margin, Pos2, RichText, Stroke, TextureHandle, TextureOptions,
+    Vec2, ViewportCommand,
 };
 
 use crate::audio::AudioEngine;
+use crate::eq::EqShared;
 use crate::model::{self, Library, SortField, SortState, Track};
+use crate::overlay::{
+    self, OverlayCommand, OverlayState,
+};
 use crate::scanner::{self, ScanEvent};
 use crate::storage;
-use crate::theme;
+use crate::theme::{self, ThemeMode};
 use crate::ui::icons::{self, Icon};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -102,6 +108,7 @@ pub(super) struct Toast {
 pub struct RPlayerApp {
     library: Library,
     audio: Option<AudioEngine>,
+    eq: Arc<EqShared>,
     view: View,
     search: String,
     sort: SortState,
@@ -116,6 +123,16 @@ pub struct RPlayerApp {
     last_saved_volume: f32,
     cover: Option<TextureHandle>,
     cover_for: Option<u64>,
+    cover_image: Option<Arc<egui::ColorImage>>,
+    overlay_state: Arc<Mutex<OverlayState>>,
+    overlay_commands: Arc<Mutex<Vec<OverlayCommand>>>,
+    mini_cache: Arc<Mutex<overlay::MiniCache>>,
+    lyrics_placed: bool,
+    mini_placed: bool,
+    lyrics_region: bool,
+    mini_region: bool,
+    lyrics_viewport_active: bool,
+    mini_viewport_active: bool,
     lyrics: Option<crate::lyrics::Lyrics>,
     lyrics_for: Option<u64>,
     expanded: bool,
@@ -134,18 +151,34 @@ pub struct RPlayerApp {
     queue_open: bool,
     last_window_title: String,
     closing_saved: bool,
-    dark_titlebar_applied: bool,
+    theme_mode: ThemeMode,
+    titlebar_dark: Option<bool>,
+    eq_open: bool,
+    eq_dirty: bool,
+    desktop_lyrics_open: bool,
+    mini_open: bool,
 }
 
 impl RPlayerApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        theme::install(&cc.egui_ctx);
-        cc.egui_ctx
-            .send_viewport_cmd(egui::ViewportCommand::SetTheme(egui::SystemTheme::Dark));
-
         let library = storage::load_library();
+        let theme_mode = if library.light_theme {
+            ThemeMode::Light
+        } else {
+            ThemeMode::Dark
+        };
+        theme::install(&cc.egui_ctx, theme_mode);
+        cc.egui_ctx
+            .send_viewport_cmd(egui::ViewportCommand::SetTheme(if theme_mode.is_dark() {
+                egui::SystemTheme::Dark
+            } else {
+                egui::SystemTheme::Light
+            }));
+
         let volume = library.volume.clamp(0.0, 1.0);
-        let (audio, audio_error) = match AudioEngine::new(volume) {
+        let desktop_lyrics_open = library.desktop_lyrics;
+        let eq = EqShared::new(library.eq.clone());
+        let (audio, audio_error) = match AudioEngine::new(volume, eq.clone()) {
             Ok(engine) => (Some(engine), None),
             Err(err) => (None, Some(format!("{err:#}"))),
         };
@@ -156,6 +189,7 @@ impl RPlayerApp {
             volume_before_mute: if volume > 0.01 { volume } else { 0.72 },
             library,
             audio,
+            eq,
             view: View::Library,
             search: String::new(),
             sort: SortState::default(),
@@ -167,6 +201,16 @@ impl RPlayerApp {
             repeat: RepeatMode::Off,
             cover: None,
             cover_for: None,
+            cover_image: None,
+            overlay_state: Arc::new(Mutex::new(OverlayState::default())),
+            overlay_commands: Arc::new(Mutex::new(Vec::new())),
+            mini_cache: Arc::new(Mutex::new(overlay::MiniCache::default())),
+            lyrics_placed: false,
+            mini_placed: false,
+            lyrics_region: false,
+            mini_region: false,
+            lyrics_viewport_active: false,
+            mini_viewport_active: false,
             lyrics: None,
             lyrics_for: None,
             expanded: false,
@@ -185,7 +229,12 @@ impl RPlayerApp {
             queue_open: false,
             last_window_title: "RPlayer".to_string(),
             closing_saved: false,
-            dark_titlebar_applied: false,
+            theme_mode,
+            titlebar_dark: None,
+            eq_open: false,
+            eq_dirty: false,
+            desktop_lyrics_open,
+            mini_open: false,
         };
 
         if let Some(err) = audio_error {
@@ -289,6 +338,7 @@ impl RPlayerApp {
             self.current = None;
             self.cover = None;
             self.cover_for = None;
+            self.cover_image = None;
         }
 
         let library = &self.library;
@@ -376,6 +426,7 @@ impl RPlayerApp {
             self.current = None;
             self.cover = None;
             self.cover_for = None;
+            self.cover_image = None;
         }
         if self
             .selected
@@ -641,6 +692,7 @@ impl RPlayerApp {
         }
         self.cover_for = Some(id);
         self.cover = None;
+        self.cover_image = None;
 
         let Some(track) = self.library.track(id) else {
             return;
@@ -654,6 +706,7 @@ impl RPlayerApp {
         let rgba = image.thumbnail(512, 512).to_rgba8();
         let size = [rgba.width() as usize, rgba.height() as usize];
         let color_image = egui::ColorImage::from_rgba_unmultiplied(size, rgba.as_raw());
+        self.cover_image = Some(Arc::new(color_image.clone()));
         self.cover = Some(ctx.load_texture(
             format!("rplayer-cover-{id}"),
             color_image,
@@ -663,6 +716,177 @@ impl RPlayerApp {
 
     fn cover_for_current(&self) -> Option<&TextureHandle> {
         self.cover.as_ref()
+    }
+
+    // ---------------------------------------------------------------------
+    // Overlay windows (desktop lyrics + mini player)
+    // ---------------------------------------------------------------------
+
+    fn sync_overlay(&self) {
+        let track = self.current.and_then(|id| self.library.track(id));
+        let position = self.current_position();
+        let favorite = self
+            .current
+            .map(|id| self.library.is_favorite(id))
+            .unwrap_or(false);
+
+        let mut state = OverlayState {
+            has_track: track.is_some(),
+            title: track.map(|track| track.title.clone()).unwrap_or_default(),
+            artist: track.map(|track| track.artist.clone()).unwrap_or_default(),
+            position,
+            duration: track.map(|track| track.duration).unwrap_or_default(),
+            playing: self.is_playing(),
+            favorite,
+            ..OverlayState::default()
+        };
+
+        if let Some(track) = track {
+            if self.lyrics_for == Some(track.id) {
+                if let Some(lyrics) = &self.lyrics {
+                    state.has_lyrics = !lyrics.lines.is_empty();
+                    if state.has_lyrics {
+                        let active = lyrics.active_index(position).unwrap_or(0);
+                        state.lyric_previous = active
+                            .checked_sub(1)
+                            .and_then(|index| lyrics.lines.get(index))
+                            .map(|line| line.text.clone())
+                            .unwrap_or_default();
+                        state.lyric_current = lyrics
+                            .lines
+                            .get(active)
+                            .map(|line| line.text.clone())
+                            .unwrap_or_default();
+                        state.lyric_next = lyrics
+                            .lines
+                            .get(active + 1)
+                            .map(|line| line.text.clone())
+                            .unwrap_or_default();
+                    }
+                }
+            }
+            if self.cover_for == Some(track.id) {
+                state.cover_id = Some(track.id);
+                state.cover = self.cover_image.clone();
+            }
+        }
+
+        if let Ok(mut shared) = self.overlay_state.lock() {
+            *shared = state;
+        }
+    }
+
+    fn handle_overlay_commands(&mut self, ctx: &egui::Context) {
+        let commands = self
+            .overlay_commands
+            .lock()
+            .map(|mut queue| std::mem::take(&mut *queue))
+            .unwrap_or_default();
+
+        for command in commands {
+            match command {
+                OverlayCommand::TogglePlay => self.toggle_play(ctx),
+                OverlayCommand::Previous => self.previous_track(ctx),
+                OverlayCommand::Next => self.next_track(ctx, false),
+                OverlayCommand::ToggleFavorite => {
+                    if let Some(id) = self.current {
+                        self.toggle_favorite(id);
+                    }
+                }
+                OverlayCommand::Seek(seconds) => self.seek_to(seconds),
+                OverlayCommand::CloseLyrics => {
+                    self.desktop_lyrics_open = false;
+                    self.library.desktop_lyrics = false;
+                    self.lyrics_viewport_active = false;
+                    ctx.send_viewport_cmd_to(
+                        overlay::lyrics_viewport(),
+                        ViewportCommand::Close,
+                    );
+                    self.persist();
+                }
+                OverlayCommand::CloseMini => {
+                    self.mini_open = false;
+                    self.mini_viewport_active = false;
+                    ctx.send_viewport_cmd_to(overlay::mini_viewport(), ViewportCommand::Close);
+                }
+                OverlayCommand::OpenMain => {
+                    self.mini_open = false;
+                    self.mini_viewport_active = false;
+                    ctx.send_viewport_cmd_to(overlay::mini_viewport(), ViewportCommand::Close);
+                    if self.current.is_some() {
+                        self.expanded = true;
+                    }
+                    ctx.send_viewport_cmd_to(
+                        egui::ViewportId::ROOT,
+                        ViewportCommand::Minimized(false),
+                    );
+                    ctx.send_viewport_cmd_to(egui::ViewportId::ROOT, ViewportCommand::Focus);
+                }
+            }
+        }
+    }
+
+    fn show_overlays(&mut self, ctx: &egui::Context) {
+        let monitor = ctx
+            .input(|input| input.viewport().monitor_size)
+            .unwrap_or(egui::vec2(1920.0, 1080.0));
+
+        if self.desktop_lyrics_open {
+            let position = if self.lyrics_placed {
+                None
+            } else {
+                Some(Pos2::new(
+                    (monitor.x - 860.0).max(0.0) * 0.5,
+                    (monitor.y - 214.0).max(40.0),
+                ))
+            };
+            overlay::show_lyrics(
+                ctx,
+                self.overlay_state.clone(),
+                self.overlay_commands.clone(),
+                position,
+            );
+            self.lyrics_placed = true;
+            self.lyrics_viewport_active = true;
+            if !self.lyrics_region {
+                self.lyrics_region = crate::platform::apply_round_window(
+                    "RPlayer 桌面歌词",
+                    26,
+                );
+            }
+        } else if self.lyrics_viewport_active {
+            self.lyrics_viewport_active = false;
+            ctx.send_viewport_cmd_to(overlay::lyrics_viewport(), ViewportCommand::Close);
+        }
+
+        if self.mini_open {
+            let position = if self.mini_placed {
+                None
+            } else {
+                Some(Pos2::new(
+                    (monitor.x - 446.0).max(0.0),
+                    (monitor.y - 190.0).max(40.0),
+                ))
+            };
+            overlay::show_mini(
+                ctx,
+                self.overlay_state.clone(),
+                self.overlay_commands.clone(),
+                self.mini_cache.clone(),
+                position,
+            );
+            self.mini_placed = true;
+            self.mini_viewport_active = true;
+            if !self.mini_region {
+                self.mini_region = crate::platform::apply_round_window(
+                    "RPlayer 迷你播放器",
+                    20,
+                );
+            }
+        } else if self.mini_viewport_active {
+            self.mini_viewport_active = false;
+            ctx.send_viewport_cmd_to(overlay::mini_viewport(), ViewportCommand::Close);
+        }
     }
 
     // ---------------------------------------------------------------------
@@ -748,6 +972,7 @@ impl RPlayerApp {
             if self.cover_for == Some(id) {
                 self.cover = None;
                 self.cover_for = None;
+                self.cover_image = None;
             }
         }
     }
@@ -760,6 +985,65 @@ impl RPlayerApp {
         self.selected = None;
         self.batch_mode = false;
         self.checked.clear();
+    }
+
+    fn set_theme_mode(&mut self, ctx: &egui::Context, mode: ThemeMode) {
+        if self.theme_mode == mode {
+            return;
+        }
+        self.theme_mode = mode;
+        self.library.light_theme = !mode.is_dark();
+        theme::set_mode(mode);
+        theme::apply_style(ctx);
+        ctx.send_viewport_cmd(ViewportCommand::SetTheme(if mode.is_dark() {
+            egui::SystemTheme::Dark
+        } else {
+            egui::SystemTheme::Light
+        }));
+        self.titlebar_dark = None;
+        self.persist();
+        self.toast(
+            if mode.is_dark() {
+                "已切换到深色主题"
+            } else {
+                "已切换到浅色主题"
+            },
+            ToastKind::Info,
+        );
+    }
+
+    fn toggle_theme(&mut self, ctx: &egui::Context) {
+        self.set_theme_mode(ctx, self.theme_mode.toggle());
+    }
+
+    fn toggle_eq(&mut self) {
+        self.eq_open = !self.eq_open;
+    }
+
+    fn toggle_desktop_lyrics(&mut self, ctx: &egui::Context) {
+        self.desktop_lyrics_open = !self.desktop_lyrics_open;
+        self.library.desktop_lyrics = self.desktop_lyrics_open;
+        if self.desktop_lyrics_open {
+            self.lyrics_placed = false;
+            self.lyrics_region = false;
+        } else {
+            self.lyrics_viewport_active = false;
+            self.lyrics_region = false;
+            ctx.send_viewport_cmd_to(overlay::lyrics_viewport(), ViewportCommand::Close);
+        }
+        self.persist();
+    }
+
+    fn toggle_mini(&mut self, ctx: &egui::Context) {
+        self.mini_open = !self.mini_open;
+        if self.mini_open {
+            self.mini_placed = false;
+            self.mini_region = false;
+        } else {
+            self.mini_viewport_active = false;
+            self.mini_region = false;
+            ctx.send_viewport_cmd_to(overlay::mini_viewport(), ViewportCommand::Close);
+        }
     }
 
     fn toggle_favorite(&mut self, id: u64) {
@@ -1010,6 +1294,8 @@ impl RPlayerApp {
         if ctx.input(|i| i.key_pressed(Key::Escape)) {
             if self.dialog != Dialog::None {
                 self.dialog = Dialog::None;
+            } else if self.eq_open {
+                self.eq_open = false;
             } else if self.queue_open {
                 self.queue_open = false;
             } else if self.expanded {
@@ -1031,6 +1317,10 @@ impl RPlayerApp {
             open_folder,
             new_playlist,
             find,
+            theme_key,
+            equalizer_key,
+            lyrics_key,
+            mini_key,
             modifiers,
         ) = ctx.input(|i| {
             (
@@ -1043,6 +1333,10 @@ impl RPlayerApp {
                 i.key_pressed(Key::O),
                 i.key_pressed(Key::N),
                 i.key_pressed(Key::F),
+                i.key_pressed(Key::T),
+                i.key_pressed(Key::E),
+                i.key_pressed(Key::L),
+                i.key_pressed(Key::M),
                 i.modifiers,
             )
         });
@@ -1052,6 +1346,18 @@ impl RPlayerApp {
         } else if find && self.current.is_some() {
             self.expanded = !self.expanded;
             self.queue_open = false;
+        }
+        if modifiers.command && theme_key {
+            self.toggle_theme(ctx);
+        }
+        if modifiers.command && equalizer_key {
+            self.toggle_eq();
+        }
+        if modifiers.command && lyrics_key {
+            self.toggle_desktop_lyrics(ctx);
+        }
+        if modifiers.command && mini_key {
+            self.toggle_mini(ctx);
         }
         if modifiers.command && open_folder {
             self.open_folder_picker();
@@ -1148,9 +1454,9 @@ impl RPlayerApp {
             1.0
         };
         let (color, icon) = match toast.kind {
-            ToastKind::Info => (theme::MUTED, Icon::Music),
-            ToastKind::Success => (theme::ACCENT, Icon::Check),
-            ToastKind::Error => (theme::DANGER, Icon::Close),
+            ToastKind::Info => (theme::c().muted, Icon::Music),
+            ToastKind::Success => (theme::c().accent, Icon::Check),
+            ToastKind::Error => (theme::c().danger, Icon::Close),
         };
         let text = toast.text.clone();
 
@@ -1160,8 +1466,8 @@ impl RPlayerApp {
             .interactable(false)
             .show(ctx, |ui| {
                 Frame::NONE
-                    .fill(theme::CARD.gamma_multiply(alpha))
-                    .stroke(Stroke::new(1.0_f32, theme::BORDER.gamma_multiply(alpha)))
+                    .fill(theme::c().card.gamma_multiply(alpha))
+                    .stroke(Stroke::new(1.0_f32, theme::c().border.gamma_multiply(alpha)))
                     .corner_radius(egui::CornerRadius::same(12))
                     .inner_margin(Margin::symmetric(14, 10))
                     .shadow(egui::epaint::Shadow {
@@ -1180,7 +1486,7 @@ impl RPlayerApp {
                                 egui::Label::new(
                                     RichText::new(text)
                                         .size(12.5)
-                                        .color(theme::TEXT.gamma_multiply(alpha)),
+                                        .color(theme::c().text.gamma_multiply(alpha)),
                                 )
                                 .wrap(),
                             );
@@ -1200,8 +1506,8 @@ impl RPlayerApp {
             .interactable(false)
             .show(ctx, |ui| {
                 Frame::NONE
-                    .fill(theme::PANEL.gamma_multiply(0.96))
-                    .stroke(Stroke::new(1.0_f32, theme::ACCENT))
+                    .fill(theme::c().panel.gamma_multiply(0.96))
+                    .stroke(Stroke::new(1.0_f32, theme::c().accent))
                     .corner_radius(egui::CornerRadius::same(20))
                     .inner_margin(Margin::same(32))
                     .shadow(egui::epaint::Shadow {
@@ -1224,19 +1530,19 @@ impl RPlayerApp {
                                 ui.painter(),
                                 rect.shrink(16.0),
                                 Icon::Folder,
-                                theme::ACCENT,
+                                theme::c().accent,
                             );
                             ui.add_space(10.0);
                             ui.label(
                                 RichText::new("松开以导入音乐")
                                     .size(17.0)
                                     .strong()
-                                    .color(theme::TEXT),
+                                    .color(theme::c().text),
                             );
                             ui.label(
                                 RichText::new("支持文件夹与音频文件，会自动加入音乐库")
                                     .size(12.0)
-                                    .color(theme::MUTED),
+                                    .color(theme::c().muted),
                             );
                         });
                     });
@@ -1257,15 +1563,18 @@ impl RPlayerApp {
 
 impl eframe::App for RPlayerApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        if !self.dark_titlebar_applied {
-            crate::platform::apply_dark_titlebar();
-            self.dark_titlebar_applied = true;
+        let dark = self.theme_mode.is_dark();
+        if self.titlebar_dark != Some(dark) {
+            crate::platform::apply_titlebar(dark);
+            self.titlebar_dark = Some(dark);
         }
 
+        self.handle_overlay_commands(ctx);
         self.poll_scan();
         self.poll_audio(ctx);
         self.handle_shortcuts(ctx);
         self.handle_close(ctx);
+        self.sync_overlay();
 
         let dropped: Vec<PathBuf> = ctx.input(|i| {
             i.raw
@@ -1293,9 +1602,11 @@ impl eframe::App for RPlayerApp {
 
         if self.expanded && self.current.is_some() {
             self.now_playing(ctx);
+            self.equalizer_window(ctx);
             self.render_dialog(ctx);
             self.render_toast(ctx);
             self.render_drop_overlay(ctx);
+            self.show_overlays(ctx);
             self.request_repaint(ctx);
             return;
         }
@@ -1304,10 +1615,18 @@ impl eframe::App for RPlayerApp {
         self.sidebar_panel(ctx);
         self.central_panel(ctx, &ids, total_seconds);
         self.queue_window(ctx);
+        self.equalizer_window(ctx);
         self.render_dialog(ctx);
         self.render_toast(ctx);
         self.render_drop_overlay(ctx);
+        self.show_overlays(ctx);
         self.request_repaint(ctx);
+    }
+
+    fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
+        // The main panels paint every pixel; overlays need a genuinely
+        // transparent framebuffer for their rounded floating cards.
+        [0.0, 0.0, 0.0, 0.0]
     }
 }
 

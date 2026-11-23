@@ -10,7 +10,7 @@ use crate::model::Library;
 
 pub const APP_DIR_NAME: &str = "RPlayer";
 pub const LIBRARY_FILE: &str = "library.json";
-pub const SCHEMA_VERSION: u32 = 2;
+pub const SCHEMA_VERSION: u32 = 3;
 
 /// Per-user data directory:
 /// - Windows: `%APPDATA%\RPlayer`
@@ -42,6 +42,7 @@ pub fn load_library() -> Library {
                 let mut library = file.library;
                 library.version = file.schema.max(1);
                 library.volume = library.volume.clamp(0.0, 1.0);
+                library.eq = library.eq.sanitized();
                 library
             }
             Err(err) => {
@@ -86,6 +87,8 @@ mod tests {
         let mut lib = Library::default();
         lib.volume = 0.33;
         lib.folders.push(PathBuf::from("D:/Music"));
+        lib.eq = crate::eq::EqSettings::from_preset(4);
+        lib.light_theme = true;
         let payload = LibraryFile {
             schema: SCHEMA_VERSION,
             library: lib,
@@ -95,5 +98,8 @@ mod tests {
         assert_eq!(decoded.schema, SCHEMA_VERSION);
         assert_eq!(decoded.library.volume, 0.33);
         assert_eq!(decoded.library.folders.len(), 1);
+        assert!(decoded.library.light_theme);
+        assert_eq!(decoded.library.eq.preset, Some(4));
+        assert!(decoded.library.eq.enabled);
     }
 }

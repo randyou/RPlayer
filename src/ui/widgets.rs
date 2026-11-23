@@ -14,13 +14,13 @@ pub fn icon_button(ui: &mut Ui, icon: Icon, size: f32, tooltip: &str) -> Respons
     let hovered = response.hovered();
     if hovered {
         ui.painter()
-            .rect_filled(rect, CornerRadius::same(9), theme::HOVER);
+            .rect_filled(rect, CornerRadius::same(9), theme::c().hover);
     }
     icons::paint(
         ui.painter(),
         rect.shrink(size * 0.27),
         icon,
-        if hovered { theme::TEXT } else { theme::MUTED },
+        if hovered { theme::c().text } else { theme::c().muted },
     );
     response
         .on_hover_cursor(CursorIcon::PointingHand)
@@ -41,9 +41,9 @@ pub fn icon_button_tinted(
             .rect_filled(rect, CornerRadius::same(9), theme::accent_alpha(0.12));
     }
     let color = if active {
-        theme::ACCENT
+        theme::c().accent
     } else if response.hovered() {
-        theme::TEXT
+        theme::c().text
     } else {
         tint
     };
@@ -93,7 +93,7 @@ pub fn play_button(ui: &mut Ui, playing: bool, enabled: bool) -> Response {
         } else if response.hovered() {
             Color32::from_rgb(0xA6, 0xFF, 0xC5)
         } else {
-            theme::ACCENT
+            theme::c().accent
         };
         ui.painter().circle_filled(center, radius, fill);
         let icon = if playing { Icon::Pause } else { Icon::Play };
@@ -105,7 +105,7 @@ pub fn play_button(ui: &mut Ui, playing: bool, enabled: bool) -> Response {
                 Vec2::new(size * 0.015, 0.0)
             }),
             icon,
-            theme::BG,
+            theme::c().on_accent,
         );
         response.on_hover_cursor(CursorIcon::PointingHand)
     } else {
@@ -115,7 +115,7 @@ pub fn play_button(ui: &mut Ui, playing: bool, enabled: bool) -> Response {
             ui.painter(),
             rect.shrink(size * 0.31),
             Icon::Play,
-            theme::FAINT,
+            theme::c().faint,
         );
         response
     }
@@ -137,9 +137,9 @@ pub fn nav_item(
             Pos2::new(rect.left() + 2.0, rect.center().y),
             Vec2::new(3.0, 18.0),
         );
-        painter.rect_filled(bar, CornerRadius::same(2), theme::ACCENT);
+        painter.rect_filled(bar, CornerRadius::same(2), theme::c().accent);
     } else if response.hovered() {
-        painter.rect_filled(rect, CornerRadius::same(10), theme::HOVER);
+        painter.rect_filled(rect, CornerRadius::same(10), theme::c().hover);
     }
 
     let icon_rect = Rect::from_center_size(
@@ -151,9 +151,9 @@ pub fn nav_item(
         icon_rect,
         icon,
         if selected {
-            theme::ACCENT
+            theme::c().accent
         } else {
-            theme::MUTED
+            theme::c().muted
         },
     );
 
@@ -162,7 +162,7 @@ pub fn nav_item(
         Align2::LEFT_CENTER,
         label,
         FontId::proportional(14.0),
-        if selected { theme::TEXT } else { theme::MUTED },
+        if selected { theme::c().text } else { theme::c().muted },
     );
 
     if let Some(count) = count {
@@ -171,7 +171,7 @@ pub fn nav_item(
             Align2::RIGHT_CENTER,
             count.to_string(),
             FontId::proportional(11.0),
-            theme::FAINT,
+            theme::c().faint,
         );
     }
 
@@ -185,7 +185,7 @@ pub fn playlist_item(ui: &mut Ui, name: &str, selected: bool) -> Response {
     if selected {
         painter.rect_filled(rect, CornerRadius::same(9), theme::accent_alpha(0.10));
     } else if response.hovered() {
-        painter.rect_filled(rect, CornerRadius::same(9), theme::HOVER);
+        painter.rect_filled(rect, CornerRadius::same(9), theme::c().hover);
     }
     let dot = Rect::from_center_size(
         Pos2::new(rect.left() + 25.0, rect.center().y),
@@ -196,9 +196,9 @@ pub fn playlist_item(ui: &mut Ui, name: &str, selected: bool) -> Response {
         dot,
         Icon::Music,
         if selected {
-            theme::ACCENT
+            theme::c().accent
         } else {
-            theme::FAINT
+            theme::c().faint
         },
     );
     painter.text(
@@ -206,30 +206,30 @@ pub fn playlist_item(ui: &mut Ui, name: &str, selected: bool) -> Response {
         Align2::LEFT_CENTER,
         name,
         FontId::proportional(13.0),
-        if selected { theme::TEXT } else { theme::MUTED },
+        if selected { theme::c().text } else { theme::c().muted },
     );
     response.on_hover_cursor(CursorIcon::PointingHand)
 }
 
 pub fn section_label(ui: &mut Ui, text: &str) {
     ui.add_space(10.0);
-    ui.label(RichText::new(text).color(theme::FAINT).size(11.0).strong());
+    ui.label(RichText::new(text).color(theme::c().faint).size(11.0).strong());
     ui.add_space(2.0);
 }
 
 pub fn search_box(ui: &mut Ui, query: &mut String, hint: &str) -> Response {
     let mut response = None;
     Frame::NONE
-        .fill(theme::CARD)
-        .stroke(Stroke::new(1.0_f32, theme::BORDER))
+        .fill(theme::c().card)
+        .stroke(Stroke::new(1.0_f32, theme::c().border))
         .corner_radius(CornerRadius::same(10))
         .inner_margin(Margin::symmetric(12, 7))
         .show(ui, |ui| {
             ui.horizontal(|ui| {
                 let (rect, _) = ui.allocate_exact_size(Vec2::splat(18.0), Sense::hover());
-                icons::paint(ui.painter(), rect, Icon::Search, theme::MUTED);
+                icons::paint(ui.painter(), rect, Icon::Search, theme::c().muted);
                 let edit = TextEdit::singleline(query)
-                    .hint_text(RichText::new(hint).color(theme::FAINT))
+                    .hint_text(RichText::new(hint).color(theme::c().faint))
                     .frame(false)
                     .margin(Margin::symmetric(2, 2))
                     .desired_width(ui.available_width());
@@ -251,12 +251,12 @@ pub fn seek_bar(ui: &mut Ui, position: f64, duration: f64) -> Option<f64> {
 
     let rail = Rect::from_center_size(rect.center(), Vec2::new(width, 4.0));
     ui.painter()
-        .rect_filled(rail, CornerRadius::same(2), theme::BORDER);
+        .rect_filled(rail, CornerRadius::same(2), theme::c().border);
     let filled_width = width * fraction;
     if filled_width > 0.5 {
         let filled = Rect::from_min_size(rail.min, Vec2::new(filled_width, 4.0));
         ui.painter()
-            .rect_filled(filled, CornerRadius::same(2), theme::ACCENT);
+            .rect_filled(filled, CornerRadius::same(2), theme::c().accent);
     }
 
     let handle_center = Pos2::new(rail.left() + filled_width, rail.center().y);
@@ -267,7 +267,7 @@ pub fn seek_bar(ui: &mut Ui, position: f64, duration: f64) -> Option<f64> {
     ui.painter().circle_filled(
         handle_center,
         if hovered { 5.5 } else { 4.0 },
-        theme::ACCENT,
+        theme::c().accent,
     );
 
     if response.hovered() {
@@ -288,21 +288,21 @@ pub fn volume_bar(ui: &mut Ui, volume: f32) -> Option<f32> {
     let (rect, response) = ui.allocate_exact_size(Vec2::new(width, 18.0), Sense::click_and_drag());
     let rail = Rect::from_center_size(rect.center(), Vec2::new(width, 4.0));
     ui.painter()
-        .rect_filled(rail, CornerRadius::same(2), theme::BORDER);
+        .rect_filled(rail, CornerRadius::same(2), theme::c().border);
     let fraction = volume.clamp(0.0, 1.0);
     let filled = Rect::from_min_size(rail.min, Vec2::new(width * fraction, 4.0));
     if fraction > 0.01 {
         ui.painter()
-            .rect_filled(filled, CornerRadius::same(2), theme::MUTED);
+            .rect_filled(filled, CornerRadius::same(2), theme::c().muted);
     }
     let handle = Pos2::new(rail.left() + width * fraction, rail.center().y);
     ui.painter().circle_filled(
         handle,
         if response.hovered() { 5.0 } else { 3.5 },
         if response.hovered() {
-            theme::ACCENT
+            theme::c().accent
         } else {
-            theme::TEXT
+            theme::c().text
         },
     );
     if response.hovered() {
@@ -318,8 +318,8 @@ pub fn volume_bar(ui: &mut Ui, volume: f32) -> Option<f32> {
 }
 
 pub fn primary_button(ui: &mut Ui, text: &str) -> Response {
-    let button = Button::new(RichText::new(text).color(theme::BG).strong().size(14.0))
-        .fill(theme::ACCENT)
+    let button = Button::new(RichText::new(text).color(theme::c().on_accent).strong().size(14.0))
+        .fill(theme::c().accent)
         .corner_radius(10)
         .min_size(Vec2::new(0.0, 38.0));
     ui.add(button)
@@ -327,26 +327,26 @@ pub fn primary_button(ui: &mut Ui, text: &str) -> Response {
 
 pub fn primary_button_full(ui: &mut Ui, text: &str) -> Response {
     let width = ui.available_width();
-    let button = Button::new(RichText::new(text).color(theme::BG).strong().size(14.0))
-        .fill(theme::ACCENT)
+    let button = Button::new(RichText::new(text).color(theme::c().on_accent).strong().size(14.0))
+        .fill(theme::c().accent)
         .corner_radius(10)
         .min_size(Vec2::new(width, 38.0));
     ui.add(button)
 }
 
 pub fn secondary_button(ui: &mut Ui, text: &str) -> Response {
-    let button = Button::new(RichText::new(text).color(theme::TEXT).size(13.0))
-        .fill(theme::CARD)
-        .stroke(Stroke::new(1.0_f32, theme::BORDER))
+    let button = Button::new(RichText::new(text).color(theme::c().text).size(13.0))
+        .fill(theme::c().card)
+        .stroke(Stroke::new(1.0_f32, theme::c().border))
         .corner_radius(10)
         .min_size(Vec2::new(0.0, 36.0));
     ui.add(button)
 }
 
 pub fn danger_button(ui: &mut Ui, text: &str) -> Response {
-    let button = Button::new(RichText::new(text).color(theme::DANGER).size(13.0))
-        .fill(theme::DANGER.gamma_multiply(0.12))
-        .stroke(Stroke::new(1.0_f32, theme::DANGER.gamma_multiply(0.45)))
+    let button = Button::new(RichText::new(text).color(theme::c().danger).size(13.0))
+        .fill(theme::c().danger.gamma_multiply(0.12))
+        .stroke(Stroke::new(1.0_f32, theme::c().danger.gamma_multiply(0.45)))
         .corner_radius(10)
         .min_size(Vec2::new(0.0, 36.0));
     ui.add(button)
@@ -354,9 +354,9 @@ pub fn danger_button(ui: &mut Ui, text: &str) -> Response {
 
 pub fn chip(ui: &mut Ui, text: &str, selected: bool) -> Response {
     let button = Button::new(RichText::new(text).size(12.0).color(if selected {
-        theme::ACCENT
+        theme::c().accent
     } else {
-        theme::MUTED
+        theme::c().muted
     }))
     .fill(if selected {
         theme::accent_alpha(0.12)
@@ -368,7 +368,7 @@ pub fn chip(ui: &mut Ui, text: &str, selected: bool) -> Response {
         if selected {
             theme::accent_alpha(0.38)
         } else {
-            theme::BORDER
+            theme::c().border
         },
     ))
     .corner_radius(CornerRadius::same(99))
@@ -381,18 +381,42 @@ pub fn empty_illustration(ui: &mut Ui, size: f32) {
     let center = rect.center();
     let painter = ui.painter();
     painter.circle_filled(center, size * 0.5, theme::accent_alpha(0.04));
-    painter.circle_filled(center, size * 0.37, theme::CARD);
-    painter.circle_stroke(center, size * 0.37, Stroke::new(1.0_f32, theme::BORDER));
+    painter.circle_filled(center, size * 0.37, theme::c().card);
+    painter.circle_stroke(center, size * 0.37, Stroke::new(1.0_f32, theme::c().border));
     icons::paint(
         painter,
         rect.shrink(size * 0.34),
         Icon::Music,
-        theme::ACCENT,
+        theme::c().accent,
     );
+}
+
+/// Small animated switch used by the equalizer and overlay settings.
+pub fn toggle_switch(ui: &mut Ui, on: &mut bool) -> Response {
+    let (rect, mut response) = ui.allocate_exact_size(Vec2::new(42.0, 23.0), Sense::click());
+    if response.clicked() {
+        *on = !*on;
+        response.mark_changed();
+    }
+    let t = ui.ctx().animate_bool(response.id, *on);
+    let track = if t > 0.5 {
+        theme::c().accent
+    } else {
+        theme::c().border
+    };
+    ui.painter()
+        .rect_filled(rect, CornerRadius::same(99), track);
+    let knob_x = egui::lerp((rect.left() + 11.5)..=(rect.right() - 11.5), t);
+    ui.painter().circle_filled(
+        Pos2::new(knob_x, rect.center().y),
+        8.5,
+        theme::c().panel,
+    );
+    response.on_hover_cursor(CursorIcon::PointingHand)
 }
 
 pub fn divider(ui: &mut Ui) {
     let width = ui.available_width();
     let (rect, _) = ui.allocate_exact_size(Vec2::new(width, 1.0), Sense::hover());
-    ui.painter().rect_filled(rect, 0, theme::BORDER_SOFT);
+    ui.painter().rect_filled(rect, 0, theme::c().border_soft);
 }

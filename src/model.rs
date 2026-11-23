@@ -127,12 +127,16 @@ pub struct Library {
     pub recent: Vec<u64>,
     /// Persisted appearance preference.
     pub light_theme: bool,
+    /// Whether the desktop lyrics overlay should open with the app.
+    pub desktop_lyrics: bool,
+    /// Ten-band equalizer settings.
+    pub eq: crate::eq::EqSettings,
 }
 
 impl Default for Library {
     fn default() -> Self {
         Self {
-            version: 2,
+            version: 3,
             folders: Vec::new(),
             tracks: Vec::new(),
             playlists: Vec::new(),
@@ -140,6 +144,8 @@ impl Default for Library {
             favorites: Vec::new(),
             recent: Vec::new(),
             light_theme: false,
+            desktop_lyrics: false,
+            eq: crate::eq::EqSettings::default(),
         }
     }
 }

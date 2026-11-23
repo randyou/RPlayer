@@ -18,8 +18,8 @@ impl RPlayerApp {
             .exact_height(104.0)
             .frame(
                 Frame::NONE
-                    .fill(theme::SIDEBAR)
-                    .stroke(Stroke::new(1.0_f32, theme::BORDER_SOFT))
+                    .fill(theme::c().sidebar)
+                    .stroke(Stroke::new(1.0_f32, theme::c().border_soft))
                     .inner_margin(Margin::symmetric(20, 10)),
             )
             .show(ctx, |ui| {
@@ -65,14 +65,14 @@ impl RPlayerApp {
         } else {
             let (rect, _) = ui.allocate_exact_size(Vec2::splat(cover_size), Sense::hover());
             let painter = ui.painter();
-            painter.rect_filled(rect, CornerRadius::same(9), theme::CARD);
+            painter.rect_filled(rect, CornerRadius::same(9), theme::c().card);
             painter.rect_stroke(
                 rect,
                 CornerRadius::same(9),
-                Stroke::new(1.0_f32, theme::BORDER_SOFT),
+                Stroke::new(1.0_f32, theme::c().border_soft),
                 egui::StrokeKind::Inside,
             );
-            icons::paint(painter, rect.shrink(17.0), Icon::Music, theme::FAINT);
+            icons::paint(painter, rect.shrink(17.0), Icon::Music, theme::c().faint);
         }
 
         ui.add_space(12.0);
@@ -90,25 +90,25 @@ impl RPlayerApp {
                                 RichText::new(&track.title)
                                     .size(13.5)
                                     .strong()
-                                    .color(theme::TEXT),
+                                    .color(theme::c().text),
                             )
                             .truncate(),
                         );
                         ui.add(
-                            Label::new(RichText::new(&track.artist).size(11.5).color(theme::MUTED))
+                            Label::new(RichText::new(&track.artist).size(11.5).color(theme::c().muted))
                                 .truncate(),
                         );
                         ui.add(
-                            Label::new(RichText::new(&track.album).size(10.5).color(theme::FAINT))
+                            Label::new(RichText::new(&track.album).size(10.5).color(theme::c().faint))
                                 .truncate(),
                         );
                     }
                     None => {
-                        ui.label(RichText::new("未在播放").size(13.0).color(theme::MUTED));
+                        ui.label(RichText::new("未在播放").size(13.0).color(theme::c().muted));
                         ui.label(
                             RichText::new("从音乐库中选择一首歌")
                                 .size(10.5)
-                                .color(theme::FAINT),
+                                .color(theme::c().faint),
                         );
                     }
                 }
@@ -131,7 +131,7 @@ impl RPlayerApp {
                     ui,
                     Icon::Shuffle,
                     30.0,
-                    theme::MUTED,
+                    theme::c().muted,
                     self.shuffle,
                     "随机播放",
                 )
@@ -158,7 +158,7 @@ impl RPlayerApp {
                     ui,
                     self.repeat.icon(),
                     30.0,
-                    theme::MUTED,
+                    theme::c().muted,
                     repeat_active,
                     self.repeat.tooltip(),
                 )
@@ -175,7 +175,7 @@ impl RPlayerApp {
             ui.label(
                 RichText::new(model::format_duration(self.current_position()))
                     .font(FontId::monospace(10.5))
-                    .color(theme::FAINT),
+                    .color(theme::c().faint),
             );
 
             let bar_width = (ui.available_width() - 96.0).max(80.0);
@@ -193,7 +193,7 @@ impl RPlayerApp {
             ui.label(
                 RichText::new(model::format_duration(self.current_duration()))
                     .font(FontId::monospace(10.5))
-                    .color(theme::FAINT),
+                    .color(theme::c().faint),
             );
         });
     }
@@ -205,7 +205,7 @@ impl RPlayerApp {
             ui,
             Icon::Queue,
             34.0,
-            theme::MUTED,
+            theme::c().muted,
             self.queue_open,
             "播放队列",
         )
@@ -263,8 +263,8 @@ impl RPlayerApp {
             .max_height(438.0)
             .frame(
                 Frame::NONE
-                    .fill(theme::PANEL)
-                    .stroke(Stroke::new(1.0_f32, theme::BORDER))
+                    .fill(theme::c().panel)
+                    .stroke(Stroke::new(1.0_f32, theme::c().border))
                     .corner_radius(CornerRadius::same(16))
                     .inner_margin(Margin::same(14))
                     .shadow(egui::epaint::Shadow {
@@ -283,12 +283,12 @@ impl RPlayerApp {
                             RichText::new("播放队列")
                                 .size(15.0)
                                 .strong()
-                                .color(theme::TEXT),
+                                .color(theme::c().text),
                         );
                         ui.label(
                             RichText::new(format!("{} 首歌曲", queue.len()))
                                 .size(10.5)
-                                .color(theme::FAINT),
+                                .color(theme::c().faint),
                         );
                     });
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
@@ -297,7 +297,7 @@ impl RPlayerApp {
                         }
                         if !queue.is_empty() {
                             let clear = ui.add(
-                                Label::new(RichText::new("清空").size(11.0).color(theme::MUTED))
+                                Label::new(RichText::new("清空").size(11.0).color(theme::c().muted))
                                     .sense(Sense::click()),
                             );
                             if clear
@@ -324,14 +324,14 @@ impl RPlayerApp {
                                 Vec2::splat(22.0),
                             ),
                             Icon::Queue,
-                            theme::FAINT,
+                            theme::c().faint,
                         );
                         ui.add_space(28.0);
-                        ui.label(RichText::new("队列空空的").size(12.0).color(theme::MUTED));
+                        ui.label(RichText::new("队列空空的").size(12.0).color(theme::c().muted));
                         ui.label(
                             RichText::new("双击歌曲后，这里会显示接下来要播放的内容")
                                 .size(10.5)
-                                .color(theme::FAINT),
+                                .color(theme::c().faint),
                         );
                     });
                     ui.add_space(26.0);
@@ -363,7 +363,7 @@ impl RPlayerApp {
                                     theme::accent_alpha(0.09),
                                 );
                             } else if response.hovered() {
-                                painter.rect_filled(rect, CornerRadius::same(8), theme::CARD);
+                                painter.rect_filled(rect, CornerRadius::same(8), theme::c().card);
                             }
 
                             let number_pos = Pos2::new(rect.left() + 16.0, rect.center().y);
@@ -387,7 +387,7 @@ impl RPlayerApp {
                                             Vec2::new(2.2, height),
                                         ),
                                         CornerRadius::same(1),
-                                        theme::ACCENT,
+                                        theme::c().accent,
                                     );
                                 }
                             } else {
@@ -396,7 +396,7 @@ impl RPlayerApp {
                                     Align2::CENTER_CENTER,
                                     format!("{}", index + 1),
                                     FontId::proportional(10.5),
-                                    theme::FAINT,
+                                    theme::c().faint,
                                 );
                             }
 
@@ -410,14 +410,14 @@ impl RPlayerApp {
                                 Align2::LEFT_CENTER,
                                 &track.title,
                                 FontId::proportional(12.0),
-                                if current { theme::ACCENT } else { theme::TEXT },
+                                if current { theme::c().accent } else { theme::c().text },
                             );
                             title_clip.text(
                                 Pos2::new(text_left, rect.center().y + 8.0),
                                 Align2::LEFT_CENTER,
                                 &track.artist,
                                 FontId::proportional(10.0),
-                                theme::FAINT,
+                                theme::c().faint,
                             );
 
                             if response.clicked() {

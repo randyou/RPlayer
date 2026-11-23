@@ -41,6 +41,10 @@ pub enum Icon {
     HeartFilled,
     Sun,
     Moon,
+    Equalizer,
+    Lyrics,
+    MiniPlayer,
+    Expand,
 }
 
 struct Canvas {
@@ -193,7 +197,7 @@ pub fn paint(painter: &Painter, rect: Rect, icon: Icon, color: Color32) {
             c.painter.rect_filled(tab, side * 0.035, c.color);
             c.painter.rect_filled(body, side * 0.035, c.color);
             let cut = Rect::from_min_max(c.p(0.16, 0.39), c.p(0.84, 0.71));
-            c.painter.rect_filled(cut, side * 0.02, theme::PANEL);
+            c.painter.rect_filled(cut, side * 0.02, theme::c().panel);
         }
         Icon::Music => {
             c.disc(0.36, 0.73, 0.12);
@@ -320,19 +324,54 @@ pub fn paint(painter: &Painter, rect: Rect, icon: Icon, color: Color32) {
             c.arc(0.50, 0.50, 0.31, -1.35, 1.35);
             c.arc(0.63, 0.50, 0.24, 1.75, 4.50);
         }
+        Icon::Equalizer => {
+            for (x, knob) in [(0.24, 0.62), (0.50, 0.34), (0.76, 0.55)] {
+                c.line((x, 0.20), (x, 0.80));
+                c.disc(x, knob, 0.075);
+            }
+        }
+        Icon::Lyrics => {
+            let bubble = Rect::from_min_max(c.p(0.12, 0.18), c.p(0.88, 0.70));
+            c.painter.rect_stroke(
+                bubble,
+                side * 0.12,
+                Stroke::new(c.stroke, c.color),
+                egui::StrokeKind::Inside,
+            );
+            c.polyline(&[(0.34, 0.70), (0.31, 0.84), (0.50, 0.70)]);
+            c.line((0.27, 0.35), (0.68, 0.35));
+            c.line((0.27, 0.48), (0.59, 0.48));
+            c.line((0.27, 0.61), (0.73, 0.61));
+        }
+        Icon::MiniPlayer => {
+            let frame = Rect::from_min_max(c.p(0.10, 0.22), c.p(0.90, 0.78));
+            c.painter.rect_stroke(
+                frame,
+                side * 0.08,
+                Stroke::new(c.stroke, c.color),
+                egui::StrokeKind::Inside,
+            );
+            c.line((0.10, 0.58), (0.90, 0.58));
+            c.fill(&[(0.42, 0.34), (0.63, 0.46), (0.42, 0.58)]);
+        }
+        Icon::Expand => {
+            c.line((0.22, 0.78), (0.78, 0.22));
+            c.polyline(&[(0.52, 0.22), (0.78, 0.22), (0.78, 0.48)]);
+            c.polyline(&[(0.48, 0.78), (0.22, 0.78), (0.22, 0.52)]);
+        }
     }
 }
 
 /// The RPlayer mark: a mint squircle with a dark "R" and two waveform bars.
 pub fn logo(painter: &Painter, rect: Rect) {
-    painter.rect_filled(rect, rect.width() * 0.28, theme::ACCENT);
+    painter.rect_filled(rect, rect.width() * 0.28, theme::c().accent);
     let glyph = rect.shrink(rect.width() * 0.14);
     painter.text(
         glyph.center() + Vec2::new(-rect.width() * 0.10, 0.0),
         Align2::CENTER_CENTER,
         "R",
         FontId::proportional(rect.width() * 0.46),
-        theme::BG,
+        theme::c().on_accent,
     );
     for (i, h) in [0.16f32, 0.27, 0.20].iter().enumerate() {
         let x = glyph.right() - rect.width() * 0.12 + i as f32 * rect.width() * 0.07;
@@ -340,6 +379,6 @@ pub fn logo(painter: &Painter, rect: Rect) {
             Pos2::new(x, glyph.center().y),
             Vec2::new(rect.width() * 0.032, rect.height() * h),
         );
-        painter.rect_filled(bar, rect.width() * 0.02, theme::BG);
+        painter.rect_filled(bar, rect.width() * 0.02, theme::c().on_accent);
     }
 }

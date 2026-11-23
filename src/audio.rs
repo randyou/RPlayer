@@ -9,7 +9,9 @@ use std::path::Path;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
-use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink};
+use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink, Source};
+
+use crate::eq::{EqShared, EqualizerSource};
 
 pub struct AudioEngine {
     // The stream must outlive every sink created from its handle.
@@ -17,12 +19,13 @@ pub struct AudioEngine {
     handle: OutputStreamHandle,
     sink: Option<Sink>,
     volume: f32,
+    eq: std::sync::Arc<EqShared>,
     paused: bool,
     reported_finished: bool,
 }
 
 impl AudioEngine {
-    pub fn new(volume: f32) -> Result<Self> {
+    pub fn new(volume: f32, eq: std::sync::Arc<EqShared>) -> Result<Self> {
         let (stream, handle) =
             OutputStream::try_default().context("no audio output device available")?;
         Ok(Self {
@@ -30,6 +33,7 @@ impl AudioEngine {
             handle,
             sink: None,
             volume: volume.clamp(0.0, 1.0),
+            eq,
             paused: false,
             reported_finished: false,
         })
@@ -45,7 +49,8 @@ impl AudioEngine {
         self.stop();
         let sink = Sink::try_new(&self.handle).context("create audio sink")?;
         sink.set_volume(self.volume);
-        sink.append(decoder);
+        let converted = decoder.convert_samples::<f32>();
+        sink.append(EqualizerSource::new(converted, self.eq.clone()));
         sink.play();
         self.sink = Some(sink);
         self.paused = false;

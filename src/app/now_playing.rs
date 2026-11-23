@@ -26,8 +26,8 @@ impl RPlayerApp {
             .exact_height(112.0)
             .frame(
                 Frame::NONE
-                    .fill(Color32::from_rgb(10, 14, 13))
-                    .stroke(Stroke::new(1.0_f32, theme::BORDER_SOFT))
+                    .fill(theme::c().sidebar)
+                    .stroke(Stroke::new(1.0_f32, theme::c().border_soft))
                     .inner_margin(Margin {
                         left: 26,
                         right: 26,
@@ -51,13 +51,13 @@ impl RPlayerApp {
                         RichText::new("正在播放")
                             .size(11.5)
                             .strong()
-                            .color(theme::MUTED),
+                            .color(theme::c().muted),
                     );
-                    ui.label(RichText::new("·").size(11.0).color(theme::FAINT));
+                    ui.label(RichText::new("·").size(11.0).color(theme::c().faint));
                     ui.label(
                         RichText::new("RPlayer")
                             .size(11.0)
-                            .color(theme::FAINT),
+                            .color(theme::c().faint),
                     );
 
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
@@ -65,7 +65,7 @@ impl RPlayerApp {
                             ui,
                             Icon::Queue,
                             32.0,
-                            theme::MUTED,
+                            theme::c().muted,
                             self.queue_open,
                             "播放队列",
                         )
@@ -83,7 +83,7 @@ impl RPlayerApp {
                                 Icon::Heart
                             },
                             32.0,
-                            if favorite { theme::ACCENT } else { theme::MUTED },
+                            if favorite { theme::c().accent } else { theme::c().muted },
                             favorite,
                             if favorite { "取消收藏" } else { "收藏" },
                         )
@@ -92,6 +92,58 @@ impl RPlayerApp {
                             if let Some(id) = self.current {
                                 self.toggle_favorite(id);
                             }
+                        }
+
+                        ui.add_space(2.0);
+                        if widgets::icon_button(
+                            ui,
+                            if self.theme_mode.is_dark() {
+                                Icon::Sun
+                            } else {
+                                Icon::Moon
+                            },
+                            32.0,
+                            "切换主题",
+                        )
+                        .clicked()
+                        {
+                            self.toggle_theme(ui.ctx());
+                        }
+                        if widgets::icon_button_tinted(
+                            ui,
+                            Icon::Equalizer,
+                            32.0,
+                            theme::c().muted,
+                            self.eq_open,
+                            "均衡器",
+                        )
+                        .clicked()
+                        {
+                            self.toggle_eq();
+                        }
+                        if widgets::icon_button_tinted(
+                            ui,
+                            Icon::Lyrics,
+                            32.0,
+                            theme::c().muted,
+                            self.desktop_lyrics_open,
+                            "桌面歌词",
+                        )
+                        .clicked()
+                        {
+                            self.toggle_desktop_lyrics(ui.ctx());
+                        }
+                        if widgets::icon_button_tinted(
+                            ui,
+                            Icon::MiniPlayer,
+                            32.0,
+                            theme::c().muted,
+                            self.mini_open,
+                            "迷你播放器",
+                        )
+                        .clicked()
+                        {
+                            self.toggle_mini(ui.ctx());
                         }
                     });
                 });
@@ -124,18 +176,18 @@ impl RPlayerApp {
                                 let (rect, _) =
                                     ui.allocate_exact_size(Vec2::splat(cover_size), Sense::hover());
                                 let painter = ui.painter();
-                                painter.rect_filled(rect, CornerRadius::same(18), theme::CARD);
+                                painter.rect_filled(rect, CornerRadius::same(18), theme::c().card);
                                 painter.rect_stroke(
                                     rect,
                                     CornerRadius::same(18),
-                                    Stroke::new(1.0_f32, theme::BORDER),
+                                    Stroke::new(1.0_f32, theme::c().border),
                                     egui::StrokeKind::Inside,
                                 );
                                 icons::paint(
                                     painter,
                                     Rect::from_center_size(rect.center(), Vec2::splat(70.0)),
                                     Icon::Music,
-                                    theme::FAINT,
+                                    theme::c().faint,
                                 );
                             }
                         },
@@ -153,14 +205,14 @@ impl RPlayerApp {
                                     RichText::new(&track.title)
                                         .size(32.0)
                                         .strong()
-                                        .color(theme::TEXT),
+                                        .color(theme::c().text),
                                 )
                                 .truncate(),
                             );
                             ui.add_space(5.0);
                             ui.add(
                                 Label::new(
-                                    RichText::new(&track.artist).size(14.0).color(theme::MUTED),
+                                    RichText::new(&track.artist).size(14.0).color(theme::c().muted),
                                 )
                                 .truncate(),
                             );
@@ -174,7 +226,7 @@ impl RPlayerApp {
                                         model::format_duration(track.duration)
                                     ))
                                     .size(10.5)
-                                    .color(theme::FAINT),
+                                    .color(theme::c().faint),
                                 )
                                 .truncate(),
                             );
@@ -198,7 +250,7 @@ impl RPlayerApp {
             RichText::new("歌词")
                 .size(10.0)
                 .strong()
-                .color(theme::FAINT),
+                .color(theme::c().faint),
         );
         ui.add_space(10.0);
 
@@ -229,11 +281,11 @@ impl RPlayerApp {
             }
             let is_active = index == active;
             let color = if is_active {
-                theme::ACCENT
+                theme::c().accent
             } else if index.abs_diff(active) == 1 {
-                theme::TEXT
+                theme::c().text
             } else {
-                theme::FAINT
+                theme::c().faint
             };
             let size = if is_active { 19.0 } else { 14.0 };
             ui.add(
@@ -259,7 +311,7 @@ impl RPlayerApp {
             ui.label(
                 RichText::new(model::format_duration(self.current_position()))
                     .font(FontId::monospace(10.5))
-                    .color(theme::MUTED),
+                    .color(theme::c().muted),
             );
             let width = (ui.available_width() - 92.0).max(120.0);
             let seek = ui
@@ -275,7 +327,7 @@ impl RPlayerApp {
             ui.label(
                 RichText::new(model::format_duration(self.current_duration()))
                     .font(FontId::monospace(10.5))
-                    .color(theme::MUTED),
+                    .color(theme::c().muted),
             );
         });
 
@@ -292,7 +344,7 @@ impl RPlayerApp {
                         ui,
                         Icon::Shuffle,
                         30.0,
-                        theme::MUTED,
+                        theme::c().muted,
                         self.shuffle,
                         "随机播放",
                     )
@@ -305,7 +357,7 @@ impl RPlayerApp {
                         ui,
                         self.repeat.icon(),
                         30.0,
-                        theme::MUTED,
+                        theme::c().muted,
                         repeat_active,
                         self.repeat.tooltip(),
                     )
@@ -317,7 +369,7 @@ impl RPlayerApp {
                     ui.label(
                         RichText::new("正在播放")
                             .size(10.5)
-                            .color(theme::FAINT),
+                            .color(theme::c().faint),
                     );
                 },
             );
@@ -349,7 +401,7 @@ impl RPlayerApp {
                         ui,
                         Icon::Queue,
                         30.0,
-                        theme::MUTED,
+                        theme::c().muted,
                         self.queue_open,
                         "播放队列",
                     )
@@ -401,7 +453,7 @@ impl RPlayerApp {
             .frame(
                 Frame::NONE
                     .fill(Color32::from_rgb(14, 18, 17))
-                    .stroke(Stroke::new(1.0_f32, theme::BORDER_SOFT))
+                    .stroke(Stroke::new(1.0_f32, theme::c().border_soft))
                     .inner_margin(Margin::symmetric(18, 20)),
             )
             .show(ctx, |ui| {
@@ -412,12 +464,12 @@ impl RPlayerApp {
                             RichText::new("播放队列")
                                 .size(16.0)
                                 .strong()
-                                .color(theme::TEXT),
+                                .color(theme::c().text),
                         );
                         ui.label(
                             RichText::new(format!("共 {} 首", queue.len()))
                                 .size(10.5)
-                                .color(theme::FAINT),
+                                .color(theme::c().faint),
                         );
                     });
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
@@ -442,7 +494,7 @@ impl RPlayerApp {
                         ui.label(
                             RichText::new("队列空空的")
                                 .size(12.0)
-                                .color(theme::FAINT),
+                                .color(theme::c().faint),
                         );
                     });
                     return;
@@ -474,7 +526,7 @@ impl RPlayerApp {
                                 ui.painter().rect_filled(
                                     rect,
                                     CornerRadius::same(8),
-                                    theme::CARD,
+                                    theme::c().card,
                                 );
                             }
 
@@ -491,7 +543,7 @@ impl RPlayerApp {
                                     Align2::CENTER_CENTER,
                                     format!("{:02}", index + 1),
                                     FontId::monospace(10.5),
-                                    theme::FAINT,
+                                    theme::c().faint,
                                 );
                             }
 
@@ -504,14 +556,14 @@ impl RPlayerApp {
                                 Align2::LEFT_CENTER,
                                 format!("{} · {}", track.title, track.artist),
                                 FontId::proportional(11.5),
-                                if current { theme::ACCENT } else { theme::TEXT },
+                                if current { theme::c().accent } else { theme::c().text },
                             );
                             ui.painter().text(
                                 Pos2::new(rect.right() - 8.0, rect.center().y),
                                 Align2::RIGHT_CENTER,
                                 model::format_duration(track.duration),
                                 FontId::monospace(10.0),
-                                theme::FAINT,
+                                theme::c().faint,
                             );
 
                             if response.clicked() {
@@ -549,8 +601,19 @@ impl RPlayerApp {
 
 fn ambient_background(ui: &Ui) {
     let rect = ui.max_rect();
-    let top = Color32::from_rgb(12, 20, 17);
-    let bottom = Color32::from_rgb(7, 10, 9);
+    ui.painter()
+        .rect_filled(rect, CornerRadius::ZERO, theme::c().bg);
+    let (top, bottom) = if theme::c().dark {
+        (
+            Color32::from_rgb(12, 20, 17),
+            Color32::from_rgb(7, 10, 9),
+        )
+    } else {
+        (
+            Color32::from_rgb(250, 252, 248),
+            Color32::from_rgb(234, 240, 232),
+        )
+    };
 
     // Vertical gradient, painted as opaque bands (avoids alpha compositing
     // surprises and looks cleaner than a flat fill).
@@ -605,13 +668,13 @@ fn lyrics_placeholder(ui: &mut Ui) {
         RichText::new("暂无歌词")
             .size(22.0)
             .strong()
-            .color(theme::TEXT),
+            .color(theme::c().text),
     );
     ui.add_space(8.0);
     ui.label(
         RichText::new("将同名 .lrc 文件放在歌曲目录，RPlayer 会自动加载。")
             .size(11.5)
-            .color(theme::MUTED),
+            .color(theme::c().muted),
     );
 }
 
@@ -630,7 +693,7 @@ fn painter_eq(painter: &egui::Painter, center: Pos2, time: f32, playing: bool) {
                 Vec2::new(2.4, height),
             ),
             CornerRadius::same(1),
-            theme::ACCENT,
+            theme::c().accent,
         );
     }
 }

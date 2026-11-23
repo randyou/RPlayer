@@ -4,8 +4,10 @@
 
 mod app;
 mod audio;
+mod eq;
 mod lyrics;
 mod model;
+mod overlay;
 mod platform;
 mod scanner;
 mod storage;

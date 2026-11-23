@@ -36,8 +36,8 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
         .backdrop_color(Color32::from_black_alpha(175))
         .frame(
             Frame::NONE
-                .fill(theme::PANEL)
-                .stroke(Stroke::new(1.0_f32, theme::BORDER))
+                .fill(theme::c().panel)
+                .stroke(Stroke::new(1.0_f32, theme::c().border))
                 .corner_radius(CornerRadius::same(18))
                 .inner_margin(Margin::same(22))
                 .shadow(egui::epaint::Shadow {
@@ -63,7 +63,7 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                     ui.label(
                         RichText::new("播放列表只保存歌曲引用，不会移动或复制文件。")
                             .size(10.5)
-                            .color(theme::FAINT),
+                            .color(theme::c().faint),
                     );
                     ui.add_space(18.0);
 
@@ -115,7 +115,7 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                                 "「{name}」会被删除，但其中的歌曲仍会保留在音乐库。"
                             ))
                             .size(12.5)
-                            .color(theme::MUTED),
+                            .color(theme::c().muted),
                         )
                         .wrap(),
                     );
@@ -143,7 +143,7 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                                 "《{title}》会从 RPlayer 的音乐库中移除。\n磁盘上的音频文件不会被删除。"
                             ))
                             .size(12.5)
-                            .color(theme::MUTED),
+                            .color(theme::c().muted),
                         )
                         .wrap(),
                     );
@@ -167,7 +167,7 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                     let folders = app.library.folders.clone();
                     if folders.is_empty() {
                         Frame::NONE
-                            .fill(theme::CARD)
+                            .fill(theme::c().card)
                             .corner_radius(CornerRadius::same(10))
                             .inner_margin(Margin::symmetric(14, 18))
                             .show(ui, |ui| {
@@ -176,12 +176,12 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                                     ui.label(
                                         RichText::new("还没有添加音乐文件夹")
                                             .size(12.0)
-                                            .color(theme::MUTED),
+                                            .color(theme::c().muted),
                                     );
                                     ui.label(
                                         RichText::new("支持 MP3 / FLAC / WAV / OGG / M4A / AAC")
                                             .size(10.5)
-                                            .color(theme::FAINT),
+                                            .color(theme::c().faint),
                                     );
                                 });
                             });
@@ -201,7 +201,7 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                                             ui.painter(),
                                             rect,
                                             Icon::Folder,
-                                            theme::MUTED,
+                                            theme::c().muted,
                                         );
                                         let available = (ui.available_width() - 34.0).max(60.0);
                                         ui.allocate_ui_with_layout(
@@ -214,7 +214,7 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                                                             folder.display().to_string(),
                                                         )
                                                         .size(11.0)
-                                                        .color(theme::MUTED),
+                                                        .color(theme::c().muted),
                                                     )
                                                     .truncate(),
                                                 );
@@ -264,12 +264,12 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                             RichText::new("RPlayer")
                                 .size(21.0)
                                 .strong()
-                                .color(theme::TEXT),
+                                .color(theme::c().text),
                         );
                         ui.label(
-                            RichText::new("0.2.0 · 本地音乐播放器")
+                            RichText::new("0.3.0 · 本地音乐播放器")
                                 .size(11.0)
-                                .color(theme::MUTED),
+                                .color(theme::c().muted),
                         );
                         ui.add_space(12.0);
                         ui.add(
@@ -278,7 +278,7 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                                     "纯粹、快速的桌面音乐播放器。\n所有音乐与播放列表都保存在你的电脑上。",
                                 )
                                 .size(11.5)
-                                .color(theme::MUTED),
+                                .color(theme::c().muted),
                             )
                             .wrap(),
                         );
@@ -296,13 +296,13 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                     ui.label(
                         RichText::new("数据目录")
                             .size(10.0)
-                            .color(theme::FAINT),
+                            .color(theme::c().faint),
                     );
                     ui.add(
                         Label::new(
                             RichText::new(crate::storage::data_dir().display().to_string())
                                 .font(FontId::monospace(10.5))
-                                .color(theme::MUTED),
+                                .color(theme::c().muted),
                         )
                         .wrap(),
                     );
@@ -358,25 +358,25 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
 }
 
 fn dialog_header(ui: &mut Ui, title: &str, subtitle: &str) {
-    ui.label(RichText::new(title).size(19.0).strong().color(theme::TEXT));
+    ui.label(RichText::new(title).size(19.0).strong().color(theme::c().text));
     if !subtitle.is_empty() {
         ui.add_space(3.0);
-        ui.add(Label::new(RichText::new(subtitle).size(11.5).color(theme::MUTED)).wrap());
+        ui.add(Label::new(RichText::new(subtitle).size(11.5).color(theme::c().muted)).wrap());
     }
 }
 
 fn name_field(ui: &mut Ui, name: &mut String, hint: &str) -> egui::Response {
     Frame::NONE
-        .fill(theme::CARD)
-        .stroke(Stroke::new(1.0_f32, theme::BORDER))
+        .fill(theme::c().card)
+        .stroke(Stroke::new(1.0_f32, theme::c().border))
         .corner_radius(CornerRadius::same(10))
         .inner_margin(Margin::symmetric(10, 2))
         .show(ui, |ui| {
             ui.add(
                 TextEdit::singleline(name)
-                    .hint_text(RichText::new(hint).size(12.5).color(theme::FAINT))
+                    .hint_text(RichText::new(hint).size(12.5).color(theme::c().faint))
                     .font(FontId::proportional(13.5))
-                    .text_color(theme::TEXT)
+                    .text_color(theme::c().text)
                     .frame(false)
                     .desired_width(f32::INFINITY)
                     .margin(Margin::symmetric(2, 9)),
@@ -402,9 +402,9 @@ fn dialog_footer(ui: &mut Ui, confirm_label: &str, danger: bool) -> FooterAction
                     RichText::new(confirm_label)
                         .size(13.0)
                         .strong()
-                        .color(theme::BG),
+                        .color(theme::c().on_accent),
                 )
-                .fill(theme::DANGER)
+                .fill(theme::c().danger)
                 .corner_radius(10)
                 .min_size(Vec2::new(84.0, 36.0))
             } else {
@@ -412,9 +412,9 @@ fn dialog_footer(ui: &mut Ui, confirm_label: &str, danger: bool) -> FooterAction
                     RichText::new(confirm_label)
                         .size(13.0)
                         .strong()
-                        .color(theme::BG),
+                        .color(theme::c().on_accent),
                 )
-                .fill(theme::ACCENT)
+                .fill(theme::c().accent)
                 .corner_radius(10)
                 .min_size(Vec2::new(84.0, 36.0))
             };
