@@ -925,20 +925,28 @@ impl RPlayerApp {
             return;
         }
 
-        match self.choose_next() {
-            Some(index) => {
-                self.queue_index = index;
-                if !self.start_current(ctx) {
-                    if let Some(audio) = &mut self.audio {
-                        audio.stop();
-                    }
-                }
-            }
-            None => {
+        // A missing or corrupt file must not stop the queue. Try subsequent
+        // entries until one opens, or all candidates fail.
+        let max_attempts = self.queue.len().max(1);
+        let mut attempts = 0;
+        loop {
+            if attempts >= max_attempts {
                 if let Some(audio) = &mut self.audio {
                     audio.stop();
                 }
+                return;
             }
+            let Some(index) = self.choose_next() else {
+                if let Some(audio) = &mut self.audio {
+                    audio.stop();
+                }
+                return;
+            };
+            self.queue_index = index;
+            if self.start_current(ctx) {
+                return;
+            }
+            attempts += 1;
         }
     }
 
