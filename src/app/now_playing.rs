@@ -390,7 +390,7 @@ impl RPlayerApp {
 
         let start = active.map(|active| active.saturating_sub(4)).unwrap_or(0);
         let visible = 9;
-        let line_height = 34.0;
+        let line_height = 44.0;
         let top_gap = ((content_height - 160.0 - visible as f32 * line_height) * 0.5).max(0.0);
         ui.add_space(top_gap.min(24.0));
 
@@ -427,7 +427,7 @@ impl RPlayerApp {
             {
                 self.seek_to(*time);
             }
-            ui.add_space(if is_active { 10.0 } else { 7.0 });
+            ui.add_space(if is_active { 16.0 } else { 12.0 });
             shown += 1;
         }
         if shown == 0 {
