@@ -134,10 +134,24 @@ impl RPlayerApp {
             }))
             .show(ctx, |ui| {
                 self.central_header(ui, ids, total_seconds);
-                ui.add_space(14.0);
+                ui.add_space(10.0);
+                if matches!(self.view, View::Library | View::Albums | View::Artists) {
+                    self.browse_tabs(ui);
+                    ui.add_space(12.0);
+                } else {
+                    ui.add_space(4.0);
+                }
 
                 if self.view == View::Folders {
                     self.folders_page(ui);
+                    return;
+                }
+                if self.view == View::Albums {
+                    self.albums_page(ui, ids);
+                    return;
+                }
+                if self.view == View::Artists {
+                    self.artists_page(ui, ids);
                     return;
                 }
 
@@ -170,7 +184,25 @@ impl RPlayerApp {
     }
 
     fn central_header(&mut self, ui: &mut Ui, ids: &[u64], total_seconds: f64) {
-        let (title, subtitle) = self.view_header(ids.len(), total_seconds);
+        let (title, subtitle) = match self.view {
+            View::Albums => (
+                "专辑".to_string(),
+                format!(
+                    "{} 张专辑 · {} 首歌曲",
+                    self.album_groups(ids).len(),
+                    ids.len()
+                ),
+            ),
+            View::Artists => (
+                "艺术家".to_string(),
+                format!(
+                    "{} 位艺术家 · {} 首歌曲",
+                    self.artist_groups(ids).len(),
+                    ids.len()
+                ),
+            ),
+            _ => self.view_header(ids.len(), total_seconds),
+        };
         ui.horizontal(|ui| {
             ui.vertical(|ui| {
                 ui.spacing_mut().item_spacing.y = 2.0;
@@ -310,11 +342,15 @@ impl RPlayerApp {
             if !ids.is_empty() && widgets::primary_button(ui, "播放全部").clicked() {
                 self.play_queue(ui.ctx(), ids.to_vec(), 0);
             }
-            if self.view != View::Folders && widgets::secondary_button(ui, "添加").clicked() {
+            let table_view = !matches!(
+                self.view,
+                View::Folders | View::Albums | View::Artists
+            );
+            if table_view && widgets::secondary_button(ui, "添加").clicked() {
                 self.open_folder_picker();
             }
 
-            if self.view != View::Folders {
+            if table_view {
                 let label = if self.batch_mode { "完成" } else { "批量操作" };
                 if widgets::secondary_button(ui, label).clicked() {
                     self.batch_mode = !self.batch_mode;

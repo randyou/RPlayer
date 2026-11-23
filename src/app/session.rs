@@ -95,6 +95,8 @@ impl RPlayerApp {
     fn view_key(&self) -> String {
         match self.view {
             View::Library => "library".to_string(),
+            View::Albums => "albums".to_string(),
+            View::Artists => "artists".to_string(),
             View::Favorites => "favorites".to_string(),
             View::Recent => "recent".to_string(),
             View::Folders => "folders".to_string(),
@@ -104,6 +106,8 @@ impl RPlayerApp {
 
     fn restore_view(&mut self, key: &str) {
         self.view = match key {
+            "albums" => View::Albums,
+            "artists" => View::Artists,
             "favorites" => View::Favorites,
             "recent" => View::Recent,
             "folders" => View::Folders,

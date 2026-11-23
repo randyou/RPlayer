@@ -1,5 +1,6 @@
 //! Application state, playback orchestration and the root layout.
 
+mod browse;
 mod dialogs;
 mod equalizer;
 mod library_view;
@@ -39,6 +40,8 @@ use crate::ui::icons::{self, Icon};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum View {
     Library,
+    Albums,
+    Artists,
     Favorites,
     Recent,
     Folders,
@@ -135,6 +138,9 @@ pub struct RPlayerApp {
     stats_dirty: bool,
     last_stats_save: std::time::Instant,
     play_credited: bool,
+    browse: browse::BrowseState,
+    album_focus: Option<String>,
+    artist_focus: Option<String>,
     audio: Option<AudioEngine>,
     eq: Arc<EqShared>,
     view: View,
@@ -250,6 +256,9 @@ impl RPlayerApp {
             stats_dirty: false,
             last_stats_save: std::time::Instant::now(),
             play_credited: false,
+            browse: browse::BrowseState::new(),
+            album_focus: None,
+            artist_focus: None,
             audio,
             eq,
             view: View::Library,
@@ -1424,12 +1433,17 @@ impl RPlayerApp {
 
     fn switch_view(&mut self, view: View) {
         if self.view == view {
+            self.album_focus = None;
+            self.artist_focus = None;
+            self.selected = None;
             return;
         }
         self.view = view;
         self.selected = None;
         self.batch_mode = false;
         self.checked.clear();
+        self.album_focus = None;
+        self.artist_focus = None;
     }
 
     fn set_theme_mode(&mut self, ctx: &egui::Context, mode: ThemeMode) {
@@ -1662,6 +1676,38 @@ impl RPlayerApp {
                 tracks.sort_by(|a, b| compare_tracks(a, b, sort));
                 tracks.into_iter().map(|track| track.id).collect()
             }
+            View::Albums => {
+                let mut tracks: Vec<&Track> = self
+                    .library
+                    .tracks
+                    .iter()
+                    .filter(|track| track_matches(track, &terms))
+                    .collect();
+                tracks.sort_by(|a, b| {
+                    a.album
+                        .to_lowercase()
+                        .cmp(&b.album.to_lowercase())
+                        .then_with(|| a.artist.to_lowercase().cmp(&b.artist.to_lowercase()))
+                        .then_with(|| a.track_number.cmp(&b.track_number))
+                });
+                tracks.into_iter().map(|track| track.id).collect()
+            }
+            View::Artists => {
+                let mut tracks: Vec<&Track> = self
+                    .library
+                    .tracks
+                    .iter()
+                    .filter(|track| track_matches(track, &terms))
+                    .collect();
+                tracks.sort_by(|a, b| {
+                    a.artist
+                        .to_lowercase()
+                        .cmp(&b.artist.to_lowercase())
+                        .then_with(|| a.album.to_lowercase().cmp(&b.album.to_lowercase()))
+                        .then_with(|| a.track_number.cmp(&b.track_number))
+                });
+                tracks.into_iter().map(|track| track.id).collect()
+            }
         }
     }
 
@@ -1670,6 +1716,14 @@ impl RPlayerApp {
             View::Library => (
                 "本地曲库".to_string(),
                 model::format_library_summary(count, total_seconds),
+            ),
+            View::Albums => (
+                "专辑".to_string(),
+                format!("{count} 首歌曲 · 按专辑浏览"),
+            ),
+            View::Artists => (
+                "艺术家".to_string(),
+                format!("{count} 首歌曲 · 按艺术家浏览"),
             ),
             View::Favorites => (
                 "我的收藏".to_string(),
@@ -2175,6 +2229,7 @@ impl eframe::App for RPlayerApp {
         self.restore_pending_playback(ctx);
         self.poll_audio(ctx);
         self.poll_stats();
+        self.poll_thumbnails(ctx);
         self.poll_lyrics_fetch();
         self.poll_cover_fetch(ctx);
         self.poll_media_keys(ctx);

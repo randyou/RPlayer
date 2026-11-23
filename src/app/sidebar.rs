@@ -55,7 +55,7 @@ impl RPlayerApp {
             Icon::Disc,
             "本地曲库",
             Some(self.library.tracks.len()),
-            self.view == View::Library,
+            matches!(self.view, View::Library | View::Albums | View::Artists),
         )
         .clicked()
         {
