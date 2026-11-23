@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
-use crate::model::Library;
+use crate::model::{Library, Track};
 
 pub const APP_DIR_NAME: &str = "RPlayer";
 pub const LIBRARY_FILE: &str = "library.json";
@@ -24,6 +24,10 @@ pub fn data_dir() -> PathBuf {
 
 pub fn library_path() -> PathBuf {
     data_dir().join(LIBRARY_FILE)
+}
+
+pub fn library_db_path() -> PathBuf {
+    data_dir().join("library.db")
 }
 
 /// Cached lyrics downloaded from LRCLIB live under the app data directory so
@@ -58,6 +62,7 @@ struct LibraryFile {
 
 pub fn load_library() -> Library {
     let path = library_path();
+    let db_exists = library_db_path().exists();
     match fs::read(&path) {
         Ok(bytes) => match serde_json::from_slice::<LibraryFile>(&bytes) {
             Ok(file) => {
@@ -79,6 +84,17 @@ pub fn load_library() -> Library {
                 if file.schema < 5 {
                     library.auto_cover = true;
                 }
+                if db_exists {
+                    if let Ok(tracks) = load_tracks_from_db() {
+                        library.tracks = tracks;
+                    }
+                } else if !library.tracks.is_empty() {
+                    // First SQLite launch: keep a JSON backup, then import the
+                    // tracks into library.db.
+                    let backup = data_dir().join("library.json.bak");
+                    let _ = fs::copy(&path, backup);
+                    let _ = save_tracks_to_db(&library.tracks);
+                }
                 library
             }
             Err(err) => {
@@ -98,9 +114,16 @@ pub fn save_library(library: &Library) -> Result<()> {
     let dir = data_dir();
     fs::create_dir_all(&dir).with_context(|| format!("create {}", dir.display()))?;
     let path = dir.join(LIBRARY_FILE);
+    // Tracks live in SQLite; JSON keeps settings and playlists. If SQLite
+    // fails, fall back to embedding tracks in JSON so nothing is lost.
+    let db_ok = save_tracks_to_db(&library.tracks).is_ok();
+    let mut settings = library.clone();
+    if db_ok {
+        settings.tracks.clear();
+    }
     let payload = LibraryFile {
         schema: SCHEMA_VERSION,
-        library: library.clone(),
+        library: settings,
     };
     let bytes = serde_json::to_vec_pretty(&payload)?;
 
@@ -114,6 +137,84 @@ pub fn save_library(library: &Library) -> Result<()> {
     Ok(())
 }
 
+fn open_library_db() -> Result<rusqlite::Connection> {
+    let path = library_db_path();
+    let conn = rusqlite::Connection::open(&path)
+        .with_context(|| format!("open {}", path.display()))?;
+    conn.execute_batch(
+        "PRAGMA journal_mode=WAL;
+         PRAGMA synchronous=NORMAL;
+         CREATE TABLE IF NOT EXISTS tracks (
+            id INTEGER PRIMARY KEY,
+            path TEXT NOT NULL,
+            title TEXT NOT NULL,
+            artist TEXT NOT NULL,
+            album TEXT NOT NULL,
+            genre TEXT NOT NULL,
+            year INTEGER,
+            track_number INTEGER,
+            duration REAL NOT NULL,
+            added_at INTEGER NOT NULL
+         );",
+    )?;
+    Ok(conn)
+}
+
+fn load_tracks_from_db() -> Result<Vec<Track>> {
+    let conn = open_library_db()?;
+    let mut stmt = conn.prepare(
+        "SELECT id,path,title,artist,album,genre,year,track_number,duration,added_at
+         FROM tracks ORDER BY id",
+    )?;
+    let rows = stmt.query_map([], |row| {
+        Ok(Track {
+            id: row.get::<_, i64>(0)? as u64,
+            path: PathBuf::from(row.get::<_, String>(1)?),
+            title: row.get(2)?,
+            artist: row.get(3)?,
+            album: row.get(4)?,
+            genre: row.get(5)?,
+            year: row.get::<_, Option<i64>>(6)?.map(|v| v as u32),
+            track_number: row.get::<_, Option<i64>>(7)?.map(|v| v as u32),
+            duration: row.get(8)?,
+            added_at: row.get::<_, i64>(9)? as u64,
+        })
+    })?;
+    let mut tracks = Vec::new();
+    for row in rows {
+        tracks.push(row?);
+    }
+    Ok(tracks)
+}
+
+fn save_tracks_to_db(tracks: &[Track]) -> Result<()> {
+    let mut conn = open_library_db()?;
+    let tx = conn.transaction()?;
+    tx.execute("DELETE FROM tracks", [])?;
+    {
+        let mut stmt = tx.prepare(
+            "INSERT INTO tracks
+             (id,path,title,artist,album,genre,year,track_number,duration,added_at)
+             VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10)",
+        )?;
+        for track in tracks {
+            stmt.execute(rusqlite::params![
+                track.id as i64,
+                track.path.to_string_lossy(),
+                track.title,
+                track.artist,
+                track.album,
+                track.genre,
+                track.year.map(|v| v as i64),
+                track.track_number.map(|v| v as i64),
+                track.duration,
+                track.added_at as i64,
+            ])?;
+        }
+    }
+    tx.commit()?;
+    Ok(())
+}
 #[cfg(test)]
 mod tests {
     use super::*;
