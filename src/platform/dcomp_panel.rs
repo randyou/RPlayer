@@ -29,9 +29,9 @@ use windows::Win32::Graphics::Dwm::{
 };
 use windows::Win32::Graphics::Dxgi::{IDXGIDevice, IDXGISurface};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
-use windows::Win32::UI::Input::KeyboardAndMouse::ReleaseCapture;
+use windows::Win32::UI::Input::KeyboardAndMouse::{GetCapture, ReleaseCapture, SetCapture};
 use windows::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExW, DefWindowProcW, FindWindowW, GetClientRect, PostMessageW, RegisterClassW, SendMessageW, SetWindowPos, ShowWindow, HCURSOR, HICON,
+    CreateWindowExW, DefWindowProcW, FindWindowW, GetClientRect, GetCursorPos, GetWindowRect, PostMessageW, RegisterClassW, SendMessageW, SetWindowPos, ShowWindow, HCURSOR, HICON,
     SWP_NOACTIVATE, SWP_SHOWWINDOW, SW_SHOWNOACTIVATE, WM_ERASEBKGND, WNDCLASSW, WNDPROC,
     WS_EX_NOACTIVATE, WS_EX_NOREDIRECTIONBITMAP, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT, WS_POPUP,
 };
@@ -52,6 +52,12 @@ struct Panel {
 unsafe impl Send for Panel {}
 
 static PANEL_OWNER: std::sync::atomic::AtomicIsize =
+    std::sync::atomic::AtomicIsize::new(0);
+static DRAG_OWNER: std::sync::atomic::AtomicIsize =
+    std::sync::atomic::AtomicIsize::new(0);
+static DRAG_START: std::sync::atomic::AtomicIsize =
+    std::sync::atomic::AtomicIsize::new(0);
+static DRAG_WIN: std::sync::atomic::AtomicIsize =
     std::sync::atomic::AtomicIsize::new(0);
 
 static PANEL: OnceLock<Mutex<Option<Panel>>> = OnceLock::new();
@@ -107,18 +113,52 @@ unsafe extern "system" fn panel_proc(
                     let _ = PostMessageW(owner_hwnd, 0x0202, windows::Win32::Foundation::WPARAM(0), windows::Win32::Foundation::LPARAM(packed));
                 }
             } else {
+                let owner_hwnd = HWND(owner as *mut core::ffi::c_void);
+                let mut cursor = windows::Win32::Foundation::POINT::default();
+                let mut window = windows::Win32::Foundation::RECT::default();
                 unsafe {
-                    let _ = ReleaseCapture();
-                    let _ = SendMessageW(
-                        HWND(owner as *mut core::ffi::c_void),
-                        0x00A1,
-                        windows::Win32::Foundation::WPARAM(2),
-                        windows::Win32::Foundation::LPARAM(0),
-                    );
+                    let _ = GetCursorPos(&mut cursor);
+                    let _ = GetWindowRect(owner_hwnd, &mut window);
+                    let _ = SetCapture(hwnd);
                 }
+                DRAG_OWNER.store(owner, std::sync::atomic::Ordering::SeqCst);
+                DRAG_START.store(
+                    ((cursor.x as isize) << 32) | (cursor.y as isize & 0xFFFF_FFFF),
+                    std::sync::atomic::Ordering::SeqCst,
+                );
+                DRAG_WIN.store(
+                    ((window.left as isize) << 32) | (window.top as isize & 0xFFFF_FFFF),
+                    std::sync::atomic::Ordering::SeqCst,
+                );
             }
             return LRESULT(0);
         }
+    }
+    if msg == 0x0200 && unsafe { GetCapture() } == hwnd {
+        let owner = DRAG_OWNER.load(std::sync::atomic::Ordering::SeqCst);
+        if owner != 0 {
+            let start = DRAG_START.load(std::sync::atomic::Ordering::SeqCst);
+            let window = DRAG_WIN.load(std::sync::atomic::Ordering::SeqCst);
+            let mut cursor = windows::Win32::Foundation::POINT::default();
+            unsafe { let _ = GetCursorPos(&mut cursor); }
+            let dx = cursor.x - ((start >> 32) as i32);
+            let dy = cursor.y - (start as i32);
+            let x = ((window >> 32) as i32) + dx;
+            let y = (window as i32) + dy;
+            unsafe {
+                let flags = 0x0001 | 0x0004 | 0x0010; // NOSIZE|NOZORDER|NOACTIVATE
+                let _ = SetWindowPos(HWND(owner as *mut core::ffi::c_void), None, x, y, 0, 0, windows::Win32::UI::WindowsAndMessaging::SET_WINDOW_POS_FLAGS(flags));
+                let _ = SetWindowPos(hwnd, None, x, y, 0, 0, windows::Win32::UI::WindowsAndMessaging::SET_WINDOW_POS_FLAGS(flags));
+            }
+            return LRESULT(0);
+        }
+    }
+    if msg == 0x0202 {
+        if unsafe { GetCapture() } == hwnd {
+            unsafe { let _ = ReleaseCapture(); }
+        }
+        DRAG_OWNER.store(0, std::sync::atomic::Ordering::SeqCst);
+        return LRESULT(0);
     }
     DefWindowProcW(hwnd, msg, wparam, lparam)
 }
