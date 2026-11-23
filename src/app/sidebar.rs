@@ -118,15 +118,29 @@ impl RPlayerApp {
         let rail_ready = Self::rail_available(ui.ctx()) && self.current.is_some();
         let queue_active = self.queue_open
             || (rail_ready && self.now_rail_open && self.rail_queue);
-        if widgets::nav_item(
-            ui,
-            Icon::Queue,
-            "播放队列",
-            Some(self.queue.len()),
-            queue_active,
-        )
-        .clicked()
-        {
+        let (queue_zone, dropped) = ui.dnd_drop_zone::<Vec<u64>, _>(
+            Frame::NONE,
+            |ui| {
+                widgets::nav_item(
+                    ui,
+                    Icon::Queue,
+                    "播放队列",
+                    Some(self.queue.len()),
+                    queue_active,
+                )
+            },
+        );
+        let queue_response = queue_zone.inner;
+        if let Some(payload) = dropped {
+            let added = self.append_to_queue(payload.as_slice());
+            if added > 0 {
+                self.toast(
+                    format!("已加入播放队列：{added} 首"),
+                    super::ToastKind::Info,
+                );
+            }
+        }
+        if queue_response.clicked() {
             if rail_ready {
                 if self.now_rail_open && self.rail_queue {
                     self.rail_queue = false;
@@ -188,6 +202,15 @@ impl RPlayerApp {
                 for (id, name) in &playlists {
                     let selected = self.view == View::Playlist(*id);
                     let response = widgets::playlist_item(ui, name, selected);
+                    if let Some(payload) = response.dnd_release_payload::<Vec<u64>>() {
+                        let added = self.add_ids_to_playlist(*id, payload.as_slice());
+                        if added > 0 {
+                            self.toast(
+                                format!("已加入「{name}」：{added} 首"),
+                                super::ToastKind::Success,
+                            );
+                        }
+                    }
                     if response.clicked() {
                         self.switch_view(View::Playlist(*id));
                     }

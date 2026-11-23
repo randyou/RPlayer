@@ -181,6 +181,7 @@ pub struct RPlayerApp {
     expanded: bool,
     batch_mode: bool,
     checked: HashSet<u64>,
+    selection_anchor: Option<u64>,
     scanning: bool,
     scan_rx: Option<Receiver<ScanEvent>>,
     scan_total: usize,
@@ -296,6 +297,7 @@ impl RPlayerApp {
             expanded: false,
             batch_mode: false,
             checked: HashSet::new(),
+            selection_anchor: None,
             scanning: false,
             scan_rx: None,
             scan_total: 0,
@@ -770,6 +772,21 @@ impl RPlayerApp {
         } else {
             None
         }
+    }
+
+    fn append_to_queue(&mut self, ids: &[u64]) -> usize {
+        let mut added = 0;
+        for id in ids {
+            if !self.queue.contains(id) {
+                self.queue.push(*id);
+                added += 1;
+            }
+        }
+        if added > 0 {
+            self.last_session_save =
+                Instant::now() - Duration::from_secs(6);
+        }
+        added
     }
 
     fn reorder_queue(&mut self, from: usize, to: usize) {
@@ -1442,6 +1459,7 @@ impl RPlayerApp {
         self.selected = None;
         self.batch_mode = false;
         self.checked.clear();
+        self.selection_anchor = None;
         self.album_focus = None;
         self.artist_focus = None;
     }
@@ -1524,6 +1542,31 @@ impl RPlayerApp {
         if !self.checked.remove(&id) {
             self.checked.insert(id);
         }
+        self.selection_anchor = Some(id);
+    }
+
+    fn select_range(&mut self, ids: &[u64], target: u64) {
+        let Some(anchor) = self.selection_anchor else {
+            self.checked.clear();
+            self.checked.insert(target);
+            self.selection_anchor = Some(target);
+            self.batch_mode = true;
+            return;
+        };
+        let Some(from) = ids.iter().position(|id| *id == anchor) else {
+            self.checked.clear();
+            self.checked.insert(target);
+            self.selection_anchor = Some(target);
+            self.batch_mode = true;
+            return;
+        };
+        let Some(to) = ids.iter().position(|id| *id == target) else {
+            return;
+        };
+        let (start, end) = if from <= to { (from, to) } else { (to, from) };
+        self.checked.clear();
+        self.checked.extend(ids[start..=end].iter().copied());
+        self.batch_mode = true;
     }
 
     fn set_all_checked(&mut self, ids: &[u64], checked: bool) {
@@ -1536,20 +1579,27 @@ impl RPlayerApp {
         }
     }
 
-    fn batch_add_to_playlist(&mut self, playlist_id: u64) {
-        let ids: Vec<u64> = self.checked.iter().copied().collect();
+    fn add_ids_to_playlist(&mut self, playlist_id: u64, ids: &[u64]) -> usize {
         let mut added = 0usize;
         for id in ids {
-            if self.library.add_to_playlist(playlist_id, id) {
+            if self.library.add_to_playlist(playlist_id, *id) {
                 added += 1;
             }
         }
+        if added > 0 {
+            self.persist();
+        }
+        added
+    }
+
+    fn batch_add_to_playlist(&mut self, playlist_id: u64) {
+        let ids: Vec<u64> = self.checked.iter().copied().collect();
+        let added = self.add_ids_to_playlist(playlist_id, &ids);
         let name = self
             .library
             .playlist(playlist_id)
             .map(|playlist| playlist.name.clone())
             .unwrap_or_default();
-        self.persist();
         self.toast(
             format!("已添加 {added} 首歌曲到「{name}」"),
             ToastKind::Success,
@@ -1934,6 +1984,10 @@ impl RPlayerApp {
                 self.eq_open = false;
             } else if self.queue_open {
                 self.queue_open = false;
+            } else if self.batch_mode && !self.checked.is_empty() {
+                self.checked.clear();
+                self.selection_anchor = None;
+                self.batch_mode = false;
             } else if self.expanded {
                 self.expanded = false;
             }
@@ -1953,6 +2007,7 @@ impl RPlayerApp {
             open_folder,
             new_playlist,
             find,
+            select_all,
             theme_key,
             equalizer_key,
             lyrics_key,
@@ -1969,6 +2024,7 @@ impl RPlayerApp {
                 i.key_pressed(Key::O),
                 i.key_pressed(Key::N),
                 i.key_pressed(Key::F),
+                i.key_pressed(Key::A),
                 i.key_pressed(Key::T),
                 i.key_pressed(Key::E),
                 i.key_pressed(Key::L),
@@ -1982,6 +2038,14 @@ impl RPlayerApp {
         } else if find && self.current.is_some() {
             self.expanded = !self.expanded;
             self.queue_open = false;
+        }
+        if modifiers.command && select_all {
+            let ids = self.visible_ids();
+            if !ids.is_empty() {
+                self.batch_mode = true;
+                self.set_all_checked(&ids, true);
+                self.selection_anchor = ids.first().copied();
+            }
         }
         if modifiers.command && ctx.input(|input| input.key_pressed(Key::Comma)) {
             self.settings_open = !self.settings_open;

@@ -648,20 +648,13 @@ impl RPlayerApp {
     }
 
     fn enqueue_ids(&mut self, ids: &[u64]) {
-        let mut added = 0;
-        for id in ids {
-            if !self.queue.contains(id) {
-                self.queue.push(*id);
-                added += 1;
-            }
-        }
+        let added = self.append_to_queue(ids);
         if added > 0 {
             self.toast(
                 format!("已加入播放队列：{added} 首"),
                 super::ToastKind::Info,
             );
         }
-        self.last_session_save = std::time::Instant::now() - std::time::Duration::from_secs(6);
     }
 
     fn browse_empty(&self, ui: &mut Ui, text: &str) {

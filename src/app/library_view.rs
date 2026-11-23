@@ -393,7 +393,7 @@ impl RPlayerApp {
                 ui.horizontal(|ui| {
                     ui.label(
                         RichText::new(if self.checked.is_empty() {
-                            "批量操作：点击歌曲勾选".to_string()
+                            "批量操作：Ctrl 点选 · Shift 范围选择".to_string()
                         } else {
                             format!("已选择 {} 首歌曲", self.checked.len())
                         })
@@ -548,7 +548,7 @@ impl RPlayerApp {
                         continue;
                     };
                     let (rect, response) =
-                        ui.allocate_exact_size(Vec2::new(width, ROW_HEIGHT), Sense::click());
+                        ui.allocate_exact_size(Vec2::new(width, ROW_HEIGHT), Sense::click_and_drag());
                     let response = response.on_hover_cursor(egui::CursorIcon::PointingHand);
                     let current = self.current == Some(id);
                     let selected = self.selected == Some(id);
@@ -772,12 +772,34 @@ impl RPlayerApp {
                     } else if response.double_clicked() {
                         self.play_track(ui.ctx(), id);
                     } else if response.clicked() {
-                        if self.batch_mode {
+                        let (shift, command) = ui.input(|input| {
+                            (
+                                input.modifiers.shift,
+                                input.modifiers.command || input.modifiers.ctrl,
+                            )
+                        });
+                        if shift {
+                            self.select_range(ids, id);
+                        } else if command {
+                            self.batch_mode = true;
+                            self.toggle_checked(id);
+                        } else if self.batch_mode {
                             self.toggle_checked(id);
                         } else {
                             self.selected = Some(id);
+                            self.selection_anchor = Some(id);
                         }
                     }
+
+                    let drag_ids: Vec<u64> = if self.checked.contains(&id) {
+                        ids.iter()
+                            .filter(|candidate| self.checked.contains(*candidate))
+                            .copied()
+                            .collect()
+                    } else {
+                        vec![id]
+                    };
+                    response.dnd_set_drag_payload(drag_ids);
 
                     response.context_menu(|ui| {
                         if ui.button("播放").clicked() {
