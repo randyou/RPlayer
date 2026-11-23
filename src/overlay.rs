@@ -561,7 +561,10 @@ pub fn show_mini(
             .frame(Frame::NONE)
             .show(ctx, |ui| {
                 let card = ui.max_rect();
-                let card_shape = card.shrink(1.0);
+                let card_shape = card;
+                // Fill the whole client area first; otherwise the outermost
+                // pixel shows the black window background as a border.
+                ui.painter().rect_filled(card, CornerRadius::ZERO, theme::c().panel);
                 ui.painter().rect_filled(
                     card_shape,
                     CornerRadius::same(18),
