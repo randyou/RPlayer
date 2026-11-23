@@ -38,7 +38,7 @@ impl RPlayerApp {
 
                 ui.scope_builder(egui::UiBuilder::new().max_rect(full), |ui| {
                     ui.set_clip_rect(screen);
-                    ui.horizontal(|ui| {
+                    ui.horizontal_centered(|ui| {
                         ui.spacing_mut().item_spacing.x = 0.0;
                         ui.allocate_ui_with_layout(
                             Vec2::new(side, ui.available_height()),
@@ -50,8 +50,12 @@ impl RPlayerApp {
                         );
 
                         ui.add_space(12.0);
+                        // 50px transport row + 3px gap + 18px seek row. Using
+                        // the content height (instead of stretching to the
+                        // whole bar) lets the parent `Align::Center` place the
+                        // entire transport block on the bar's vertical center.
                         ui.allocate_ui_with_layout(
-                            Vec2::new(center, ui.available_height()),
+                            Vec2::new(center, 71.0),
                             Layout::top_down(Align::Center),
                             |ui| {
                                 ui.set_min_width(center);
