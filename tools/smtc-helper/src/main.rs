@@ -31,11 +31,6 @@ fn main() {
         CreateWindowExW, HMENU, WINDOW_EX_STYLE, WINDOW_STYLE,
     };
 
-    #[link(name = "shell32")]
-    extern "system" {
-        fn SetCurrentProcessExplicitAppUserModelID(app_id: *const u16) -> i32;
-    }
-
     let Some(hwnd) = std::env::args().nth(1).and_then(|arg| arg.parse::<isize>().ok()) else {
         return;
     };
@@ -44,10 +39,7 @@ fn main() {
     }
 
     let _ = unsafe { RoInitialize(RO_INIT_SINGLETHREADED) };
-    let app_id: Vec<u16> = "RPlayer\0".encode_utf16().collect();
-    unsafe {
-        let _ = SetCurrentProcessExplicitAppUserModelID(app_id.as_ptr());
-    }
+
     let hidden = unsafe {
         CreateWindowExW(
             WINDOW_EX_STYLE(0),
