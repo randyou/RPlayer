@@ -65,7 +65,9 @@ pub fn load_library() -> Library {
                 library.version = file.schema.max(1);
                 library.volume = library.volume.clamp(0.0, 1.0);
                 library.desktop_lyrics_opacity =
-                    library.desktop_lyrics_opacity.clamp(0.35, 1.0);
+                    library.desktop_lyrics_opacity.clamp(0.0, 1.0);
+                library.desktop_lyrics_text_opacity =
+                    library.desktop_lyrics_text_opacity.clamp(0.0, 1.0);
                 library.eq = library.eq.sanitized();
                 // v0.4 makes the paper theme the default. Older files only had
                 // a boolean, so migrate once; the user can switch back instantly.

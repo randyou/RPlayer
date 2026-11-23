@@ -221,8 +221,8 @@ pub struct RPlayerApp {
     lyrics_placed: bool,
     mini_placed: bool,
     lyrics_region: bool,
-    lyrics_alpha_applied: f32,
     mini_region: bool,
+    lyrics_key_mode: bool,
     lyrics_viewport_active: bool,
     mini_viewport_active: bool,
     lyrics: Option<crate::lyrics::Lyrics>,
@@ -357,8 +357,8 @@ impl RPlayerApp {
             lyrics_placed: false,
             mini_placed: false,
             lyrics_region: false,
-            lyrics_alpha_applied: 0.0,
             mini_region: false,
+            lyrics_key_mode: false,
             lyrics_viewport_active: false,
             mini_viewport_active: false,
             lyrics: None,
@@ -1535,6 +1535,7 @@ impl RPlayerApp {
                     self.desktop_lyrics_open = false;
                     self.library.desktop_lyrics = false;
                     self.lyrics_viewport_active = false;
+                    self.lyrics_key_mode = false;
                     ctx.send_viewport_cmd_to(
                         overlay::lyrics_viewport(),
                         ViewportCommand::Close,
@@ -1600,15 +1601,18 @@ impl RPlayerApp {
                     26,
                 );
             }
-            // The window itself stays fully opaque; panel and text opacity are
-            // painted separately so a transparent panel never hides lyrics.
-            if (self.lyrics_alpha_applied - 1.0).abs() > 0.005 {
-                if crate::platform::set_window_alpha("RPlayer 桌面歌词", 1.0) {
-                    self.lyrics_alpha_applied = 1.0;
+            // The GL surface has no usable per-pixel alpha. At exactly 0% we
+            // switch the window to color-key transparency so the panel is
+            // genuinely invisible; text is still painted opaque on top.
+            let key_mode = self.library.desktop_lyrics_opacity <= 0.001;
+            if key_mode != self.lyrics_key_mode {
+                if crate::platform::set_window_color_key("RPlayer 桌面歌词", key_mode) {
+                    self.lyrics_key_mode = key_mode;
                 }
             }
         } else if self.lyrics_viewport_active {
             self.lyrics_viewport_active = false;
+                    self.lyrics_key_mode = false;
             ctx.send_viewport_cmd_to(overlay::lyrics_viewport(), ViewportCommand::Close);
         }
 
@@ -1810,11 +1814,10 @@ impl RPlayerApp {
         if self.desktop_lyrics_open {
             self.lyrics_placed = false;
             self.lyrics_region = false;
-            self.lyrics_alpha_applied = 0.0;
         } else {
             self.lyrics_viewport_active = false;
+                    self.lyrics_key_mode = false;
             self.lyrics_region = false;
-            self.lyrics_alpha_applied = 0.0;
             ctx.send_viewport_cmd_to(overlay::lyrics_viewport(), ViewportCommand::Close);
         }
         self.persist();

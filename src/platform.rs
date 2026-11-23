@@ -311,6 +311,77 @@ pub fn set_window_alpha(title: &str, opacity: f32) -> bool {
     unsafe { SetLayeredWindowAttributes(hwnd, 0, alpha, LWA_ALPHA) != 0 }
 }
 
+/// Enables color-key transparency for the fully transparent lyric panel.
+/// The GL surface does not expose per-pixel alpha on this renderer; a keyed
+/// background lets the desktop show through while text stays opaque.
+#[cfg(target_os = "windows")]
+pub fn set_window_color_key(title: &str, enabled: bool) -> bool {
+    #[link(name = "user32")]
+    extern "system" {
+        fn FindWindowW(class_name: *const u16, window_name: *const u16) -> isize;
+        fn GetWindowLongPtrW(hwnd: isize, index: i32) -> isize;
+        fn SetWindowLongPtrW(hwnd: isize, index: i32, value: isize) -> isize;
+        fn SetLayeredWindowAttributes(
+            hwnd: isize,
+            color_key: u32,
+            alpha: u8,
+            flags: u32,
+        ) -> i32;
+        fn SetWindowPos(
+            hwnd: isize,
+            after: isize,
+            x: i32,
+            y: i32,
+            cx: i32,
+            cy: i32,
+            flags: u32,
+        ) -> i32;
+    }
+
+    const GWL_EXSTYLE: i32 = -20;
+    const WS_EX_LAYERED: isize = 0x0008_0000;
+    const LWA_ALPHA: u32 = 0x0000_0002;
+    const LWA_COLORKEY: u32 = 0x0000_0001;
+    const SWP_NOMOVE: u32 = 0x0002;
+    const SWP_NOSIZE: u32 = 0x0001;
+    const SWP_NOZORDER: u32 = 0x0004;
+    const SWP_FRAMECHANGED: u32 = 0x0020;
+    // COLORREF is 0x00BBGGRR. Deliberately an unusual color.
+    const KEY: u32 = 0x0003_0201;
+
+    let wide: Vec<u16> = title.encode_utf16().chain(std::iter::once(0)).collect();
+    let hwnd = unsafe { FindWindowW(std::ptr::null(), wide.as_ptr()) };
+    if hwnd == 0 {
+        return false;
+    }
+    let style = unsafe { GetWindowLongPtrW(hwnd, GWL_EXSTYLE) };
+    if style & WS_EX_LAYERED == 0 {
+        unsafe { SetWindowLongPtrW(hwnd, GWL_EXSTYLE, style | WS_EX_LAYERED) };
+    }
+    unsafe {
+        let result = if enabled {
+            SetLayeredWindowAttributes(hwnd, KEY, 255, LWA_COLORKEY) != 0
+        } else {
+            SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA) != 0
+        };
+        SetWindowPos(
+            hwnd,
+            0,
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED,
+        );
+        result
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn set_window_color_key(_title: &str, _enabled: bool) -> bool {
+    true
+}
+
 #[cfg(not(target_os = "windows"))]
 pub fn set_window_alpha(_title: &str, _opacity: f32) -> bool {
     true

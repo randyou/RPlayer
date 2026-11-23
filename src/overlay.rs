@@ -93,8 +93,7 @@ pub fn show_lyrics(
         .with_resizable(false)
         .with_inner_size(LYRICS_SIZE)
         .with_min_inner_size(LYRICS_SIZE)
-        .with_taskbar(false)
-        .with_active(false);
+        .with_taskbar(false);
     if let Some(position) = initial_position {
         builder = builder.with_position(position);
     }
@@ -115,13 +114,47 @@ pub fn show_lyrics(
                 ui.set_min_size(LYRICS_SIZE);
                 let capsule = ui.max_rect();
                 let dark = theme::c().dark;
-                let panel_alpha = snapshot.lyrics_opacity.clamp(0.0, 1.0);
+                let key_mode = snapshot.lyrics_opacity <= 0.001;
+                let panel_alpha = if key_mode {
+                    0.0
+                } else {
+                    snapshot.lyrics_opacity.clamp(0.0, 1.0)
+                };
                 let text_alpha = snapshot.lyrics_text_opacity.clamp(0.0, 1.0);
-                ui.painter().rect_filled(
-                    capsule,
-                    CornerRadius::ZERO,
-                    with_alpha(theme::c().panel, panel_alpha),
-                );
+                let pointer_inside = ctx.input(|input| {
+                    let (Some(position), Some(outer)) =
+                        (input.pointer.latest_pos(), input.viewport().outer_rect)
+                    else {
+                        return false;
+                    };
+                    // Egui gives the pointer in screen coordinates for
+                    // deferred viewports; the capsule is window-local.
+                    capsule.contains(position - outer.min.to_vec2())
+                });
+                let hover_boost = pointer_inside && key_mode;
+                if key_mode {
+                    // Must match `set_window_color_key` (COLORREF 0x00030201).
+                    ui.painter().rect_filled(
+                        capsule,
+                        CornerRadius::ZERO,
+                        Color32::from_rgb(1, 2, 3),
+                    );
+                    ui.painter().rect_stroke(
+                        capsule.shrink(1.0),
+                        CornerRadius::ZERO,
+                        Stroke::new(
+                            1.0_f32,
+                            theme::white_alpha(if pointer_inside { 0.24 } else { 0.10 }),
+                        ),
+                        egui::StrokeKind::Inside,
+                    );
+                } else {
+                    ui.painter().rect_filled(
+                        capsule,
+                        CornerRadius::ZERO,
+                        with_alpha(theme::c().panel, panel_alpha),
+                    );
+                }
                 ui.painter().rect_stroke(
                     capsule.shrink(1.0),
                     CornerRadius::ZERO,
@@ -359,42 +392,60 @@ pub fn show_lyrics(
                         }
                     });
 
-                // A small always-visible control opens the two opacity sliders
-                // without requiring the right-click menu.
+                // A gear opens the two opacity sliders. Its opacity follows the
+                // panel, with a hover boost when the panel is fully transparent.
                 let controls_id = Id::new("lyrics-opacity-open");
-                let mut controls_open = ctx
+                let was_open = ctx
                     .data(|data| data.get_temp::<bool>(controls_id))
                     .unwrap_or(false);
+                let mut controls_open = was_open;
                 let button_rect = Rect::from_min_size(
-                    Pos2::new(capsule.left() + 12.0, capsule.top() + 8.0),
-                    Vec2::new(38.0, 22.0),
+                    Pos2::new(capsule.left() + 10.0, capsule.top() + 7.0),
+                    Vec2::splat(24.0),
                 );
                 let button = ui.interact(
                     button_rect,
                     Id::new("lyrics-opacity-button"),
                     Sense::click(),
                 );
-                ui.painter().rect_filled(
-                    button_rect,
-                    CornerRadius::same(7),
-                    theme::c().hover,
-                );
-                ui.painter().text(
-                    button_rect.center(),
-                    Align2::CENTER_CENTER,
-                    "透明",
-                    FontId::proportional(10.0),
-                    theme::c().muted,
+                let gear_alpha = if button.hovered() {
+                    1.0
+                } else if key_mode {
+                    0.45
+                } else if hover_boost {
+                    0.65
+                } else {
+                    panel_alpha
+                };
+                if button.hovered() || controls_open {
+                    ui.painter().rect_filled(
+                        button_rect,
+                        CornerRadius::same(7),
+                        with_alpha(theme::c().hover, gear_alpha.min(1.0)),
+                    );
+                }
+                icons::paint(
+                    ui.painter(),
+                    button_rect.shrink(5.0),
+                    Icon::Settings,
+                    with_alpha(
+                        if button.hovered() {
+                            theme::c().text
+                        } else {
+                            theme::c().muted
+                        },
+                        gear_alpha,
+                    ),
                 );
                 if button.clicked() {
                     controls_open = !controls_open;
-                    ctx.data_mut(|data| data.insert_temp(controls_id, controls_open));
                 }
+                let mut popup_rect = Rect::NOTHING;
                 if controls_open {
                     let mut panel_value = snapshot.lyrics_opacity;
                     let mut text_value = snapshot.lyrics_text_opacity;
-                    egui::Area::new(Id::new("lyrics-opacity-controls"))
-                        .fixed_pos(capsule.left_top() + Vec2::new(12.0, 34.0))
+                    let area = egui::Area::new(Id::new("lyrics-opacity-controls"))
+                        .fixed_pos(capsule.left_top() + Vec2::new(10.0, 34.0))
                         .order(egui::Order::Foreground)
                         .show(ctx, |ui| {
                             Frame::NONE
@@ -444,6 +495,25 @@ pub fn show_lyrics(
                                     }
                                 });
                         });
+                    popup_rect = area.response.rect;
+                }
+                if controls_open && !button.clicked() {
+                    let clicked_outside = ctx.input(|input| {
+                        input.pointer.any_click()
+                            && input.pointer.latest_pos().is_some_and(|position| {
+                                !popup_rect.contains(position)
+                                    && !button_rect.contains(position)
+                            })
+                    });
+                    let escape = ctx.input(|input| input.key_pressed(egui::Key::Escape));
+                    let lost_focus =
+                        ctx.input(|input| input.viewport().focused) == Some(false);
+                    if clicked_outside || escape || lost_focus {
+                        controls_open = false;
+                    }
+                }
+                if controls_open != was_open {
+                    ctx.data_mut(|data| data.insert_temp(controls_id, controls_open));
                 }
             });
 
