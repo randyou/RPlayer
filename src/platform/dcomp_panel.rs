@@ -29,6 +29,7 @@ use windows::Win32::Graphics::Dwm::{
 };
 use windows::Win32::Graphics::Dxgi::{IDXGIDevice, IDXGISurface};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
+use windows::Win32::UI::Input::KeyboardAndMouse::EnableWindow;
 use windows::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DefWindowProcW, FindWindowW, RegisterClassW, SetWindowPos, ShowWindow, HCURSOR, HICON,
     SWP_NOACTIVATE, SWP_SHOWWINDOW, SW_SHOWNOACTIVATE, WM_ERASEBKGND, WNDCLASSW, WNDPROC,
@@ -68,6 +69,10 @@ unsafe extern "system" fn panel_proc(
 ) -> LRESULT {
     if msg == WM_ERASEBKGND {
         return LRESULT(1);
+    }
+    if msg == 0x0084 {
+        // WM_NCHITTEST: let every click fall through to the lyric window.
+        return LRESULT(-1);
     }
     DefWindowProcW(hwnd, msg, wparam, lparam)
 }
@@ -156,6 +161,7 @@ fn create_panel(hwnd: HWND) -> windows::core::Result<Panel> {
         blur.dwFlags = DWM_BB_ENABLE;
         blur.fEnable = true.into();
         let _ = DwmEnableBlurBehindWindow(hwnd, &blur);
+        let _ = EnableWindow(hwnd, false);
         let target = dcomp.CreateTargetForHwnd(hwnd, false)?;
         let visual = dcomp.CreateVisual()?;
         target.SetRoot(&visual)?;

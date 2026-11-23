@@ -561,12 +561,6 @@ pub fn show_mini(
                     CornerRadius::same(18),
                     theme::c().panel,
                 );
-                ui.painter().rect_stroke(
-                    card_shape,
-                    CornerRadius::same(18),
-                    Stroke::new(1.0_f32, theme::c().border),
-                    egui::StrokeKind::Inside,
-                );
                 ui.painter().rect_filled(
                     Rect::from_min_max(
                         Pos2::new(card.left() + 1.0, card.top() + 14.0),
