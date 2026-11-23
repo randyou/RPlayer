@@ -30,7 +30,7 @@ impl RPlayerApp {
             .frame(
                 Frame::NONE
                     .fill(theme::c().sidebar)
-                    .stroke(Stroke::new(1.0_f32, theme::c().border_soft))
+                    .stroke(Stroke::new(1.0_f32, theme::divider()))
                     .inner_margin(Margin::symmetric(16, 14)),
             )
             .show(ctx, |ui| self.rail_contents(ui));

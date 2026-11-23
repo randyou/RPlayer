@@ -13,6 +13,7 @@ impl RPlayerApp {
         egui::SidePanel::left("rplayer-sidebar")
             .exact_width(252.0)
             .resizable(false)
+            .show_separator_line(false)
             .frame(
                 Frame::NONE
                     .fill(theme::c().sidebar)
@@ -415,7 +416,7 @@ impl RPlayerApp {
         ui.add_space(2.0);
         ui.horizontal(|ui| {
             ui.add_space(((ui.available_width() - 150.0) * 0.5).max(0.0));
-            ui.label(RichText::new("v0.10.13").size(10.0).color(theme::c().faint));
+            ui.label(RichText::new("v0.10.14").size(10.0).color(theme::c().faint));
             ui.add_space(10.0);
             let about = ui
                 .add(
