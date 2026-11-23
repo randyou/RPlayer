@@ -31,6 +31,8 @@ impl RPlayerApp {
         } else {
             self.library.mini_style.clone()
         };
+        let mut mini_on_top = self.library.mini_on_top;
+        let mut mini_snap = self.library.mini_snap;
         let mut auto_lyrics = self.library.auto_lyrics;
         let mut auto_cover = self.library.auto_cover;
         let mut clear_covers = false;
@@ -263,9 +265,30 @@ impl RPlayerApp {
                                 }
                             }
                         });
+                        ui.add_space(8.0);
+                        ui.horizontal(|ui| {
+                            ui.label(
+                                RichText::new("始终显示在最上层")
+                                    .size(12.0)
+                                    .color(theme::c().text),
+                            );
+                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                                widgets::toggle_switch(ui, &mut mini_on_top);
+                            });
+                        });
+                        ui.horizontal(|ui| {
+                            ui.label(
+                                RichText::new("拖到屏幕边缘时自动吸附")
+                                    .size(12.0)
+                                    .color(theme::c().text),
+                            );
+                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                                widgets::toggle_switch(ui, &mut mini_snap);
+                            });
+                        });
                         ui.add_space(4.0);
                         ui.label(
-                            RichText::new("底部播放栏的迷你播放器按钮可随时打开/关闭。")
+                            RichText::new("底部播放栏的迷你播放器按钮可随时切换主/迷你模式。")
                                 .size(10.0)
                                 .color(theme::c().faint),
                         );
@@ -441,6 +464,24 @@ impl RPlayerApp {
         }
         if mini_style != self.library.mini_style {
             self.library.mini_style = mini_style;
+            self.prefs_dirty = true;
+        }
+        if mini_on_top != self.library.mini_on_top {
+            self.library.mini_on_top = mini_on_top;
+            self.prefs_dirty = true;
+            if self.mini_open {
+                ctx.send_viewport_cmd_to(
+                    crate::overlay::mini_viewport(),
+                    egui::ViewportCommand::WindowLevel(if mini_on_top {
+                        egui::WindowLevel::AlwaysOnTop
+                    } else {
+                        egui::WindowLevel::Normal
+                    }),
+                );
+            }
+        }
+        if mini_snap != self.library.mini_snap {
+            self.library.mini_snap = mini_snap;
             self.prefs_dirty = true;
         }
         if auto_lyrics != self.library.auto_lyrics {

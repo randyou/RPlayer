@@ -1363,6 +1363,9 @@ impl RPlayerApp {
             } else {
                 "classic".to_string()
             },
+            mini_on_top: self.library.mini_on_top,
+            mini_snap: self.library.mini_snap,
+            desktop_lyrics_open: self.desktop_lyrics_open,
             ..OverlayState::default()
         };
 
@@ -1437,6 +1440,29 @@ impl RPlayerApp {
                     self.library.desktop_lyrics_pos = Some((x, y));
                     self.prefs_dirty = true;
                 }
+                OverlayCommand::ToggleLyrics => {
+                    self.toggle_desktop_lyrics(ctx);
+                }
+                OverlayCommand::SetMiniOnTop(on_top) => {
+                    self.library.mini_on_top = on_top;
+                    self.prefs_dirty = true;
+                    ctx.send_viewport_cmd_to(
+                        overlay::mini_viewport(),
+                        ViewportCommand::WindowLevel(if on_top {
+                            egui::WindowLevel::AlwaysOnTop
+                        } else {
+                            egui::WindowLevel::Normal
+                        }),
+                    );
+                }
+                OverlayCommand::SetMiniSnap(snap) => {
+                    self.library.mini_snap = snap;
+                    self.prefs_dirty = true;
+                }
+                OverlayCommand::SetMiniPosition(x, y) => {
+                    self.library.mini_pos = Some((x, y));
+                    self.prefs_dirty = true;
+                }
                 OverlayCommand::CloseLyrics => {
                     self.desktop_lyrics_open = false;
                     self.library.desktop_lyrics = false;
@@ -1451,6 +1477,12 @@ impl RPlayerApp {
                     self.mini_open = false;
                     self.mini_viewport_active = false;
                     ctx.send_viewport_cmd_to(overlay::mini_viewport(), ViewportCommand::Close);
+                    ctx.send_viewport_cmd_to(
+                        egui::ViewportId::ROOT,
+                        ViewportCommand::Minimized(false),
+                    );
+                    ctx.send_viewport_cmd_to(egui::ViewportId::ROOT, ViewportCommand::Visible(true));
+                    ctx.send_viewport_cmd_to(egui::ViewportId::ROOT, ViewportCommand::Focus);
                 }
                 OverlayCommand::OpenMain => {
                     self.mini_open = false;
@@ -1463,6 +1495,7 @@ impl RPlayerApp {
                         egui::ViewportId::ROOT,
                         ViewportCommand::Minimized(false),
                     );
+                    ctx.send_viewport_cmd_to(egui::ViewportId::ROOT, ViewportCommand::Visible(true));
                     ctx.send_viewport_cmd_to(egui::ViewportId::ROOT, ViewportCommand::Focus);
                 }
             }
@@ -1513,6 +1546,11 @@ impl RPlayerApp {
         if self.mini_open {
             let position = if self.mini_placed {
                 None
+            } else if let Some((x, y)) = self.library.mini_pos {
+                Some(Pos2::new(
+                    x.clamp(0.0, (monitor.x - 410.0).max(0.0)),
+                    y.clamp(0.0, (monitor.y - 146.0).max(0.0)),
+                ))
             } else {
                 Some(Pos2::new(
                     (monitor.x - 446.0).max(0.0),
@@ -1525,6 +1563,7 @@ impl RPlayerApp {
                 self.overlay_commands.clone(),
                 self.mini_cache.clone(),
                 position,
+                self.library.mini_on_top,
             );
             self.mini_placed = true;
             self.mini_viewport_active = true;
@@ -1717,10 +1756,22 @@ impl RPlayerApp {
         if self.mini_open {
             self.mini_placed = false;
             self.mini_region = false;
+            // Switch modes: the main window collapses while the mini player is
+            // shown, but keeps its event loop alive to service playback commands.
+            ctx.send_viewport_cmd_to(
+                egui::ViewportId::ROOT,
+                ViewportCommand::Minimized(true),
+            );
         } else {
             self.mini_viewport_active = false;
             self.mini_region = false;
             ctx.send_viewport_cmd_to(overlay::mini_viewport(), ViewportCommand::Close);
+            ctx.send_viewport_cmd_to(
+                egui::ViewportId::ROOT,
+                ViewportCommand::Minimized(false),
+            );
+            ctx.send_viewport_cmd_to(egui::ViewportId::ROOT, ViewportCommand::Visible(true));
+            ctx.send_viewport_cmd_to(egui::ViewportId::ROOT, ViewportCommand::Focus);
         }
     }
 

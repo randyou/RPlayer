@@ -35,6 +35,9 @@ pub struct OverlayState {
     pub lyrics_font: f32,
     pub lyrics_locked: bool,
     pub mini_style: String,
+    pub mini_on_top: bool,
+    pub mini_snap: bool,
+    pub desktop_lyrics_open: bool,
     pub cover_id: Option<u64>,
     pub cover: Option<Arc<ColorImage>>,
 }
@@ -50,6 +53,10 @@ pub enum OverlayCommand {
     SetLyricsFont(f32),
     SetLyricsLocked(bool),
     SetLyricsPosition(f32, f32),
+    ToggleLyrics,
+    SetMiniOnTop(bool),
+    SetMiniSnap(bool),
+    SetMiniPosition(f32, f32),
     CloseLyrics,
     CloseMini,
     OpenMain,
@@ -326,17 +333,21 @@ pub fn show_mini(
     commands: Arc<Mutex<Vec<OverlayCommand>>>,
     cache: Arc<Mutex<MiniCache>>,
     initial_position: Option<Pos2>,
+    always_on_top: bool,
 ) {
     let mut builder = ViewportBuilder::default()
         .with_title("RPlayer 迷你播放器")
         .with_decorations(false)
         .with_transparent(true)
-        .with_always_on_top()
+        .with_window_level(if always_on_top {
+            egui::WindowLevel::AlwaysOnTop
+        } else {
+            egui::WindowLevel::Normal
+        })
         .with_resizable(false)
         .with_inner_size(MINI_SIZE)
         .with_min_inner_size(MINI_SIZE)
-        .with_taskbar(false)
-        .with_active(false);
+        .with_taskbar(false);
     if let Some(position) = initial_position {
         builder = builder.with_position(position);
     }
@@ -356,11 +367,15 @@ pub fn show_mini(
             .frame(Frame::NONE)
             .show(ctx, |ui| {
                 let card = ui.max_rect();
-                ui.painter()
-                    .rect_filled(card, CornerRadius::ZERO, theme::c().panel);
+                let card_shape = card.shrink(1.0);
+                ui.painter().rect_filled(
+                    card_shape,
+                    CornerRadius::same(18),
+                    theme::c().panel,
+                );
                 ui.painter().rect_stroke(
-                    card.shrink(1.0),
-                    CornerRadius::ZERO,
+                    card_shape,
+                    CornerRadius::same(18),
                     Stroke::new(1.0_f32, theme::c().border),
                     egui::StrokeKind::Inside,
                 );
@@ -376,7 +391,6 @@ pub fn show_mini(
                 if snapshot.mini_style == "compact" {
                     draw_mini_compact(
                         ui,
-                        ctx,
                         &snapshot,
                         &commands,
                         &mut close,
@@ -439,11 +453,45 @@ pub fn show_mini(
                                             ui,
                                             Icon::Expand,
                                             22.0,
-                                            "打开主窗口",
+                                            "切回主播放器",
                                         )
                                         .clicked()
                                         {
                                             open_main = true;
+                                        }
+                                        if widgets::glyph_button_tinted(
+                                            ui,
+                                            "词",
+                                            22.0,
+                                            theme::c().muted,
+                                            snapshot.desktop_lyrics_open,
+                                            "显示 / 隐藏桌面歌词",
+                                        )
+                                        .clicked()
+                                        {
+                                            if let Ok(mut queue) = commands.lock() {
+                                                queue.push(OverlayCommand::ToggleLyrics);
+                                            }
+                                        }
+                                        if widgets::glyph_button_tinted(
+                                            ui,
+                                            "顶",
+                                            22.0,
+                                            theme::c().muted,
+                                            snapshot.mini_on_top,
+                                            if snapshot.mini_on_top {
+                                                "取消始终置顶"
+                                            } else {
+                                                "始终显示在最上层"
+                                            },
+                                        )
+                                        .clicked()
+                                        {
+                                            if let Ok(mut queue) = commands.lock() {
+                                                queue.push(OverlayCommand::SetMiniOnTop(
+                                                    !snapshot.mini_on_top,
+                                                ));
+                                            }
                                         }
                                     });
                                 });
@@ -537,6 +585,31 @@ pub fn show_mini(
                     },
                 );
                 }
+
+                // Title/artist drag strip: avoids covering transport buttons or
+                // the seek bar, while the cover remains draggable as well.
+                let drag_rect = if snapshot.mini_style == "compact" {
+                    Rect::from_min_size(
+                        card.min + Vec2::new(12.0, 6.0),
+                        Vec2::new((card.width() - 142.0).max(80.0), 66.0),
+                    )
+                } else {
+                    Rect::from_min_size(
+                        card.min + Vec2::new(112.0, 10.0),
+                        Vec2::new((card.width() - 242.0).max(80.0), 40.0),
+                    )
+                };
+                let drag = ui.interact(drag_rect, Id::new("mini-title-drag"), Sense::drag());
+                if drag.dragged() {
+                    ctx.send_viewport_cmd(ViewportCommand::StartDrag);
+                }
+                if drag.drag_stopped() {
+                    let pos = ctx
+                        .input(|input| input.viewport().outer_rect)
+                        .map(|rect| rect.min)
+                        .unwrap_or(card.min);
+                    snap_and_store_mini(ctx, &snapshot, &commands, pos, card.size());
+                }
             });
 
         if close {
@@ -550,26 +623,59 @@ pub fn show_mini(
             }
         }
         ctx.request_repaint_after(std::time::Duration::from_millis(33));
+        // Commands are handled by the (possibly minimized) main viewport.
+        ctx.request_repaint_of(egui::ViewportId::ROOT);
     });
+}
+
+fn clamp_mini_position(ctx: &egui::Context, pos: Pos2, size: Vec2) -> Pos2 {
+    let monitor = ctx
+        .input(|input| input.viewport().monitor_size)
+        .unwrap_or(egui::vec2(1920.0, 1080.0));
+    Pos2::new(
+        pos.x.clamp(0.0, (monitor.x - size.x).max(0.0)),
+        pos.y.clamp(0.0, (monitor.y - size.y).max(0.0)),
+    )
+}
+
+fn snap_and_store_mini(
+    ctx: &egui::Context,
+    snapshot: &OverlayState,
+    commands: &Arc<Mutex<Vec<OverlayCommand>>>,
+    pos: Pos2,
+    size: Vec2,
+) {
+    let monitor = ctx
+        .input(|input| input.viewport().monitor_size)
+        .unwrap_or(egui::vec2(1920.0, 1080.0));
+    let mut pos = clamp_mini_position(ctx, pos, size);
+    if snapshot.mini_snap {
+        let threshold = 28.0;
+        if pos.x < threshold {
+            pos.x = 0.0;
+        } else if (monitor.x - (pos.x + size.x)).abs() < threshold {
+            pos.x = (monitor.x - size.x).max(0.0);
+        }
+        if pos.y < threshold {
+            pos.y = 0.0;
+        } else if (monitor.y - (pos.y + size.y)).abs() < threshold {
+            pos.y = (monitor.y - size.y).max(0.0);
+        }
+    }
+    ctx.send_viewport_cmd(ViewportCommand::OuterPosition(pos));
+    if let Ok(mut queue) = commands.lock() {
+        queue.push(OverlayCommand::SetMiniPosition(pos.x, pos.y));
+    }
 }
 
 fn draw_mini_compact(
     ui: &mut egui::Ui,
-    ctx: &egui::Context,
     snapshot: &OverlayState,
     commands: &Arc<Mutex<Vec<OverlayCommand>>>,
     close: &mut bool,
     open_main: &mut bool,
 ) {
     let card = ui.max_rect();
-    let drag_rect = Rect::from_min_size(
-        card.min + Vec2::new(14.0, 10.0),
-        Vec2::new((card.width() - 82.0).max(80.0), 18.0),
-    );
-    let drag = ui.interact(drag_rect, Id::new("mini-compact-drag"), Sense::drag());
-    if drag.dragged() {
-        ctx.send_viewport_cmd(ViewportCommand::StartDrag);
-    }
 
     ui.allocate_new_ui(
         egui::UiBuilder::new()
@@ -586,8 +692,40 @@ fn draw_mini_compact(
                     if widgets::icon_button(ui, Icon::Close, 20.0, "关闭迷你播放器").clicked() {
                         *close = true;
                     }
-                    if widgets::icon_button(ui, Icon::Expand, 20.0, "打开主窗口").clicked() {
+                    if widgets::icon_button(ui, Icon::Expand, 20.0, "切回主播放器").clicked() {
                         *open_main = true;
+                    }
+                    if widgets::glyph_button_tinted(
+                        ui,
+                        "词",
+                        20.0,
+                        theme::c().muted,
+                        snapshot.desktop_lyrics_open,
+                        "显示 / 隐藏桌面歌词",
+                    )
+                    .clicked()
+                    {
+                        if let Ok(mut queue) = commands.lock() {
+                            queue.push(OverlayCommand::ToggleLyrics);
+                        }
+                    }
+                    if widgets::glyph_button_tinted(
+                        ui,
+                        "顶",
+                        20.0,
+                        theme::c().muted,
+                        snapshot.mini_on_top,
+                        if snapshot.mini_on_top {
+                            "取消始终置顶"
+                        } else {
+                            "始终显示在最上层"
+                        },
+                    )
+                    .clicked()
+                    {
+                        if let Ok(mut queue) = commands.lock() {
+                            queue.push(OverlayCommand::SetMiniOnTop(!snapshot.mini_on_top));
+                        }
                     }
                 });
             });
