@@ -9,6 +9,7 @@ mod cover_fetch;
 mod eq;
 mod lyrics;
 mod lyrics_fetch;
+mod m3u;
 mod model;
 mod overlay;
 mod platform;

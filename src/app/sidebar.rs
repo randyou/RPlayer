@@ -173,6 +173,12 @@ impl RPlayerApp {
                 if widgets::icon_button(ui, Icon::Star, 22.0, "新建智能歌单").clicked() {
                     self.open_smart_builder();
                 }
+                if widgets::icon_button(ui, Icon::Download, 22.0, "导入 M3U").clicked() {
+                    self.import_m3u();
+                }
+                if widgets::icon_button(ui, Icon::List, 22.0, "导出当前视图为 M3U").clicked() {
+                    self.export_m3u();
+                }
             });
         });
 

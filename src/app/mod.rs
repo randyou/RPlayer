@@ -545,6 +545,109 @@ impl RPlayerApp {
         }
     }
 
+    fn import_m3u(&mut self) {
+        let Some(file) = rfd::FileDialog::new()
+            .set_title("导入 M3U 播放列表")
+            .add_filter("M3U 播放列表", &["m3u", "m3u8"])
+            .pick_file()
+        else {
+            return;
+        };
+        let paths = match crate::m3u::parse_file(&file) {
+            Ok(paths) => paths,
+            Err(err) => {
+                self.toast(format!("读取 M3U 失败：{err}"), ToastKind::Error);
+                return;
+            }
+        };
+        let mut ids = Vec::new();
+        let mut missing = 0usize;
+        for path in paths {
+            let exact = self
+                .library
+                .tracks
+                .iter()
+                .find(|track| model::same_path(&track.path, &path))
+                .map(|track| track.id);
+            let fallback = || {
+                let name = path.file_name()?;
+                let mut matches = self
+                    .library
+                    .tracks
+                    .iter()
+                    .filter(|track| track.path.file_name() == Some(name));
+                let first = matches.next()?;
+                if matches.next().is_some() {
+                    None
+                } else {
+                    Some(first.id)
+                }
+            };
+            if let Some(id) = exact.or_else(fallback) {
+                if !ids.contains(&id) {
+                    ids.push(id);
+                }
+            } else {
+                missing += 1;
+            }
+        }
+        if ids.is_empty() {
+            self.toast("M3U 中没有找到曲库内的歌曲", ToastKind::Error);
+            return;
+        }
+        let name = file
+            .file_stem()
+            .map(|name| name.to_string_lossy().to_string())
+            .unwrap_or_else(|| "导入的播放列表".to_string());
+        let id = self.library.create_playlist(name.clone());
+        for track_id in &ids {
+            self.library.add_to_playlist(id, *track_id);
+        }
+        self.view = View::Playlist(id);
+        self.persist();
+        self.toast(
+            format!(
+                "已导入「{name}」：{} 首{}",
+                ids.len(),
+                if missing > 0 {
+                    format!("，跳过 {missing} 首缺失")
+                } else {
+                    String::new()
+                }
+            ),
+            ToastKind::Success,
+        );
+    }
+
+    fn export_m3u(&mut self) {
+        let ids = self.visible_ids();
+        if ids.is_empty() {
+            self.toast("当前视图没有可导出的歌曲", ToastKind::Info);
+            return;
+        }
+        let Some(path) = rfd::FileDialog::new()
+            .set_title("导出 M3U 播放列表")
+            .set_file_name("RPlayer.m3u8")
+            .add_filter("M3U8 播放列表", &["m3u8", "m3u"])
+            .save_file()
+        else {
+            return;
+        };
+        let paths: Vec<PathBuf> = ids
+            .iter()
+            .filter_map(|id| self.library.track(*id))
+            .map(|track| track.path.clone())
+            .collect();
+        let base = path.parent().map(Path::to_path_buf);
+        match crate::m3u::write_file(&path, &paths, base.as_deref()) {
+            Ok(()) => self.toast(
+                format!("已导出 {} 首歌曲", paths.len()),
+                ToastKind::Success,
+            ),
+            Err(err) => self.toast(format!("导出 M3U 失败：{err}"), ToastKind::Error),
+        }
+    }
+
     fn remove_folder(&mut self, folder: &Path) {
         let Some(index) = self
             .library
