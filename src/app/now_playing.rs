@@ -508,6 +508,22 @@ impl RPlayerApp {
                         {
                             if let Some(id) = self.current { self.open_lyrics_match(id); }
                         }
+                        if ui
+                            .add(
+                                egui::Button::new(
+                                    RichText::new("编辑歌词")
+                                        .size(11.0)
+                                        .color(theme::c().muted),
+                                )
+                                .fill(theme::c().panel)
+                                .stroke(Stroke::new(1.0_f32, theme::c().border))
+                                .corner_radius(9)
+                                .min_size(Vec2::new(0.0, 32.0)),
+                            )
+                            .clicked()
+                        {
+                            super::lyrics_edit::open(self);
+                        }
                     });
                 });
         });

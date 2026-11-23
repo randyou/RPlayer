@@ -38,6 +38,12 @@ pub fn lyrics_cache_path(track_id: u64) -> PathBuf {
         .join(format!("{track_id:016x}.lrc"))
 }
 
+pub fn custom_lyrics_path(track_id: u64) -> PathBuf {
+    data_dir()
+        .join("lyrics_custom")
+        .join(format!("{track_id:016x}.lrc"))
+}
+
 pub fn cover_cache_dir() -> PathBuf {
     data_dir().join("covers")
 }

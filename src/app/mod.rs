@@ -6,6 +6,7 @@ mod dialogs;
 mod equalizer;
 mod health;
 mod library_view;
+mod lyrics_edit;
 mod now_playing;
 mod now_rail;
 mod player_bar;
@@ -234,6 +235,7 @@ pub struct RPlayerApp {
     mini_viewport_active: bool,
     lyrics: Option<crate::lyrics::Lyrics>,
     lyrics_for: Option<u64>,
+    lyrics_editor: Option<crate::lyrics::LyricsEditor>,
     lyrics_source: Option<String>,
     expanded: bool,
     batch_mode: bool,
@@ -370,6 +372,7 @@ impl RPlayerApp {
             mini_viewport_active: false,
             lyrics: None,
             lyrics_for: None,
+            lyrics_editor: None,
             lyrics_source: None,
             expanded: false,
             batch_mode: false,
@@ -1205,6 +1208,7 @@ impl RPlayerApp {
         track.album = album.trim().to_string();
         // A wrong cached match must not survive a failed re-match.
         let _ = std::fs::remove_file(crate::storage::lyrics_cache_path(track_id));
+        let _ = std::fs::remove_file(crate::storage::custom_lyrics_path(track_id));
         self.lyrics_attempted.insert(track_id);
         self.lyrics_fetching = Some(track_id);
         self.toast("正在按新条件搜索歌词…", ToastKind::Info);
@@ -1222,7 +1226,10 @@ impl RPlayerApp {
     }
 
     fn load_lyrics_for(&mut self, track: &Track, id: u64) {
-        if let Some(lyrics) = crate::lyrics::load(&track.path) {
+        if let Some(lyrics) = crate::lyrics::load_custom(id) {
+            self.lyrics = Some(lyrics);
+            self.lyrics_source = Some("编辑".to_string());
+        } else if let Some(lyrics) = crate::lyrics::load(&track.path) {
             self.lyrics = Some(lyrics);
             self.lyrics_source = Some("本地".to_string());
         } else if let Some(lyrics) = crate::lyrics::load_cached(id) {
@@ -2780,6 +2787,7 @@ impl eframe::App for RPlayerApp {
             self.render_toast(ctx);
             self.render_drop_overlay(ctx);
             self.show_overlays(ctx);
+            lyrics_edit::show(self, ctx);
             self.command_palette(ctx);
             self.flush_prefs(ctx);
             self.request_repaint(ctx);
@@ -2804,6 +2812,7 @@ impl eframe::App for RPlayerApp {
         self.render_toast(ctx);
         self.render_drop_overlay(ctx);
         self.show_overlays(ctx);
+        lyrics_edit::show(self, ctx);
         self.command_palette(ctx);
         self.flush_prefs(ctx);
         self.request_repaint(ctx);

@@ -23,7 +23,93 @@ pub struct Lyrics {
     pub plain: bool,
 }
 
+pub struct EditorRow {
+    pub time: String,
+    pub text: String,
+}
+
+pub struct LyricsEditor {
+    pub track_id: u64,
+    pub title: String,
+    pub rows: Vec<EditorRow>,
+    pub plain: bool,
+}
+
+impl LyricsEditor {
+    pub fn from_lyrics(track_id: u64, title: String, lyrics: &Lyrics) -> Self {
+        Self {
+            track_id,
+            title,
+            plain: lyrics.plain,
+            rows: lyrics
+                .lines
+                .iter()
+                .map(|line| EditorRow {
+                    time: if lyrics.plain {
+                        String::new()
+                    } else {
+                        format_timestamp(line.time)
+                    },
+                    text: line.text.clone(),
+                })
+                .collect(),
+        }
+    }
+
+    pub fn build(&self) -> Option<Lyrics> {
+        if self.rows.is_empty() {
+            return None;
+        }
+        let mut lines = Vec::new();
+        let mut timed = false;
+        for row in &self.rows {
+            if row.text.trim().is_empty() {
+                continue;
+            }
+            let time = if row.time.trim().is_empty() {
+                0.0
+            } else {
+                let value = parse_time(&row.time)?;
+                timed = true;
+                value
+            };
+            lines.push(LyricLine {
+                time,
+                text: row.text.trim().to_string(),
+            });
+        }
+        if lines.is_empty() {
+            return None;
+        }
+        if timed {
+            lines.sort_by(|a, b| a.time.total_cmp(&b.time));
+        }
+        Some(Lyrics {
+            lines,
+            plain: !timed,
+        })
+    }
+}
+
 impl Lyrics {
+    pub fn to_lrc(&self) -> String {
+        if self.plain {
+            return self
+                .lines
+                .iter()
+                .map(|line| line.text.as_str())
+                .collect::<Vec<_>>()
+                .join("\n");
+        }
+        let mut lines = self.lines.clone();
+        lines.sort_by(|a, b| a.time.total_cmp(&b.time));
+        lines
+            .into_iter()
+            .map(|line| format!("{} {}", format_timestamp(line.time), line.text))
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
     pub fn is_empty(&self) -> bool {
         self.lines.is_empty()
     }
@@ -67,6 +153,21 @@ pub fn load(path: &Path) -> Option<Lyrics> {
         }
     }
     None
+}
+
+/// Loads user-edited lyrics; these take precedence over sidecar/cache files.
+pub fn load_custom(track_id: u64) -> Option<Lyrics> {
+    let bytes = fs::read(crate::storage::custom_lyrics_path(track_id)).ok()?;
+    let lyrics = parse_lrc(&decode_text(&bytes));
+    if lyrics.is_empty() { None } else { Some(lyrics) }
+}
+
+pub fn store_custom(track_id: u64, lyrics: &Lyrics) -> std::io::Result<()> {
+    let path = crate::storage::custom_lyrics_path(track_id);
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    fs::write(path, lyrics.to_lrc().as_bytes())
 }
 
 /// Loads a previously downloaded lyric file from the app cache.
@@ -118,6 +219,23 @@ fn decode_text(bytes: &[u8]) -> String {
     // Mainland Chinese .lrc files are commonly GBK/GB18030 rather than UTF-8.
     let (text, _, _) = encoding_rs::GBK.decode(bytes);
     text.into_owned()
+}
+
+pub fn format_timestamp(time: f64) -> String {
+    let total = time.max(0.0);
+    let minutes = (total / 60.0).floor() as u32;
+    let seconds = total - f64::from(minutes) * 60.0;
+    format!("[{minutes:02}:{seconds:05.2}]")
+}
+
+/// Accepts `mm:ss.xx` and `hh:mm:ss.xx`, with or without brackets.
+pub fn parse_time(value: &str) -> Option<f64> {
+    let trimmed = value.trim();
+    let without_brackets = trimmed
+        .strip_prefix('[')
+        .and_then(|text| text.strip_suffix(']'))
+        .unwrap_or(trimmed);
+    parse_timestamp(without_brackets)
 }
 
 pub fn parse_lrc(text: &str) -> Lyrics {
