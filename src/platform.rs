@@ -1,5 +1,7 @@
 //! Small platform integration helpers that egui does not expose directly.
 
+pub mod media;
+
 /// Ask the Windows compositor to use a dark or light native title bar.
 ///
 /// The main HWND is discovered once by process id so switching themes after the

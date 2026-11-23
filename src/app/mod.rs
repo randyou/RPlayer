@@ -45,6 +45,12 @@ pub(super) enum View {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct QueuedNext {
+    index: usize,
+    id: u64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum RepeatMode {
     Off,
     All,
@@ -189,9 +195,12 @@ pub struct RPlayerApp {
     pending_resume: Option<f64>,
     last_session_save: std::time::Instant,
     queue_drag: Option<usize>,
+    queued_next: Option<QueuedNext>,
+    boundary_seen: u64,
     watch: Option<crate::watch::FolderWatcher>,
     watch_folders: Vec<PathBuf>,
     watch_pending: bool,
+    media_rx: Option<Receiver<crate::platform::media::MediaCommand>>,
     lyrics_tx: Sender<LyricsFetchEvent>,
     lyrics_rx: Receiver<LyricsFetchEvent>,
     lyrics_fetching: Option<u64>,
@@ -292,9 +301,12 @@ impl RPlayerApp {
             pending_resume: None,
             last_session_save: std::time::Instant::now(),
             queue_drag: None,
+            queued_next: None,
+            boundary_seen: 0,
             watch: None,
             watch_folders: Vec::new(),
             watch_pending: false,
+            media_rx: None,
             lyrics_tx,
             lyrics_rx,
             lyrics_fetching: None,
@@ -305,6 +317,7 @@ impl RPlayerApp {
         if let Some(err) = audio_error {
             app.toast(format!("音频输出不可用：{err}"), ToastKind::Error);
         }
+        app.media_rx = crate::platform::media::start();
         if let Some(session) = crate::session::load() {
             app.restore_session(session);
         }
@@ -660,19 +673,10 @@ impl RPlayerApp {
         match play_result {
             Ok(()) => {
                 self.current = Some(id);
+                self.queued_next = None;
+                self.boundary_seen = 0;
                 self.library.mark_played(id);
-                let local_lyrics = crate::lyrics::load(&track.path);
-                if let Some(lyrics) = local_lyrics {
-                    self.lyrics = Some(lyrics);
-                    self.lyrics_source = Some("本地".to_string());
-                } else if let Some(lyrics) = crate::lyrics::load_cached(id) {
-                    self.lyrics = Some(lyrics);
-                    self.lyrics_source = Some("缓存".to_string());
-                } else {
-                    self.lyrics = None;
-                    self.lyrics_source = None;
-                }
-                self.lyrics_for = Some(id);
+                self.load_lyrics_for(&track, id);
                 self.load_cover(ctx, id);
                 self.persist();
                 if self.library.auto_lyrics && self.lyrics.is_none() {
@@ -699,9 +703,7 @@ impl RPlayerApp {
             return;
         }
         if !automatic && self.queue.len() == 1 {
-            if let Some(audio) = &mut self.audio {
-                audio.seek(0.0);
-            }
+            self.seek_to(0.0);
             return;
         }
 
@@ -757,6 +759,19 @@ impl RPlayerApp {
                 self.queue_index = index;
             }
         }
+        if self.queued_next.is_some() {
+            if let Some(track) = self.current.and_then(|id| self.library.track(id)).cloned() {
+                if let Some(audio) = &mut self.audio {
+                    let paused = audio.is_paused();
+                    let position = audio.position();
+                    if audio.play_path_at(&track.path, position).is_ok() && paused {
+                        audio.set_paused(true);
+                    }
+                }
+            }
+            self.queued_next = None;
+            self.boundary_seen = 0;
+        }
         self.last_session_save = std::time::Instant::now() - std::time::Duration::from_secs(6);
     }
 
@@ -767,6 +782,8 @@ impl RPlayerApp {
         self.queue.clear();
         self.queue_index = 0;
         self.current = None;
+        self.queued_next = None;
+        self.boundary_seen = 0;
         self.cover = None;
         self.cover_for = None;
         self.cover_image = None;
@@ -814,6 +831,22 @@ impl RPlayerApp {
     }
 
     fn seek_to(&mut self, seconds: f64) {
+        if self.queued_next.is_some() {
+            // A gapless source is already appended; reopening is the only way
+            // to guarantee that a backward seek does not hit the next track.
+            let Some(track) = self.current.and_then(|id| self.library.track(id)).cloned() else {
+                return;
+            };
+            if let Some(audio) = &mut self.audio {
+                let paused = audio.is_paused();
+                if audio.play_path_at(&track.path, seconds).is_ok() && paused {
+                    audio.set_paused(true);
+                }
+            }
+            self.queued_next = None;
+            self.boundary_seen = 0;
+            return;
+        }
         if let Some(audio) = &mut self.audio {
             audio.seek(seconds);
         }
@@ -844,6 +877,20 @@ impl RPlayerApp {
 
     fn cycle_repeat(&mut self) {
         self.repeat = self.repeat.next();
+    }
+
+    fn load_lyrics_for(&mut self, track: &Track, id: u64) {
+        if let Some(lyrics) = crate::lyrics::load(&track.path) {
+            self.lyrics = Some(lyrics);
+            self.lyrics_source = Some("本地".to_string());
+        } else if let Some(lyrics) = crate::lyrics::load_cached(id) {
+            self.lyrics = Some(lyrics);
+            self.lyrics_source = Some("缓存".to_string());
+        } else {
+            self.lyrics = None;
+            self.lyrics_source = None;
+        }
+        self.lyrics_for = Some(id);
     }
 
     fn load_cover(&mut self, ctx: &egui::Context, id: u64) {
@@ -1637,13 +1684,126 @@ impl RPlayerApp {
     // Frame
     // ---------------------------------------------------------------------
 
+    fn poll_media_keys(&mut self, ctx: &egui::Context) {
+        let mut commands = Vec::new();
+        if let Some(receiver) = &self.media_rx {
+            while let Ok(command) = receiver.try_recv() {
+                commands.push(command);
+            }
+        }
+        for command in commands {
+            match command {
+                crate::platform::media::MediaCommand::PlayPause => {
+                    if self.current.is_some() {
+                        self.toggle_play(ctx);
+                    }
+                }
+                crate::platform::media::MediaCommand::Next => {
+                    if self.current.is_some() {
+                        self.next_track(ctx, false);
+                    }
+                }
+                crate::platform::media::MediaCommand::Previous => {
+                    if self.current.is_some() {
+                        self.previous_track(ctx);
+                    }
+                }
+                crate::platform::media::MediaCommand::Stop => {
+                    if let Some(audio) = &mut self.audio {
+                        audio.set_paused(true);
+                    }
+                }
+            }
+        }
+    }
+
+    fn preload_gapless(&mut self) {
+        if self.queued_next.is_some() {
+            return;
+        }
+        let Some(current_id) = self.current else {
+            return;
+        };
+        let Some(track) = self.library.track(current_id).cloned() else {
+            return;
+        };
+        let Some(audio) = self.audio.as_ref() else {
+            return;
+        };
+        let position = audio.position();
+        if track.duration <= 0.0 || track.duration - position > 1.4 {
+            return;
+        }
+        let next_index = if self.repeat == RepeatMode::One {
+            Some(self.queue_index)
+        } else {
+            self.choose_next()
+        };
+        let Some(next_index) = next_index else {
+            return;
+        };
+        let Some(next_id) = self.queue.get(next_index).copied() else {
+            return;
+        };
+        let Some(next_track) = self.library.track(next_id).cloned() else {
+            return;
+        };
+        if next_id == current_id && self.repeat == RepeatMode::Off {
+            return;
+        }
+        if let Some(audio) = &mut self.audio {
+            if audio.queue_next(&next_track.path).is_ok() {
+                self.queued_next = Some(QueuedNext {
+                    index: next_index,
+                    id: next_id,
+                });
+            }
+        }
+    }
+
+    fn consume_gapless_boundary(&mut self, ctx: &egui::Context) {
+        let Some(next) = self.queued_next.take() else {
+            return;
+        };
+        if let Some(audio) = &mut self.audio {
+            audio.begin_next_track();
+        }
+        self.queue_index = next.index;
+        let Some(track) = self.library.track(next.id).cloned() else {
+            self.current = None;
+            return;
+        };
+        self.current = Some(next.id);
+        self.library.mark_played(next.id);
+        self.load_lyrics_for(&track, next.id);
+        self.load_cover(ctx, next.id);
+        self.persist();
+        if self.library.auto_lyrics && self.lyrics.is_none() {
+            self.request_lyrics(ctx, next.id, false);
+        }
+    }
+
     fn poll_audio(&mut self, ctx: &egui::Context) {
+        let boundary = self
+            .audio
+            .as_ref()
+            .map(AudioEngine::boundary_count)
+            .unwrap_or(0);
+        if boundary > self.boundary_seen {
+            if self.queued_next.is_some() {
+                self.consume_gapless_boundary(ctx);
+            }
+            self.boundary_seen = boundary;
+        }
+        self.preload_gapless();
+
         let finished = self
             .audio
             .as_mut()
             .map(AudioEngine::take_finished)
             .unwrap_or(false);
         if finished {
+            self.queued_next = None;
             let can_continue = if self.repeat == RepeatMode::One {
                 self.start_current(ctx)
             } else {
@@ -1976,6 +2136,7 @@ impl eframe::App for RPlayerApp {
         self.poll_audio(ctx);
         self.poll_lyrics_fetch();
         self.poll_cover_fetch(ctx);
+        self.poll_media_keys(ctx);
         self.handle_shortcuts(ctx);
         self.handle_close(ctx);
         self.tick_session();
