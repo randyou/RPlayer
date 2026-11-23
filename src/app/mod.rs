@@ -1,6 +1,7 @@
 //! Application state, playback orchestration and the root layout.
 
 mod browse;
+mod command_palette;
 mod dialogs;
 mod equalizer;
 mod library_view;
@@ -191,6 +192,10 @@ pub struct RPlayerApp {
     dialog: Dialog,
     focus_pending: bool,
     focus_search: bool,
+    command_open: bool,
+    command_query: String,
+    command_index: usize,
+    command_focus: bool,
     toast: Option<Toast>,
     queue_open: bool,
     last_window_title: String,
@@ -311,6 +316,10 @@ impl RPlayerApp {
             dialog: Dialog::None,
             focus_pending: false,
             focus_search: false,
+            command_open: false,
+            command_query: String::new(),
+            command_index: 0,
+            command_focus: false,
             toast: None,
             queue_open: false,
             last_window_title: "RPlayer".to_string(),
@@ -2005,6 +2014,11 @@ impl RPlayerApp {
             }
         }
 
+        if ctx.input(|input| input.modifiers.command && input.key_pressed(Key::K)) {
+            self.toggle_command_palette();
+            return;
+        }
+
         if ctx.wants_keyboard_input() {
             return;
         }
@@ -2351,6 +2365,7 @@ impl eframe::App for RPlayerApp {
             self.render_toast(ctx);
             self.render_drop_overlay(ctx);
             self.show_overlays(ctx);
+            self.command_palette(ctx);
             self.flush_prefs(ctx);
             self.request_repaint(ctx);
             return;
@@ -2372,6 +2387,7 @@ impl eframe::App for RPlayerApp {
         self.render_toast(ctx);
         self.render_drop_overlay(ctx);
         self.show_overlays(ctx);
+        self.command_palette(ctx);
         self.flush_prefs(ctx);
         self.request_repaint(ctx);
     }
