@@ -388,7 +388,7 @@ pub fn primary_button(ui: &mut Ui, text: &str) -> Response {
         .fill(theme::c().accent)
         .corner_radius(10)
         .min_size(Vec2::new(96.0, 40.0));
-    ui.add(button)
+    ui.add(button).on_hover_cursor(CursorIcon::PointingHand)
 }
 
 pub fn primary_button_full(ui: &mut Ui, text: &str) -> Response {
@@ -418,7 +418,7 @@ pub fn secondary_button(ui: &mut Ui, text: &str) -> Response {
         .stroke(Stroke::new(1.0_f32, theme::c().border))
         .corner_radius(10)
         .min_size(Vec2::new(72.0, 38.0));
-    ui.add(button)
+    ui.add(button).on_hover_cursor(CursorIcon::PointingHand)
 }
 
 pub fn danger_button(ui: &mut Ui, text: &str) -> Response {
@@ -427,7 +427,7 @@ pub fn danger_button(ui: &mut Ui, text: &str) -> Response {
         .stroke(Stroke::new(1.0_f32, theme::c().danger.gamma_multiply(0.45)))
         .corner_radius(10)
         .min_size(Vec2::new(72.0, 38.0));
-    ui.add(button)
+    ui.add(button).on_hover_cursor(CursorIcon::PointingHand)
 }
 
 pub fn rating_stars(ui: &mut Ui, rating: u8, star_size: f32) -> Option<u8> {

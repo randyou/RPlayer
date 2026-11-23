@@ -383,7 +383,7 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                                 .color(theme::c().text),
                         );
                         ui.label(
-                            RichText::new("0.10.7 · 本地音乐播放器")
+                            RichText::new("0.10.8 · 本地音乐播放器")
                                 .size(11.0)
                                 .color(theme::c().muted),
                         );
@@ -550,23 +550,26 @@ fn dialog_header(ui: &mut Ui, title: &str, subtitle: &str) {
 fn tag_field(ui: &mut Ui, label: &str, value: &mut String) {
     ui.horizontal(|ui| {
         ui.allocate_ui_with_layout(
-            Vec2::new(44.0, 20.0),
+            Vec2::new(44.0, 26.0),
             Layout::left_to_right(Align::Center),
             |ui| {
                 ui.label(RichText::new(label).size(11.0).color(theme::c().muted));
             },
         );
+        // Fill the remaining row width so every field has the same right edge.
+        let width = ui.available_width().max(120.0);
         Frame::NONE
             .fill(theme::c().card)
             .stroke(Stroke::new(1.0_f32, theme::c().border))
             .corner_radius(CornerRadius::same(8))
             .inner_margin(Margin::symmetric(8, 5))
             .show(ui, |ui| {
-                ui.add(
+                ui.set_width(width - 16.0);
+                ui.add_sized(
+                    [width - 16.0, 22.0],
                     TextEdit::singleline(value)
                         .frame(false)
-                        .text_color(theme::c().text)
-                        .desired_width(f32::INFINITY),
+                        .text_color(theme::c().text),
                 );
             });
     });
