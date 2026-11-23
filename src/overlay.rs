@@ -48,6 +48,7 @@ pub enum OverlayCommand {
     SetLyricsOpacity(f32),
     SetLyricsFont(f32),
     SetLyricsLocked(bool),
+    SetLyricsPosition(f32, f32),
     CloseLyrics,
     CloseMini,
     OpenMain,
@@ -241,6 +242,15 @@ pub fn show_lyrics(
                 );
                 if drag.dragged() && !snapshot.lyrics_locked {
                     ctx.send_viewport_cmd(ViewportCommand::StartDrag);
+                }
+                if drag.drag_stopped() {
+                    if let Some(rect) = ctx.input(|input| input.viewport().outer_rect) {
+                        if let Ok(mut queue) = commands.lock() {
+                            queue.push(OverlayCommand::SetLyricsPosition(
+                                rect.min.x, rect.min.y,
+                            ));
+                        }
+                    }
                 }
                 let mut opacity = snapshot.lyrics_opacity;
                 let mut font = snapshot.lyrics_font;

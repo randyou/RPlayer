@@ -1420,6 +1420,10 @@ impl RPlayerApp {
                     self.library.desktop_lyrics_locked = locked;
                     self.prefs_dirty = true;
                 }
+                OverlayCommand::SetLyricsPosition(x, y) => {
+                    self.library.desktop_lyrics_pos = Some((x, y));
+                    self.prefs_dirty = true;
+                }
                 OverlayCommand::CloseLyrics => {
                     self.desktop_lyrics_open = false;
                     self.library.desktop_lyrics = false;
@@ -1460,6 +1464,8 @@ impl RPlayerApp {
         if self.desktop_lyrics_open {
             let position = if self.lyrics_placed {
                 None
+            } else if let Some((x, y)) = self.library.desktop_lyrics_pos {
+                Some(Pos2::new(x, y))
             } else {
                 Some(Pos2::new(
                     (monitor.x - 860.0).max(0.0) * 0.5,
