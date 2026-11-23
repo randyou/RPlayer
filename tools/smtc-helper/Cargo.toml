@@ -1,0 +1,21 @@
+[package]
+name = "rplayer-smtc"
+version = "0.1.0"
+edition = "2021"
+description = "RPlayer Windows SMTC helper"
+
+[dependencies]
+windows = { version = "0.58", features = [
+    "Foundation",
+    "Media",
+    "Media_Playback",
+    "Win32_Foundation",
+    "Win32_System_WinRT",
+    "Win32_UI_WindowsAndMessaging",
+] }
+
+[profile.release]
+opt-level = 3
+lto = "off"
+codegen-units = 16
+strip = true

@@ -201,6 +201,8 @@ pub struct RPlayerApp {
     watch_folders: Vec<PathBuf>,
     watch_pending: bool,
     media_rx: Option<Receiver<crate::platform::media::MediaCommand>>,
+    smtc: Option<crate::platform::smtc_client::SmtcClient>,
+    smtc_attempted: bool,
     lyrics_tx: Sender<LyricsFetchEvent>,
     lyrics_rx: Receiver<LyricsFetchEvent>,
     lyrics_fetching: Option<u64>,
@@ -307,6 +309,8 @@ impl RPlayerApp {
             watch_folders: Vec::new(),
             watch_pending: false,
             media_rx: None,
+            smtc: None,
+            smtc_attempted: false,
             lyrics_tx,
             lyrics_rx,
             lyrics_fetching: None,
@@ -1684,12 +1688,31 @@ impl RPlayerApp {
     // Frame
     // ---------------------------------------------------------------------
 
+    fn sync_smtc(&mut self) {
+        let track = self
+            .current
+            .and_then(|id| self.library.track(id))
+            .cloned();
+        let playing = self
+            .audio
+            .as_ref()
+            .is_some_and(|audio| audio.is_playing());
+        let position = self.current_position();
+        let duration = track.as_ref().map(|track| track.duration).unwrap_or(0.0);
+        if let Some(smtc) = &mut self.smtc {
+            smtc.sync(track.as_ref(), playing, position, duration);
+        }
+    }
+
     fn poll_media_keys(&mut self, ctx: &egui::Context) {
         let mut commands = Vec::new();
         if let Some(receiver) = &self.media_rx {
             while let Ok(command) = receiver.try_recv() {
                 commands.push(command);
             }
+        }
+        if let Some(smtc) = &self.smtc {
+            commands.extend(smtc.poll());
         }
         for command in commands {
             match command {
@@ -2137,8 +2160,13 @@ impl eframe::App for RPlayerApp {
         self.poll_lyrics_fetch();
         self.poll_cover_fetch(ctx);
         self.poll_media_keys(ctx);
+        self.sync_smtc();
         self.handle_shortcuts(ctx);
         self.handle_close(ctx);
+        if !self.smtc_attempted {
+            self.smtc_attempted = true;
+            self.smtc = crate::platform::smtc_client::SmtcClient::new();
+        }
         self.tick_session();
         self.sync_overlay();
 

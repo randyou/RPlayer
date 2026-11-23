@@ -1,6 +1,70 @@
 //! Small platform integration helpers that egui does not expose directly.
 
 pub mod media;
+pub mod smtc_client;
+
+/// First visible top-level window owned by this process. Used by the SMTC
+/// helper, which needs the main HWND to attach the system media card.
+#[cfg(target_os = "windows")]
+pub fn main_window_handle() -> Option<isize> {
+    use std::sync::atomic::{AtomicIsize, Ordering};
+    use winapi::shared::windef::RECT;
+    use winapi::um::winuser::{
+        EnumWindows, GetForegroundWindow, GetWindowRect, GetWindowThreadProcessId,
+        IsWindowVisible,
+    };
+
+    static FOUND: AtomicIsize = AtomicIsize::new(0);
+    static BEST_AREA: AtomicIsize = AtomicIsize::new(0);
+    static PID: AtomicIsize = AtomicIsize::new(0);
+
+    unsafe extern "system" fn callback(hwnd: winapi::shared::windef::HWND, _: isize) -> i32 {
+        let mut owner = 0u32;
+        unsafe { GetWindowThreadProcessId(hwnd, &mut owner) };
+        if owner as isize != PID.load(Ordering::SeqCst)
+            || unsafe { IsWindowVisible(hwnd) } == 0
+        {
+            return 1;
+        }
+        let mut rect: RECT = unsafe { std::mem::zeroed() };
+        if unsafe { GetWindowRect(hwnd, &mut rect) } == 0 {
+            return 1;
+        }
+        let area = ((rect.right - rect.left).max(0) as isize)
+            * ((rect.bottom - rect.top).max(0) as isize);
+        if area > BEST_AREA.load(Ordering::SeqCst) {
+            BEST_AREA.store(area, Ordering::SeqCst);
+            FOUND.store(hwnd as isize, Ordering::SeqCst);
+        }
+        1
+    }
+
+    let process = std::process::id() as isize;
+    PID.store(process, Ordering::SeqCst);
+    let foreground = unsafe { GetForegroundWindow() };
+    if !foreground.is_null() {
+        let mut owner = 0u32;
+        unsafe { GetWindowThreadProcessId(foreground, &mut owner) };
+        if owner as isize == process {
+            return Some(foreground as isize);
+        }
+    }
+
+    FOUND.store(0, Ordering::SeqCst);
+    BEST_AREA.store(0, Ordering::SeqCst);
+    unsafe {
+        EnumWindows(Some(callback), 0);
+    }
+    match FOUND.load(Ordering::SeqCst) {
+        0 => None,
+        hwnd => Some(hwnd),
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn main_window_handle() -> Option<isize> {
+    None
+}
 
 /// Ask the Windows compositor to use a dark or light native title bar.
 ///

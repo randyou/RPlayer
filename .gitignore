@@ -1,4 +1,5 @@
 /target
+/tools/smtc-helper/target
 /dist
 /testdata
 /.idea

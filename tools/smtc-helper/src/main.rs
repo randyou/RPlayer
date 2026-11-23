@@ -1,0 +1,172 @@
+//! Small helper process that owns the Windows System Media Transport Controls
+//! session. Keeping WinRT in a separate executable keeps the main RPlayer
+//! binary light and avoids a large WinRT link in the UI process.
+//!
+//! Protocol (tab separated, one message per line):
+//!   T <title> <artist> <album>
+//!   S <0|1>
+//!   P <position> <duration>
+//!   C
+//! Replies: play / pause / next / previous / stop.
+
+#![cfg_attr(windows, windows_subsystem = "windows")]
+
+#[cfg(windows)]
+fn main() {
+    use std::io::{BufRead, Write};
+
+    use windows::core::{factory, HSTRING};
+    use windows::Foundation::{TimeSpan, TypedEventHandler};
+    use windows::Media::{
+        MediaPlaybackStatus, MediaPlaybackType, SystemMediaTransportControls,
+        SystemMediaTransportControlsButton, SystemMediaTransportControlsTimelineProperties,
+    };
+    use windows::Win32::Foundation::{HINSTANCE, HWND};
+    use windows::Win32::System::WinRT::{
+        ISystemMediaTransportControlsInterop, RoInitialize, RO_INIT_SINGLETHREADED,
+    };
+    use windows::Win32::UI::WindowsAndMessaging::{
+        CreateWindowExW, HMENU, WINDOW_EX_STYLE, WINDOW_STYLE,
+    };
+
+    #[link(name = "shell32")]
+    extern "system" {
+        fn SetCurrentProcessExplicitAppUserModelID(app_id: *const u16) -> i32;
+    }
+
+    let Some(hwnd) = std::env::args().nth(1).and_then(|arg| arg.parse::<isize>().ok()) else {
+        return;
+    };
+    if hwnd == 0 {
+        return;
+    }
+
+    let _ = unsafe { RoInitialize(RO_INIT_SINGLETHREADED) };
+    let app_id: Vec<u16> = "RPlayer\0".encode_utf16().collect();
+    unsafe {
+        let _ = SetCurrentProcessExplicitAppUserModelID(app_id.as_ptr());
+    }
+    let hidden = unsafe {
+        CreateWindowExW(
+            WINDOW_EX_STYLE(0),
+            windows::core::w!("STATIC"),
+            windows::core::w!("RPlayer SMTC"),
+            WINDOW_STYLE(0),
+            0,
+            0,
+            0,
+            0,
+            HWND(std::ptr::null_mut()),
+            HMENU(std::ptr::null_mut()),
+            HINSTANCE(std::ptr::null_mut()),
+            None,
+        )
+    };
+    let Ok(hidden) = hidden else {
+        return;
+    };
+
+    let Ok(interop) =
+        factory::<SystemMediaTransportControls, ISystemMediaTransportControlsInterop>()
+    else {
+        return;
+    };
+    let controls = unsafe {
+        interop.GetForWindow::<_, SystemMediaTransportControls>(hidden)
+    };
+    let Ok(controls) = controls else {
+        return;
+    };
+
+    let _ = controls.SetIsEnabled(true);
+    let _ = controls.SetIsPlayEnabled(true);
+    let _ = controls.SetIsPauseEnabled(true);
+    let _ = controls.SetIsNextEnabled(true);
+    let _ = controls.SetIsPreviousEnabled(true);
+    let _ = controls.SetIsStopEnabled(true);
+    let _ = controls.SetPlaybackStatus(MediaPlaybackStatus::Paused);
+
+    let handler = TypedEventHandler::new(
+        move |_sender: &Option<SystemMediaTransportControls>,
+              args: &Option<windows::Media::SystemMediaTransportControlsButtonPressedEventArgs>| {
+            if let Some(args) = args {
+                if let Ok(button) = args.Button() {
+                    let reply = if button == SystemMediaTransportControlsButton::Play {
+                        "play"
+                    } else if button == SystemMediaTransportControlsButton::Pause {
+                        "pause"
+                    } else if button == SystemMediaTransportControlsButton::Next {
+                        "next"
+                    } else if button == SystemMediaTransportControlsButton::Previous {
+                        "previous"
+                    } else if button == SystemMediaTransportControlsButton::Stop {
+                        "stop"
+                    } else {
+                        ""
+                    };
+                    if !reply.is_empty() {
+                        let mut out = std::io::stdout();
+                        let _ = writeln!(out, "{reply}");
+                        let _ = out.flush();
+                    }
+                }
+            }
+            Ok(())
+        },
+    );
+    if controls.ButtonPressed(&handler).is_err() {
+        return;
+    }
+
+    let mut timeline = SystemMediaTransportControlsTimelineProperties::new().ok();
+    let stdin = std::io::stdin();
+    for line in stdin.lock().lines().map_while(Result::ok) {
+        let mut parts = line.split('\t');
+        match parts.next() {
+            Some("T") => {
+                let title = parts.next().unwrap_or("未知歌曲");
+                let artist = parts.next().unwrap_or("未知艺术家");
+                let album = parts.next().unwrap_or("");
+                if let Ok(updater) = controls.DisplayUpdater() {
+                    let _ = updater.SetType(MediaPlaybackType::Music);
+                    if let Ok(properties) = updater.MusicProperties() {
+                        let _ = properties.SetTitle(&HSTRING::from(title));
+                        let _ = properties.SetArtist(&HSTRING::from(artist));
+                        let _ = properties.SetAlbumTitle(&HSTRING::from(album));
+                    }
+                    let _ = updater.Update();
+                }
+            }
+            Some("S") => {
+                let playing = parts.next() == Some("1");
+                let _ = controls.SetPlaybackStatus(if playing {
+                    MediaPlaybackStatus::Playing
+                } else {
+                    MediaPlaybackStatus::Paused
+                });
+            }
+            Some("P") => {
+                let position = parts.next().and_then(|v| v.parse::<f64>().ok()).unwrap_or(0.0);
+                let duration = parts.next().and_then(|v| v.parse::<f64>().ok()).unwrap_or(0.0);
+                if let Some(timeline) = timeline.as_ref() {
+                    let ticks = |seconds: f64| TimeSpan {
+                        Duration: (seconds.max(0.0) * 10_000_000.0) as i64,
+                    };
+                    let _ = timeline.SetStartTime(ticks(0.0));
+                    let _ = timeline.SetMinSeekTime(ticks(0.0));
+                    let _ = timeline.SetMaxSeekTime(ticks(duration));
+                    let _ = timeline.SetEndTime(ticks(duration));
+                    let _ = timeline.SetPosition(ticks(position));
+                    let _ = controls.UpdateTimelineProperties(timeline);
+                }
+            }
+            Some("C") => {
+                let _ = controls.SetPlaybackStatus(MediaPlaybackStatus::Closed);
+            }
+            _ => {}
+        }
+    }
+}
+
+#[cfg(not(windows))]
+fn main() {}
