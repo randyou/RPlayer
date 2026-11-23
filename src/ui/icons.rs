@@ -39,6 +39,8 @@ pub enum Icon {
     Queue,
     Heart,
     HeartFilled,
+    Star,
+    StarFilled,
     Sun,
     Moon,
     Equalizer,
@@ -285,6 +287,36 @@ pub fn paint(painter: &Painter, rect: Rect, icon: Icon, color: Color32) {
             c.polyline(&[(0.12, 0.50), (0.62, 0.50)]);
             c.polyline(&[(0.12, 0.70), (0.48, 0.70)]);
             c.fill(&[(0.64, 0.60), (0.88, 0.73), (0.64, 0.86)]);
+        }
+        Icon::Star | Icon::StarFilled => {
+            let mut points = Vec::with_capacity(10);
+            for index in 0..10 {
+                let angle = -std::f32::consts::FRAC_PI_2
+                    + index as f32 * std::f32::consts::PI / 5.0;
+                let radius = if index % 2 == 0 { 0.43 } else { 0.18 };
+                points.push((
+                    0.5 + angle.cos() * radius,
+                    0.5 + angle.sin() * radius,
+                ));
+            }
+            if matches!(icon, Icon::StarFilled) {
+                // A star is concave; a single convex polygon would render
+                // incorrectly. Fan triangles from the centre instead.
+                let center = c.p(0.5, 0.5);
+                for index in 0..10 {
+                    let a = points[index];
+                    let b = points[(index + 1) % 10];
+                    c.painter.add(Shape::convex_polygon(
+                        vec![center, c.p(a.0, a.1), c.p(b.0, b.1)],
+                        c.color,
+                        Stroke::NONE,
+                    ));
+                }
+            } else {
+                let first = points[0];
+                points.push(first);
+                c.polyline(&points);
+            }
         }
         Icon::Heart | Icon::HeartFilled => {
             let points = [

@@ -14,6 +14,7 @@ mod overlay;
 mod platform;
 mod scanner;
 mod session;
+mod stats;
 mod storage;
 mod theme;
 mod ui;

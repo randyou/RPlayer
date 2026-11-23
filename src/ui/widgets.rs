@@ -362,6 +362,47 @@ pub fn danger_button(ui: &mut Ui, text: &str) -> Response {
     ui.add(button)
 }
 
+pub fn rating_stars(ui: &mut Ui, rating: u8, star_size: f32) -> Option<u8> {
+    let gap = 2.0;
+    let width = star_size * 5.0 + gap * 4.0;
+    let (rect, response) =
+        ui.allocate_exact_size(Vec2::new(width, star_size + 4.0), Sense::click());
+    let pointer = response.hover_pos();
+    let hovered = pointer.map(|pos| {
+        let local = (pos.x - rect.left()).max(0.0);
+        ((local / (star_size + gap)).floor() as u8 + 1).min(5)
+    });
+    for index in 0..5 {
+        let star = Rect::from_center_size(
+            Pos2::new(
+                rect.left() + star_size * 0.5 + index as f32 * (star_size + gap),
+                rect.center().y,
+            ),
+            Vec2::splat(star_size),
+        );
+        let filled = index < rating || hovered.is_some_and(|hover| index < hover);
+        icons::paint(
+            ui.painter(),
+            star,
+            if filled { Icon::StarFilled } else { Icon::Star },
+            if index < rating || filled {
+                theme::c().accent
+            } else {
+                theme::c().faint
+            },
+        );
+    }
+    let clicked = response.clicked().then(|| {
+        pointer.map(|pos| {
+            let local = (pos.x - rect.left()).max(0.0);
+            ((local / (star_size + gap)).floor() as u8 + 1).min(5)
+        })
+    });
+    let result = clicked.flatten();
+    response.on_hover_cursor(CursorIcon::PointingHand);
+    result
+}
+
 pub fn chip(ui: &mut Ui, text: &str, selected: bool) -> Response {
     let button = Button::new(RichText::new(text).size(12.0).color(if selected {
         theme::c().accent

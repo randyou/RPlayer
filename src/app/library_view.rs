@@ -23,6 +23,7 @@ struct Columns {
     title: f32,
     artist: f32,
     album: f32,
+    rating: f32,
     format: f32,
     duration: f32,
     actions: f32,
@@ -30,26 +31,29 @@ struct Columns {
 
 impl Columns {
     fn for_width(width: f32) -> Self {
-        let index = 40.0;
-        let artist = (width * 0.16).clamp(106.0, 170.0);
-        let album = (width * 0.18).clamp(100.0, 190.0);
-        let format = 54.0;
-        let duration = 58.0;
-        let actions = 62.0;
+        let index = 36.0;
+        let artist = (width * 0.15).clamp(90.0, 150.0);
+        let album = (width * 0.15).clamp(90.0, 160.0);
+        let rating = 60.0;
+        let format = 44.0;
+        let duration = 50.0;
+        let actions = 56.0;
         let title = (width
             - SIDE_PAD * 2.0
             - index
             - artist
             - album
+            - rating
             - format
             - duration
             - actions)
-            .max(120.0);
+            .max(96.0);
         Self {
             index,
             title,
             artist,
             album,
+            rating,
             format,
             duration,
             actions,
@@ -87,8 +91,16 @@ impl Columns {
         )
     }
 
-    fn format_rect(&self, row: Rect) -> Rect {
+    fn rating_rect(&self, row: Rect) -> Rect {
         let left = self.album_rect(row).right();
+        Rect::from_min_size(
+            Pos2::new(left, row.top()),
+            Vec2::new(self.rating, row.height()),
+        )
+    }
+
+    fn format_rect(&self, row: Rect) -> Rect {
+        let left = self.rating_rect(row).right();
         Rect::from_min_size(
             Pos2::new(left, row.top()),
             Vec2::new(self.format, row.height()),
@@ -440,7 +452,15 @@ impl RPlayerApp {
         }
 
         ui.painter().text(
-            Pos2::new(columns.format_rect(rect).left() + 2.0, rect.center().y),
+            Pos2::new(columns.rating_rect(rect).left() + 2.0, rect.center().y),
+            Align2::LEFT_CENTER,
+            "评分",
+            FontId::proportional(11.0),
+            theme::c().faint,
+        );
+
+        ui.painter().text(
+            Pos2::new(columns.format_rect(rect).left() + 6.0, rect.center().y),
             Align2::LEFT_CENTER,
             "格式",
             FontId::proportional(11.0),
@@ -608,7 +628,7 @@ impl RPlayerApp {
 
                     painter.text(
                         Pos2::new(
-                            columns.format_rect(rect).left() + 2.0,
+                            columns.format_rect(rect).left() + 6.0,
                             columns.format_rect(rect).center().y,
                         ),
                         Align2::LEFT_CENTER,
@@ -628,13 +648,59 @@ impl RPlayerApp {
                         if current { theme::c().muted } else { theme::c().faint },
                     );
 
+                    let rating_rect = columns.rating_rect(rect);
+                    let rating = self.rating(id);
+                    let pointer = response.hover_pos();
+                    let hover_rating = pointer.and_then(|pos| {
+                        if rating_rect.contains(pos) {
+                            Some(
+                                (((pos.x - rating_rect.left()) / 11.0).floor() as u8 + 1).min(5),
+                            )
+                        } else {
+                            None
+                        }
+                    });
+                    for index in 0..5 {
+                        let star = Rect::from_center_size(
+                            Pos2::new(
+                                rating_rect.left() + 4.0 + index as f32 * 11.0,
+                                rating_rect.center().y,
+                            ),
+                            Vec2::splat(9.0),
+                        );
+                        let filled = index < rating || hover_rating.is_some_and(|h| index < h);
+                        icons::paint(
+                            ui.painter(),
+                            star,
+                            if filled { Icon::StarFilled } else { Icon::Star },
+                            if filled {
+                                theme::c().accent
+                            } else {
+                                theme::c().faint
+                            },
+                        );
+                    }
+                    let rating_clicked = if response.clicked() {
+                        pointer.and_then(|pos| {
+                            if rating_rect.contains(pos) {
+                                Some(
+                                    (((pos.x - rating_rect.left()) / 11.0).floor() as u8 + 1)
+                                        .min(5),
+                                )
+                            } else {
+                                None
+                            }
+                        })
+                    } else {
+                        None
+                    };
+
                     let actions_rect = columns.actions_rect(rect);
                     let heart_rect = Rect::from_center_size(
                         Pos2::new(actions_rect.left() + 18.0, actions_rect.center().y),
                         Vec2::splat(26.0),
                     );
                     let favorite = self.library.is_favorite(id);
-                    let pointer = response.hover_pos();
                     let heart_hovered = pointer.is_some_and(|pos| heart_rect.contains(pos));
                     icons::paint(
                         ui.painter(),
@@ -662,7 +728,10 @@ impl RPlayerApp {
                     let click_pos = response.interact_pointer_pos();
                     let heart_clicked =
                         response.clicked() && click_pos.is_some_and(|pos| heart_rect.contains(pos));
-                    if heart_clicked {
+                    if let Some(value) = rating_clicked {
+                        let next = if self.rating(id) == value { 0 } else { value };
+                        self.set_rating(id, next);
+                    } else if heart_clicked {
                         self.toggle_favorite(id);
                     } else if response.double_clicked() {
                         self.play_track(ui.ctx(), id);
@@ -690,6 +759,25 @@ impl RPlayerApp {
                             self.toggle_favorite(id);
                             ui.close_menu();
                         }
+
+                        ui.menu_button("评分", |ui| {
+                            let current = self.rating(id);
+                            for value in 1..=5u8 {
+                                let label = if value == current {
+                                    format!("{value} 星（当前）")
+                                } else {
+                                    format!("{value} 星")
+                                };
+                                if ui.button(label).clicked() {
+                                    self.set_rating(id, value);
+                                    ui.close_menu();
+                                }
+                            }
+                            if current > 0 && ui.button("清除评分").clicked() {
+                                self.set_rating(id, 0);
+                                ui.close_menu();
+                            }
+                        });
 
                         ui.menu_button("添加到播放列表", |ui| {
                             let playlists: Vec<(u64, String)> = self

@@ -252,6 +252,27 @@ impl RPlayerApp {
                                 )
                                 .truncate(),
                             );
+                            ui.add_space(6.0);
+                            ui.horizontal(|ui| {
+                                let current_rating = self.rating(track.id);
+                                if let Some(value) =
+                                    widgets::rating_stars(ui, current_rating, 16.0)
+                                {
+                                    let next = if current_rating == value { 0 } else { value };
+                                    self.set_rating(track.id, next);
+                                }
+                                let stats = self.stats.get(track.id);
+                                if stats.play_count > 0 {
+                                    ui.label(
+                                        RichText::new(format!(
+                                            "播放 {} 次 · 跳过 {} 次",
+                                            stats.play_count, stats.skip_count
+                                        ))
+                                        .size(10.0)
+                                        .color(theme::c().faint),
+                                    );
+                                }
+                            });
                             ui.add_space(8.0);
                             ui.horizontal(|ui| {
                                 if let Some(source) = self.cover_source {

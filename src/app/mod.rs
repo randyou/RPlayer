@@ -8,6 +8,7 @@ mod now_rail;
 mod player_bar;
 mod session;
 mod settings;
+mod stats;
 mod sidebar;
 
 use std::collections::HashSet;
@@ -130,6 +131,10 @@ pub(super) struct Toast {
 
 pub struct RPlayerApp {
     library: Library,
+    stats: crate::stats::PlaybackStats,
+    stats_dirty: bool,
+    last_stats_save: std::time::Instant,
+    play_credited: bool,
     audio: Option<AudioEngine>,
     eq: Arc<EqShared>,
     view: View,
@@ -241,6 +246,10 @@ impl RPlayerApp {
             last_saved_volume: volume,
             volume_before_mute: if volume > 0.01 { volume } else { 0.72 },
             library,
+            stats: crate::stats::PlaybackStats::load(),
+            stats_dirty: false,
+            last_stats_save: std::time::Instant::now(),
+            play_credited: false,
             audio,
             eq,
             view: View::Library,
@@ -649,6 +658,7 @@ impl RPlayerApp {
         if index >= queue.len() {
             return;
         }
+        self.credit_current_track(true);
         self.queue = queue;
         self.queue_index = index;
         self.start_current(ctx);
@@ -677,6 +687,7 @@ impl RPlayerApp {
         match play_result {
             Ok(()) => {
                 self.current = Some(id);
+                self.play_credited = false;
                 self.queued_next = None;
                 self.boundary_seen = 0;
                 self.library.mark_played(id);
@@ -702,6 +713,7 @@ impl RPlayerApp {
         if self.queue.is_empty() {
             return;
         }
+        self.credit_current_track(!automatic);
         if automatic && self.repeat == RepeatMode::One {
             self.start_current(ctx);
             return;
@@ -780,6 +792,7 @@ impl RPlayerApp {
     }
 
     fn clear_queue(&mut self) {
+        self.credit_current_track(true);
         if let Some(audio) = &mut self.audio {
             audio.stop();
         }
@@ -816,6 +829,7 @@ impl RPlayerApp {
             return;
         }
 
+        self.credit_current_track(true);
         let len = self.queue.len();
         let index = if self.shuffle && len > 1 {
             use rand::Rng;
@@ -1788,6 +1802,7 @@ impl RPlayerApp {
         let Some(next) = self.queued_next.take() else {
             return;
         };
+        self.credit_completed_track();
         if let Some(audio) = &mut self.audio {
             audio.begin_next_track();
         }
@@ -2132,8 +2147,10 @@ impl RPlayerApp {
 
     fn handle_close(&mut self, ctx: &egui::Context) {
         if !self.closing_saved && ctx.input(|i| i.viewport().close_requested()) {
+            self.credit_current_track(false);
             self.persist();
             self.save_session();
+            self.save_stats();
             self.closing_saved = true;
         }
     }
@@ -2157,6 +2174,7 @@ impl eframe::App for RPlayerApp {
         self.poll_watch();
         self.restore_pending_playback(ctx);
         self.poll_audio(ctx);
+        self.poll_stats();
         self.poll_lyrics_fetch();
         self.poll_cover_fetch(ctx);
         self.poll_media_keys(ctx);
