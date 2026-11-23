@@ -112,7 +112,12 @@ fn decode_text(bytes: &[u8]) -> String {
             .collect();
         return String::from_utf16_lossy(&units);
     }
-    String::from_utf8_lossy(bytes).into_owned()
+    if let Ok(text) = std::str::from_utf8(bytes) {
+        return text.to_owned();
+    }
+    // Mainland Chinese .lrc files are commonly GBK/GB18030 rather than UTF-8.
+    let (text, _, _) = encoding_rs::GBK.decode(bytes);
+    text.into_owned()
 }
 
 pub fn parse_lrc(text: &str) -> Lyrics {
@@ -207,6 +212,14 @@ mod tests {
         assert_eq!(lyrics.active_index(1.2), Some(0));
         assert_eq!(lyrics.active_index(6.0), Some(1));
         assert_eq!(lyrics.active_index(12.0), Some(2));
+    }
+
+    #[test]
+    fn decodes_gbk_sidecar_lyrics() {
+        let (encoded, _, _) = encoding_rs::GBK.encode("[00:01.00]你好\n");
+        let text = decode_text(&encoded);
+        assert!(text.contains("你好"));
+        assert_eq!(parse_lrc(&text).lines[0].text, "你好");
     }
 
     #[test]

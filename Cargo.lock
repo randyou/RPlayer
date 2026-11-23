@@ -3057,6 +3057,7 @@ dependencies = [
  "dirs",
  "eframe",
  "egui",
+ "encoding_rs",
  "image",
  "lofty",
  "rand 0.8.8",
