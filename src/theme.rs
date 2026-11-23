@@ -77,6 +77,86 @@ pub const DARK: Palette = Palette {
     shadow: Color32::from_black_alpha(150),
 };
 
+pub const SAND: Palette = Palette {
+    dark: false,
+    bg: Color32::from_rgb(0xF6, 0xF1, 0xE9),
+    sidebar: Color32::from_rgb(0xFC, 0xF8, 0xF1),
+    panel: Color32::from_rgb(0xFF, 0xFD, 0xF8),
+    card: Color32::from_rgb(0xF1, 0xE8, 0xDA),
+    hover: Color32::from_rgb(0xEA, 0xDF, 0xCC),
+    selected: Color32::from_rgb(0xF7, 0xE8, 0xC8),
+    border: Color32::from_rgb(0xDC, 0xCD, 0xB8),
+    border_soft: Color32::from_rgb(0xEA, 0xDF, 0xCC),
+    text: Color32::from_rgb(0x24, 0x1C, 0x12),
+    muted: Color32::from_rgb(0x6B, 0x5D, 0x4C),
+    faint: Color32::from_rgb(0x94, 0x85, 0x73),
+    accent: Color32::from_rgb(0xC4, 0x7A, 0x2C),
+    accent_dark: Color32::from_rgb(0x8F, 0x54, 0x1A),
+    on_accent: Color32::from_rgb(0xFF, 0xF8, 0xED),
+    danger: Color32::from_rgb(0xD8, 0x4A, 0x3D),
+    shadow: Color32::from_black_alpha(38),
+};
+
+pub const MIST: Palette = Palette {
+    dark: false,
+    bg: Color32::from_rgb(0xEE, 0xF4, 0xF8),
+    sidebar: Color32::from_rgb(0xF8, 0xFB, 0xFD),
+    panel: Color32::from_rgb(0xFF, 0xFF, 0xFF),
+    card: Color32::from_rgb(0xE6, 0xF0, 0xF6),
+    hover: Color32::from_rgb(0xDC, 0xEA, 0xF2),
+    selected: Color32::from_rgb(0xD9, 0xED, 0xF5),
+    border: Color32::from_rgb(0xC8, 0xD9, 0xE4),
+    border_soft: Color32::from_rgb(0xDF, 0xEA, 0xF2),
+    text: Color32::from_rgb(0x12, 0x20, 0x29),
+    muted: Color32::from_rgb(0x4D, 0x63, 0x70),
+    faint: Color32::from_rgb(0x78, 0x90, 0x9E),
+    accent: Color32::from_rgb(0x2A, 0x86, 0xB8),
+    accent_dark: Color32::from_rgb(0x1B, 0x5F, 0x84),
+    on_accent: Color32::from_rgb(0xFF, 0xFF, 0xFF),
+    danger: Color32::from_rgb(0xD8, 0x4A, 0x5D),
+    shadow: Color32::from_black_alpha(38),
+};
+
+pub const MIDNIGHT: Palette = Palette {
+    dark: true,
+    bg: Color32::from_rgb(0x0A, 0x10, 0x1C),
+    sidebar: Color32::from_rgb(0x0D, 0x15, 0x24),
+    panel: Color32::from_rgb(0x10, 0x1A, 0x2B),
+    card: Color32::from_rgb(0x14, 0x21, 0x36),
+    hover: Color32::from_rgb(0x1B, 0x2A, 0x43),
+    selected: Color32::from_rgb(0x17, 0x32, 0x4A),
+    border: Color32::from_rgb(0x24, 0x36, 0x50),
+    border_soft: Color32::from_rgb(0x1A, 0x2A, 0x40),
+    text: Color32::from_rgb(0xF2, 0xF7, 0xFF),
+    muted: Color32::from_rgb(0x8F, 0xA5, 0xC0),
+    faint: Color32::from_rgb(0x61, 0x7A, 0x96),
+    accent: Color32::from_rgb(0x7C, 0xC7, 0xFF),
+    accent_dark: Color32::from_rgb(0x2E, 0x6A, 0x96),
+    on_accent: Color32::from_rgb(0x06, 0x12, 0x1C),
+    danger: Color32::from_rgb(0xFF, 0x7A, 0x8A),
+    shadow: Color32::from_black_alpha(150),
+};
+
+pub const CHARCOAL: Palette = Palette {
+    dark: true,
+    bg: Color32::from_rgb(0x11, 0x11, 0x11),
+    sidebar: Color32::from_rgb(0x17, 0x17, 0x17),
+    panel: Color32::from_rgb(0x1B, 0x1B, 0x1B),
+    card: Color32::from_rgb(0x22, 0x22, 0x22),
+    hover: Color32::from_rgb(0x2B, 0x2B, 0x2B),
+    selected: Color32::from_rgb(0x26, 0x30, 0x26),
+    border: Color32::from_rgb(0x33, 0x33, 0x33),
+    border_soft: Color32::from_rgb(0x28, 0x28, 0x28),
+    text: Color32::from_rgb(0xF2, 0xF2, 0xF2),
+    muted: Color32::from_rgb(0x9A, 0x9A, 0x9A),
+    faint: Color32::from_rgb(0x6E, 0x6E, 0x6E),
+    accent: Color32::from_rgb(0xA8, 0xC7, 0xA1),
+    accent_dark: Color32::from_rgb(0x58, 0x7A, 0x52),
+    on_accent: Color32::from_rgb(0x0B, 0x12, 0x0A),
+    danger: Color32::from_rgb(0xFF, 0x7A, 0x8A),
+    shadow: Color32::from_black_alpha(150),
+};
+
 pub const LIGHT: Palette = Palette {
     dark: false,
     bg: Color32::from_rgb(0xF3, 0xF5, 0xF1),
@@ -97,29 +177,135 @@ pub const LIGHT: Palette = Palette {
     shadow: Color32::from_black_alpha(38),
 };
 
-static MODE: AtomicU8 = AtomicU8::new(0);
-static FONTS_INSTALLED: AtomicBool = AtomicBool::new(false);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ThemePreset {
+    Paper,
+    Sand,
+    Mist,
+    #[default]
+    Forest,
+    Midnight,
+    Charcoal,
+}
 
-pub fn mode() -> ThemeMode {
-    match MODE.load(Ordering::Relaxed) {
-        1 => ThemeMode::Light,
-        _ => ThemeMode::Dark,
+impl ThemePreset {
+    pub const ALL: [Self; 6] = [
+        Self::Paper,
+        Self::Sand,
+        Self::Mist,
+        Self::Forest,
+        Self::Midnight,
+        Self::Charcoal,
+    ];
+
+    pub fn id(self) -> &'static str {
+        match self {
+            Self::Paper => "paper",
+            Self::Sand => "sand",
+            Self::Mist => "mist",
+            Self::Forest => "forest",
+            Self::Midnight => "midnight",
+            Self::Charcoal => "charcoal",
+        }
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Paper => "纸白",
+            Self::Sand => "暖沙",
+            Self::Mist => "雾蓝",
+            Self::Forest => "墨绿",
+            Self::Midnight => "午夜",
+            Self::Charcoal => "炭黑",
+        }
+    }
+
+    pub fn from_id(id: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|preset| preset.id() == id)
+    }
+
+    pub fn default_for_mode(mode: ThemeMode) -> Self {
+        if mode.is_dark() {
+            Self::Forest
+        } else {
+            Self::Paper
+        }
+    }
+
+    pub fn mode(self) -> ThemeMode {
+        if self.is_dark() {
+            ThemeMode::Dark
+        } else {
+            ThemeMode::Light
+        }
+    }
+
+    pub fn is_dark(self) -> bool {
+        matches!(self, Self::Forest | Self::Midnight | Self::Charcoal)
+    }
+
+    pub fn palette(self) -> &'static Palette {
+        match self {
+            Self::Paper => &LIGHT,
+            Self::Sand => &SAND,
+            Self::Mist => &MIST,
+            Self::Forest => &DARK,
+            Self::Midnight => &MIDNIGHT,
+            Self::Charcoal => &CHARCOAL,
+        }
+    }
+
+    /// `Ctrl+T` keeps the current family: Paper↔Forest, Sand↔Charcoal,
+    /// Mist↔Midnight.
+    pub fn toggle_mode(self) -> Self {
+        match self {
+            Self::Paper => Self::Forest,
+            Self::Forest => Self::Paper,
+            Self::Sand => Self::Charcoal,
+            Self::Charcoal => Self::Sand,
+            Self::Mist => Self::Midnight,
+            Self::Midnight => Self::Mist,
+        }
     }
 }
 
+static PRESET: AtomicU8 = AtomicU8::new(3);
+static FONTS_INSTALLED: AtomicBool = AtomicBool::new(false);
+
+pub fn preset() -> ThemePreset {
+    match PRESET.load(Ordering::Relaxed) {
+        0 => ThemePreset::Paper,
+        1 => ThemePreset::Sand,
+        2 => ThemePreset::Mist,
+        3 => ThemePreset::Forest,
+        4 => ThemePreset::Midnight,
+        _ => ThemePreset::Charcoal,
+    }
+}
+
+pub fn set_preset(preset: ThemePreset) {
+    let index = match preset {
+        ThemePreset::Paper => 0,
+        ThemePreset::Sand => 1,
+        ThemePreset::Mist => 2,
+        ThemePreset::Forest => 3,
+        ThemePreset::Midnight => 4,
+        ThemePreset::Charcoal => 5,
+    };
+    PRESET.store(index, Ordering::Relaxed);
+}
+
+pub fn mode() -> ThemeMode {
+    preset().mode()
+}
+
 pub fn set_mode(mode: ThemeMode) {
-    MODE.store(
-        if mode.is_dark() { 0 } else { 1 },
-        Ordering::Relaxed,
-    );
+    set_preset(ThemePreset::default_for_mode(mode));
 }
 
 /// The active palette. Every custom-painted colour goes through this.
 pub fn c() -> &'static Palette {
-    match mode() {
-        ThemeMode::Dark => &DARK,
-        ThemeMode::Light => &LIGHT,
-    }
+    preset().palette()
 }
 
 /// Translucent accent colour. `egui` meshes are composited from
@@ -150,7 +336,12 @@ pub fn black_alpha(alpha: f32) -> Color32 {
 
 /// Installs fonts once and applies the style for `mode`.
 pub fn install(ctx: &egui::Context, mode: ThemeMode) {
-    set_mode(mode);
+    install_preset(ctx, ThemePreset::default_for_mode(mode));
+}
+
+/// Installs fonts once and applies a specific preset.
+pub fn install_preset(ctx: &egui::Context, preset: ThemePreset) {
+    set_preset(preset);
     if !FONTS_INSTALLED.swap(true, Ordering::Relaxed) {
         install_fonts(ctx);
     }

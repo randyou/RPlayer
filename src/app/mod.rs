@@ -34,7 +34,7 @@ use crate::overlay::{
 };
 use crate::scanner::{self, ScanEvent};
 use crate::storage;
-use crate::theme::{self, ThemeMode};
+use crate::theme::{self, ThemeMode, ThemePreset};
 use crate::ui::icons::{self, Icon};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -196,6 +196,7 @@ pub struct RPlayerApp {
     last_window_title: String,
     closing_saved: bool,
     theme_mode: ThemeMode,
+    theme_preset: ThemePreset,
     titlebar_dark: Option<bool>,
     eq_open: bool,
     eq_dirty: bool,
@@ -225,12 +226,15 @@ pub struct RPlayerApp {
 impl RPlayerApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         let library = storage::load_library();
-        let theme_mode = if library.light_theme {
-            ThemeMode::Light
-        } else {
-            ThemeMode::Dark
-        };
-        theme::install(&cc.egui_ctx, theme_mode);
+        let theme_preset = ThemePreset::from_id(&library.theme_preset).unwrap_or_else(|| {
+            if library.light_theme {
+                ThemePreset::Paper
+            } else {
+                ThemePreset::Forest
+            }
+        });
+        let theme_mode = theme_preset.mode();
+        theme::install_preset(&cc.egui_ctx, theme_preset);
         cc.egui_ctx
             .send_viewport_cmd(egui::ViewportCommand::SetTheme(if theme_mode.is_dark() {
                 egui::SystemTheme::Dark
@@ -312,6 +316,7 @@ impl RPlayerApp {
             last_window_title: "RPlayer".to_string(),
             closing_saved: false,
             theme_mode,
+            theme_preset,
             titlebar_dark: None,
             eq_open: false,
             eq_dirty: false,
@@ -1465,14 +1470,25 @@ impl RPlayerApp {
     }
 
     fn set_theme_mode(&mut self, ctx: &egui::Context, mode: ThemeMode) {
-        if self.theme_mode == mode {
+        let preset = if self.theme_preset.mode() == mode {
+            self.theme_preset
+        } else {
+            self.theme_preset.toggle_mode()
+        };
+        self.set_theme_preset(ctx, preset);
+    }
+
+    fn set_theme_preset(&mut self, ctx: &egui::Context, preset: ThemePreset) {
+        if self.theme_preset == preset {
             return;
         }
-        self.theme_mode = mode;
-        self.library.light_theme = !mode.is_dark();
-        theme::set_mode(mode);
+        self.theme_preset = preset;
+        self.theme_mode = preset.mode();
+        self.library.light_theme = !preset.is_dark();
+        self.library.theme_preset = preset.id().to_string();
+        theme::set_preset(preset);
         theme::apply_style(ctx);
-        ctx.send_viewport_cmd(ViewportCommand::SetTheme(if mode.is_dark() {
+        ctx.send_viewport_cmd(ViewportCommand::SetTheme(if preset.is_dark() {
             egui::SystemTheme::Dark
         } else {
             egui::SystemTheme::Light
@@ -1480,17 +1496,13 @@ impl RPlayerApp {
         self.titlebar_dark = None;
         self.persist();
         self.toast(
-            if mode.is_dark() {
-                "已切换到深色主题"
-            } else {
-                "已切换到浅色主题"
-            },
+            format!("已切换到「{}」主题", preset.label()),
             ToastKind::Info,
         );
     }
 
     fn toggle_theme(&mut self, ctx: &egui::Context) {
-        self.set_theme_mode(ctx, self.theme_mode.toggle());
+        self.set_theme_preset(ctx, self.theme_preset.toggle_mode());
     }
 
     fn toggle_eq(&mut self) {

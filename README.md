@@ -14,6 +14,10 @@ v0.6 正在开发：已完成底栏三段布局、按钮间距统一、Windows e
 
 ![RPlayer 批量多选](docs/screenshot-multiselect.png)
 
+![RPlayer 暖沙主题](docs/screenshot-theme-sand.png)
+
+![RPlayer 午夜主题](docs/screenshot-theme-midnight.png)
+
 ![RPlayer 深色正在播放](docs/screenshot-dark.png)
 
 ![RPlayer 正在播放](docs/screenshot-playing.png)
@@ -247,6 +251,7 @@ v0.6 的曲库深度规划、专辑/艺术家视图、评分与统计、智能�
 - 曲库新增「歌曲 / 专辑 / 艺术家」浏览切换；专辑封面网格、专辑详情、艺术家详情；单曲/整张/整位艺术家播放与加入队列。
 - 专辑封面缩略图在后台线程加载，避免滚动时解码阻塞 UI。
 - 曲库支持 Shift 范围选择、Ctrl 点选、Ctrl+A 全选、批量加入歌单/队列、拖动到歌单或播放队列。
+- 新增 6 套主题预设：纸白、暖沙、雾蓝、墨绿、午夜、炭黑；设置中可切换，`Ctrl+T` 在主题家族内切换浅/深。
 - 版本号进入 v0.6 开发线。
 
 ### v0.5.0

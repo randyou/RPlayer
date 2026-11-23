@@ -127,6 +127,8 @@ pub struct Library {
     pub recent: Vec<u64>,
     /// Persisted appearance preference.
     pub light_theme: bool,
+    /// Theme preset id (paper/sand/mist/forest/midnight/charcoal).
+    pub theme_preset: String,
     /// Whether the desktop lyrics overlay should open with the app.
     pub desktop_lyrics: bool,
     /// Background opacity of the desktop lyrics card (0.35–1.0).
@@ -150,6 +152,7 @@ impl Default for Library {
             favorites: Vec::new(),
             recent: Vec::new(),
             light_theme: true,
+            theme_preset: "paper".to_string(),
             desktop_lyrics: false,
             desktop_lyrics_opacity: 0.85,
             auto_lyrics: true,

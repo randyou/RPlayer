@@ -6,7 +6,7 @@ use egui::{
 };
 
 use super::RPlayerApp;
-use crate::theme::{self, ThemeMode};
+use crate::theme::{self, ThemePreset};
 use crate::ui::icons::{self, Icon};
 use crate::ui::widgets;
 
@@ -17,7 +17,7 @@ impl RPlayerApp {
         }
 
         let mut close = false;
-        let mut requested_theme = None;
+        let mut requested_theme: Option<ThemePreset> = None;
         let mut opacity = self.library.desktop_lyrics_opacity;
         let mut auto_lyrics = self.library.auto_lyrics;
         let mut auto_cover = self.library.auto_cover;
@@ -89,34 +89,40 @@ impl RPlayerApp {
                     .corner_radius(CornerRadius::same(12))
                     .inner_margin(egui::Margin::symmetric(12, 10))
                     .show(ui, |ui| {
-                        ui.horizontal(|ui| {
-                            ui.label(
-                                RichText::new("主题")
-                                    .size(12.0)
-                                    .color(theme::c().text),
-                            );
-                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                                ui.spacing_mut().item_spacing.x = 6.0;
+                        ui.label(
+                            RichText::new("主题")
+                                .size(12.0)
+                                .color(theme::c().text),
+                        );
+                        ui.add_space(7.0);
+                        ui.horizontal_wrapped(|ui| {
+                            ui.spacing_mut().item_spacing.x = 6.0;
+                            for preset in ThemePreset::ALL {
                                 if widgets::chip(
                                     ui,
-                                    "深色",
-                                    self.theme_mode == ThemeMode::Dark,
+                                    preset.label(),
+                                    self.theme_preset == preset,
                                 )
                                 .clicked()
                                 {
-                                    requested_theme = Some(ThemeMode::Dark);
+                                    requested_theme = Some(preset);
                                 }
-                                if widgets::chip(
-                                    ui,
-                                    "浅色",
-                                    self.theme_mode == ThemeMode::Light,
-                                )
-                                .clicked()
-                                {
-                                    requested_theme = Some(ThemeMode::Light);
-                                }
-                            });
+                            }
                         });
+                        ui.add_space(5.0);
+                        ui.label(
+                            RichText::new(format!(
+                                "当前：{} · {}",
+                                self.theme_preset.label(),
+                                if self.theme_preset.is_dark() {
+                                    "深色"
+                                } else {
+                                    "浅色"
+                                }
+                            ))
+                            .size(10.0)
+                            .color(theme::c().faint),
+                        );
                     });
 
                 ui.add_space(16.0);
@@ -285,8 +291,8 @@ impl RPlayerApp {
                 });
             });
 
-        if let Some(mode) = requested_theme {
-            self.set_theme_mode(ctx, mode);
+        if let Some(preset) = requested_theme {
+            self.set_theme_preset(ctx, preset);
         }
         if (opacity - self.library.desktop_lyrics_opacity).abs() > 0.001 {
             self.library.desktop_lyrics_opacity = opacity.clamp(0.35, 1.0);
