@@ -33,7 +33,7 @@ impl RPlayerApp {
                 let width = full.width();
                 // Symmetric side columns keep the transport cluster at the
                 // real window centre instead of the centre of leftover space.
-                let side = if width >= 1040.0 { 300.0 } else { 260.0 };
+                let side = if width >= 1040.0 { 300.0 } else { 280.0 };
                 let center = (width - side * 2.0 - 24.0).max(300.0);
 
                 ui.scope_builder(egui::UiBuilder::new().max_rect(full), |ui| {
@@ -248,18 +248,23 @@ impl RPlayerApp {
     }
 
     fn player_extras(&mut self, ui: &mut Ui) {
-        ui.spacing_mut().item_spacing.x = 6.0;
+        let compact = ui.available_width() < 300.0;
+        let icon_size = if compact { 28.0 } else { 31.0 };
+        ui.spacing_mut().item_spacing.x = if compact { 3.0 } else { 4.0 };
 
         let rail_ready = Self::rail_available(ui.ctx()) && self.current.is_some();
-        if widgets::icon_button_tinted(
-            ui,
-            Icon::PanelRight,
-            34.0,
-            theme::c().muted,
-            rail_ready && self.now_rail_open,
-            "显示 / 收起正在播放侧栏",
-        )
-        .clicked()
+        // The panel toggle also exists in the header; drop it first when the
+        // right column gets tight, keeping volume + equalizer + lyrics usable.
+        if !compact
+            && widgets::icon_button_tinted(
+                ui,
+                Icon::PanelRight,
+                34.0,
+                theme::c().muted,
+                rail_ready && self.now_rail_open,
+                "显示 / 收起正在播放侧栏",
+            )
+            .clicked()
         {
             if self.current.is_some() && Self::rail_available(ui.ctx()) {
                 self.now_rail_open = !self.now_rail_open;
@@ -277,7 +282,7 @@ impl RPlayerApp {
         if widgets::icon_button_tinted(
             ui,
             Icon::Queue,
-            34.0,
+            icon_size,
             theme::c().muted,
             queue_active,
             "播放队列",
@@ -297,6 +302,32 @@ impl RPlayerApp {
             }
         }
 
+        if widgets::icon_button_tinted(
+            ui,
+            Icon::Lyrics,
+            icon_size,
+            theme::c().muted,
+            self.desktop_lyrics_open,
+            "显示 / 隐藏桌面歌词",
+        )
+        .clicked()
+        {
+            self.toggle_desktop_lyrics(ui.ctx());
+        }
+
+        if widgets::icon_button_tinted(
+            ui,
+            Icon::Equalizer,
+            icon_size,
+            theme::c().muted,
+            self.eq_open,
+            "均衡器",
+        )
+        .clicked()
+        {
+            self.toggle_eq();
+        }
+
         if let Some(volume) = widgets::volume_bar(ui, self.volume) {
             self.set_volume(volume);
         }
@@ -309,12 +340,12 @@ impl RPlayerApp {
         } else {
             Icon::VolumeHigh
         };
-        if widgets::icon_button(ui, icon, 30.0, if muted { "取消静音" } else { "静音" }).clicked()
+        if widgets::icon_button(ui, icon, icon_size, if muted { "取消静音" } else { "静音" }).clicked()
         {
             self.toggle_mute();
         }
 
-        if widgets::icon_button(ui, Icon::ChevronUp, 30.0, "打开正在播放").clicked()
+        if widgets::icon_button(ui, Icon::ChevronUp, icon_size, "打开正在播放").clicked()
             && self.current.is_some()
         {
             self.queue_open = false;

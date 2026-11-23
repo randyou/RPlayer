@@ -239,7 +239,7 @@ impl RPlayerApp {
                     .inner_margin(Margin::symmetric(4, 3))
                     .show(ui, |ui| {
                         ui.allocate_ui_with_layout(
-                            Vec2::new(if compact { 128.0 } else { 188.0 }, 30.0),
+                            Vec2::new(if compact { 98.0 } else { 158.0 }, 30.0),
                             Layout::left_to_right(Align::Center),
                             |ui| {
                             ui.spacing_mut().item_spacing.x = 1.0;
@@ -261,18 +261,6 @@ impl RPlayerApp {
                             .clicked()
                             {
                                 self.toggle_theme(ui.ctx());
-                            }
-                            if widgets::icon_button_tinted(
-                                ui,
-                                Icon::Equalizer,
-                                30.0,
-                                theme::c().muted,
-                                self.eq_open,
-                                "均衡器",
-                            )
-                            .clicked()
-                            {
-                                self.toggle_eq();
                             }
                             if !compact {
                                 if widgets::icon_button_tinted(
