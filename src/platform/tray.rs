@@ -1,5 +1,8 @@
 //! Windows system tray integration.
 
+use std::sync::{Mutex, OnceLock};
+use std::sync::atomic::{AtomicBool, Ordering};
+
 use tray_icon::{
     menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem},
     Icon, MouseButton, TrayIcon, TrayIconBuilder, TrayIconEvent,
@@ -58,24 +61,49 @@ impl Tray {
             .with_icon(icon)
             .build()
             .ok()?;
+        start_event_thread();
         Some(Self { _icon: tray })
     }
 
     pub fn poll() -> Vec<TrayAction> {
-        let mut actions = Vec::new();
+        let mut queue = actions().lock().unwrap_or_else(|error| error.into_inner());
+        std::mem::take(&mut *queue)
+    }
+}
+
+fn actions() -> &'static Mutex<Vec<TrayAction>> {
+    static QUEUE: OnceLock<Mutex<Vec<TrayAction>>> = OnceLock::new();
+    QUEUE.get_or_init(|| Mutex::new(Vec::new()))
+}
+
+fn push(action: TrayAction) {
+    if let Ok(mut queue) = actions().lock() {
+        queue.push(action);
+    }
+}
+
+fn start_event_thread() {
+    static STARTED: AtomicBool = AtomicBool::new(false);
+    if STARTED.swap(true, Ordering::SeqCst) {
+        return;
+    }
+    std::thread::spawn(|| {
+        loop {
+        let mut has_action = false;
         while let Ok(event) = TrayIconEvent::receiver().try_recv() {
-            if let TrayIconEvent::Click {
-                button: MouseButton::Left,
-                ..
-            } = event
-            {
-                actions.push(TrayAction::Show);
-            } else if let TrayIconEvent::DoubleClick { .. } = event {
-                actions.push(TrayAction::Show);
+            if matches!(
+                event,
+                TrayIconEvent::Click {
+                    button: MouseButton::Left,
+                    ..
+                } | TrayIconEvent::DoubleClick { .. }
+            ) {
+                push(TrayAction::Show);
+                has_action = true;
             }
         }
         while let Ok(event) = MenuEvent::receiver().try_recv() {
-            actions.push(match event.id.0.as_str() {
+            let action = match event.id.0.as_str() {
                 "show" => TrayAction::Show,
                 "toggle" => TrayAction::TogglePlay,
                 "previous" => TrayAction::Previous,
@@ -84,8 +112,28 @@ impl Tray {
                 "settings" => TrayAction::Settings,
                 "exit" => TrayAction::Exit,
                 _ => continue,
-            });
+            };
+            push(action);
+            has_action = true;
         }
-        actions
+        if has_action {
+            // The UI may be minimized; unminimize natively so egui resumes
+            // updating and can consume the queued action immediately.
+            restore_main_window();
+        }
+        std::thread::sleep(std::time::Duration::from_millis(80));
+        }
+    });
+}
+
+fn restore_main_window() {
+    #[cfg(target_os = "windows")]
+    unsafe {
+        use winapi::um::winuser::{SetForegroundWindow, ShowWindow, SW_RESTORE};
+        if let Some(hwnd) = crate::platform::main_window_handle() {
+            let hwnd = hwnd as winapi::shared::windef::HWND;
+            ShowWindow(hwnd, SW_RESTORE);
+            SetForegroundWindow(hwnd);
+        }
     }
 }

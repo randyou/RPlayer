@@ -164,6 +164,7 @@ pub struct RPlayerApp {
     #[cfg(target_os = "windows")]
     tray: Option<crate::platform::tray::Tray>,
     allow_exit: bool,
+    main_window_pos: Option<Pos2>,
     audio: Option<AudioEngine>,
     eq: Arc<EqShared>,
     view: View,
@@ -301,6 +302,7 @@ impl RPlayerApp {
             #[cfg(target_os = "windows")]
             tray: None,
             allow_exit: false,
+            main_window_pos: None,
             audio,
             eq,
             view: View::Library,
@@ -387,6 +389,15 @@ impl RPlayerApp {
         #[cfg(target_os = "windows")]
         {
             app.tray = crate::platform::tray::Tray::create();
+            if app.tray.is_some() {
+                // The main viewport is minimized when sent to the tray; keep a
+                // light heartbeat so menu events can be polled while hidden.
+                let ctx = cc.egui_ctx.clone();
+                std::thread::spawn(move || loop {
+                    std::thread::sleep(std::time::Duration::from_millis(250));
+                    ctx.request_repaint_of(egui::ViewportId::ROOT);
+                });
+            }
         }
         if let Some(err) = audio_error {
             app.toast(format!("音频输出不可用：{err}"), ToastKind::Error);
@@ -2545,7 +2556,7 @@ impl RPlayerApp {
             #[cfg(target_os = "windows")]
             if self.tray.is_some() {
                 ctx.send_viewport_cmd(ViewportCommand::CancelClose);
-                ctx.send_viewport_cmd(ViewportCommand::Visible(false));
+                ctx.send_viewport_cmd(ViewportCommand::Minimized(true));
                 return;
             }
         }

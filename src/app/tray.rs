@@ -38,6 +38,9 @@ impl RPlayerApp {
     fn show_main_window(&mut self, ctx: &egui::Context) {
         ctx.send_viewport_cmd(egui::ViewportCommand::Visible(true));
         ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(false));
+        if let Some(pos) = self.main_window_pos.take() {
+            ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(pos));
+        }
         ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
     }
 
