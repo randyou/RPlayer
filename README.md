@@ -20,6 +20,10 @@ v0.6 正在开发：已完成底栏三段布局、按钮间距统一、Windows e
 
 ![RPlayer Ctrl+K 命令面板](docs/screenshot-command.png)
 
+![RPlayer 智能歌单规则](docs/screenshot-smart-builder.png)
+
+![RPlayer 智能歌单结果](docs/screenshot-smart.png)
+
 ![RPlayer 深色正在播放](docs/screenshot-dark.png)
 
 ![RPlayer 正在播放](docs/screenshot-playing.png)
@@ -255,6 +259,7 @@ v0.6 的曲库深度规划、专辑/艺术家视图、评分与统计、智能�
 - 曲库支持 Shift 范围选择、Ctrl 点选、Ctrl+A 全选、批量加入歌单/队列、拖动到歌单或播放队列。
 - 新增 6 套主题预设：纸白、暖沙、雾蓝、墨绿、午夜、炭黑；设置中可切换，`Ctrl+T` 在主题家族内切换浅/深。
 - 新增 `Ctrl+K` 命令面板：搜索并执行播放、浏览、设置、主题、扫描等动作，显示稳定动作 ID。
+- 新增智能歌单：按标题/艺术家/专辑/流派/年份/评分/播放次数/跳过次数组合规则，全部/任一匹配，可限制数量并实时更新。
 - 版本号进入 v0.6 开发线。
 
 ### v0.5.0

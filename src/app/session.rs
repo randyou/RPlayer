@@ -101,6 +101,7 @@ impl RPlayerApp {
             View::Recent => "recent".to_string(),
             View::Folders => "folders".to_string(),
             View::Playlist(id) => format!("playlist:{id}"),
+            View::Smart(id) => format!("smart:{id}"),
         }
     }
 
@@ -117,6 +118,13 @@ impl RPlayerApp {
                     Some(id) if self.library.playlists.iter().any(|list| list.id == id) => {
                         View::Playlist(id)
                     }
+                    _ => View::Library,
+                }
+            }
+            value if value.starts_with("smart:") => {
+                let id = value["smart:".len()..].parse::<u64>().ok();
+                match id {
+                    Some(id) if self.library.smart_playlist(id).is_some() => View::Smart(id),
                     _ => View::Library,
                 }
             }

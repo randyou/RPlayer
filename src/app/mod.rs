@@ -10,6 +10,7 @@ mod now_rail;
 mod player_bar;
 mod session;
 mod settings;
+mod smart;
 mod stats;
 mod sidebar;
 
@@ -47,6 +48,7 @@ pub(super) enum View {
     Recent,
     Folders,
     Playlist(u64),
+    Smart(u64),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -142,6 +144,7 @@ pub struct RPlayerApp {
     browse: browse::BrowseState,
     album_focus: Option<String>,
     artist_focus: Option<String>,
+    smart_builder: Option<smart::SmartDraft>,
     audio: Option<AudioEngine>,
     eq: Arc<EqShared>,
     view: View,
@@ -269,6 +272,7 @@ impl RPlayerApp {
             browse: browse::BrowseState::new(),
             album_focus: None,
             artist_focus: None,
+            smart_builder: None,
             audio,
             eq,
             view: View::Library,
@@ -1703,6 +1707,11 @@ impl RPlayerApp {
             .collect();
 
         match self.view {
+            View::Smart(id) => self
+                .library
+                .smart_playlist(id)
+                .map(|playlist| self.smart_ids(playlist))
+                .unwrap_or_default(),
             View::Playlist(id) => {
                 let Some(playlist) = self.library.playlist(id) else {
                     return Vec::new();
@@ -1808,6 +1817,14 @@ impl RPlayerApp {
                 "音乐目录".to_string(),
                 format!("{} 个文件夹", self.library.folders.len()),
             ),
+            View::Smart(id) => {
+                let name = self
+                    .library
+                    .smart_playlist(id)
+                    .map(|list| list.name.clone())
+                    .unwrap_or_else(|| "智能歌单".to_string());
+                (name, format!("{count} 首歌曲 · 智能规则"))
+            }
             View::Playlist(id) => {
                 let name = self
                     .library
@@ -2361,6 +2378,7 @@ impl eframe::App for RPlayerApp {
             self.now_playing(ctx);
             self.equalizer_window(ctx);
             self.settings_window(ctx);
+            self.smart_builder_window(ctx);
             self.render_dialog(ctx);
             self.render_toast(ctx);
             self.render_drop_overlay(ctx);
@@ -2383,6 +2401,7 @@ impl eframe::App for RPlayerApp {
         }
         self.equalizer_window(ctx);
         self.settings_window(ctx);
+        self.smart_builder_window(ctx);
         self.render_dialog(ctx);
         self.render_toast(ctx);
         self.render_drop_overlay(ctx);

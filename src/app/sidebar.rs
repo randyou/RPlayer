@@ -170,6 +170,9 @@ impl RPlayerApp {
                     };
                     self.focus_pending = true;
                 }
+                if widgets::icon_button(ui, Icon::Star, 22.0, "新建智能歌单").clicked() {
+                    self.open_smart_builder();
+                }
             });
         });
 
@@ -178,6 +181,12 @@ impl RPlayerApp {
             .playlists
             .iter()
             .map(|playlist| (playlist.id, playlist.name.clone()))
+            .collect();
+        let smart_playlists: Vec<(u64, String)> = self
+            .library
+            .smart_playlists
+            .iter()
+            .map(|list| (list.id, list.name.clone()))
             .collect();
 
         let scroll_height = (ui.available_height() - 142.0).max(70.0);
@@ -199,6 +208,7 @@ impl RPlayerApp {
                             .color(theme::c().faint.gamma_multiply(0.75)),
                     );
                 }
+                self.smart_playlist_items(ui, &smart_playlists);
                 for (id, name) in &playlists {
                     let selected = self.view == View::Playlist(*id);
                     let response = widgets::playlist_item(ui, name, selected);
@@ -249,6 +259,47 @@ impl RPlayerApp {
         // Push the footer to the bottom of the rail.
         ui.add_space((ui.available_height() - 118.0).max(4.0));
         self.sidebar_footer(ui);
+    }
+
+    fn smart_playlist_items(&mut self, ui: &mut Ui, lists: &[(u64, String)]) {
+        if lists.is_empty() {
+            return;
+        }
+        ui.label(
+            RichText::new("智能歌单")
+                .size(10.0)
+                .strong()
+                .color(theme::c().faint),
+        );
+        ui.add_space(3.0);
+        for (id, name) in lists {
+            let selected = self.view == View::Smart(*id);
+            let response = widgets::playlist_item(ui, &format!("✦ {name}"), selected);
+            if response.clicked() {
+                self.switch_view(View::Smart(*id));
+            }
+            response.context_menu(|ui| {
+                if ui.button("播放").clicked() {
+                    if let Some(playlist) = self.library.smart_playlist(*id) {
+                        let queue = self.smart_ids(playlist);
+                        if !queue.is_empty() {
+                            self.play_queue(ui.ctx(), queue, 0);
+                        }
+                    }
+                    ui.close_menu();
+                }
+                ui.separator();
+                if ui.button("删除智能歌单").clicked() {
+                    self.library.remove_smart_playlist(*id);
+                    if self.view == View::Smart(*id) {
+                        self.view = View::Library;
+                    }
+                    self.persist();
+                    ui.close_menu();
+                }
+            });
+        }
+        ui.add_space(6.0);
     }
 
     fn sidebar_footer(&mut self, ui: &mut Ui) {

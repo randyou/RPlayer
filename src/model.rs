@@ -112,6 +112,52 @@ impl Playlist {
     }
 }
 
+/// One condition in a smart playlist.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct SmartRule {
+    pub field: String,
+    pub op: String,
+    pub value: String,
+}
+
+impl Default for SmartRule {
+    fn default() -> Self {
+        Self {
+            field: "rating".to_string(),
+            op: ">=".to_string(),
+            value: "2".to_string(),
+        }
+    }
+}
+
+/// A saved, rule-driven playlist. It stores no track ids: results are
+/// evaluated against the current library and playback statistics.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct SmartPlaylist {
+    pub id: u64,
+    pub name: String,
+    pub match_all: bool,
+    pub rules: Vec<SmartRule>,
+    /// 0 means no limit.
+    pub limit: usize,
+    pub created_at: u64,
+}
+
+impl Default for SmartPlaylist {
+    fn default() -> Self {
+        Self {
+            id: 1,
+            name: "智能歌单".to_string(),
+            match_all: true,
+            rules: vec![SmartRule::default()],
+            limit: 0,
+            created_at: now_millis(),
+        }
+    }
+}
+
 /// Everything that survives an app restart.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
@@ -120,6 +166,7 @@ pub struct Library {
     pub folders: Vec<PathBuf>,
     pub tracks: Vec<Track>,
     pub playlists: Vec<Playlist>,
+    pub smart_playlists: Vec<SmartPlaylist>,
     pub volume: f32,
     /// Track ids the listener has hearted, newest first.
     pub favorites: Vec<u64>,
@@ -148,6 +195,7 @@ impl Default for Library {
             folders: Vec::new(),
             tracks: Vec::new(),
             playlists: Vec::new(),
+            smart_playlists: Vec::new(),
             volume: 0.72,
             favorites: Vec::new(),
             recent: Vec::new(),
@@ -187,6 +235,38 @@ impl Library {
 
     pub fn remove_playlist(&mut self, id: u64) {
         self.playlists.retain(|p| p.id != id);
+    }
+
+    pub fn smart_playlist(&self, id: u64) -> Option<&SmartPlaylist> {
+        self.smart_playlists.iter().find(|list| list.id == id)
+    }
+
+    pub fn create_smart_playlist(
+        &mut self,
+        name: impl Into<String>,
+        match_all: bool,
+        rules: Vec<SmartRule>,
+        limit: usize,
+    ) -> u64 {
+        let mut id = now_millis().max(1);
+        while self.playlists.iter().any(|list| list.id == id)
+            || self.smart_playlists.iter().any(|list| list.id == id)
+        {
+            id += 1;
+        }
+        self.smart_playlists.push(SmartPlaylist {
+            id,
+            name: name.into(),
+            match_all,
+            rules,
+            limit,
+            created_at: now_millis(),
+        });
+        id
+    }
+
+    pub fn remove_smart_playlist(&mut self, id: u64) {
+        self.smart_playlists.retain(|list| list.id != id);
     }
 
     /// Adds a track to a playlist, keeping order unique.
