@@ -61,53 +61,70 @@ struct LibraryFile {
 }
 
 pub fn load_library() -> Library {
-    let path = library_path();
+    let dir = data_dir();
+    let path = dir.join(LIBRARY_FILE);
     let db_exists = library_db_path().exists();
-    match fs::read(&path) {
-        Ok(bytes) => match serde_json::from_slice::<LibraryFile>(&bytes) {
+    // Recover from an interrupted write or a corrupted main file: the .tmp
+    // file is complete before rename, and .bak is the previous good save.
+    let candidates = [
+        path.clone(),
+        dir.join(format!("{LIBRARY_FILE}.tmp")),
+        dir.join(format!("{LIBRARY_FILE}.bak")),
+    ];
+    for candidate in &candidates {
+        let Ok(bytes) = fs::read(candidate) else {
+            continue;
+        };
+        match serde_json::from_slice::<LibraryFile>(&bytes) {
             Ok(file) => {
-                let mut library = file.library;
-                library.version = file.schema.max(1);
-                library.volume = library.volume.clamp(0.0, 1.0);
-                library.desktop_lyrics_opacity =
-                    library.desktop_lyrics_opacity.clamp(0.0, 1.0);
-                library.desktop_lyrics_text_opacity =
-                    library.desktop_lyrics_text_opacity.clamp(0.0, 1.0);
-                library.eq = library.eq.sanitized();
-                // v0.4 makes the paper theme the default. Older files only had
-                // a boolean, so migrate once; the user can switch back instantly.
-                if file.schema < 4 {
-                    library.light_theme = true;
-                    library.desktop_lyrics_opacity = 0.85;
-                    library.auto_lyrics = true;
-                }
-                if file.schema < 5 {
-                    library.auto_cover = true;
-                }
-                if db_exists {
-                    if let Ok(tracks) = load_tracks_from_db() {
-                        library.tracks = tracks;
-                    }
-                } else if !library.tracks.is_empty() {
-                    // First SQLite launch: keep a JSON backup, then import the
-                    // tracks into library.db.
-                    let backup = data_dir().join("library.json.bak");
-                    let _ = fs::copy(&path, backup);
-                    let _ = save_tracks_to_db(&library.tracks);
-                }
-                library
+                let from_main = candidate == &path;
+                return apply_loaded_library(file, db_exists, from_main, &path);
             }
             Err(err) => {
-                eprintln!("[RPlayer] failed to parse {}: {err}", path.display());
-                Library::default()
+                eprintln!(
+                    "[RPlayer] failed to parse {}: {err}",
+                    candidate.display()
+                );
             }
-        },
-        Err(err) if err.kind() == std::io::ErrorKind::NotFound => Library::default(),
-        Err(err) => {
-            eprintln!("[RPlayer] failed to read {}: {err}", path.display());
-            Library::default()
         }
     }
+    Library::default()
+}
+
+fn apply_loaded_library(
+    file: LibraryFile,
+    db_exists: bool,
+    from_main: bool,
+    path: &std::path::Path,
+) -> Library {
+    let mut library = file.library;
+    library.version = file.schema.max(1);
+    library.volume = library.volume.clamp(0.0, 1.0);
+    library.desktop_lyrics_opacity = library.desktop_lyrics_opacity.clamp(0.0, 1.0);
+    library.desktop_lyrics_text_opacity =
+        library.desktop_lyrics_text_opacity.clamp(0.0, 1.0);
+    library.eq = library.eq.sanitized();
+    // v0.4 makes the paper theme the default. Older files only had a
+    // boolean, so migrate once; the user can switch back instantly.
+    if file.schema < 4 {
+        library.light_theme = true;
+        library.desktop_lyrics_opacity = 0.85;
+        library.auto_lyrics = true;
+    }
+    if file.schema < 5 {
+        library.auto_cover = true;
+    }
+    if db_exists {
+        if let Ok(tracks) = load_tracks_from_db() {
+            library.tracks = tracks;
+        }
+    } else if from_main && !library.tracks.is_empty() {
+        // First SQLite launch: keep a JSON backup, then import the tracks.
+        let backup = data_dir().join(format!("{LIBRARY_FILE}.bak"));
+        let _ = fs::copy(path, backup);
+        let _ = save_tracks_to_db(&library.tracks);
+    }
+    library
 }
 
 pub fn save_library(library: &Library) -> Result<()> {
@@ -131,6 +148,8 @@ pub fn save_library(library: &Library) -> Result<()> {
     let tmp = dir.join(format!("{LIBRARY_FILE}.tmp"));
     fs::write(&tmp, bytes).with_context(|| format!("write {}", tmp.display()))?;
     if path.exists() {
+        let backup = dir.join(format!("{LIBRARY_FILE}.bak"));
+        let _ = fs::copy(&path, backup);
         fs::remove_file(&path).with_context(|| format!("replace {}", path.display()))?;
     }
     fs::rename(&tmp, &path).with_context(|| format!("rename {}", path.display()))?;
