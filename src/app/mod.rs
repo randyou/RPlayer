@@ -1333,6 +1333,12 @@ impl RPlayerApp {
             playing: self.is_playing(),
             favorite,
             lyrics_opacity: self.library.desktop_lyrics_opacity,
+            lyrics_font: if self.library.desktop_lyrics_font > 0.0 {
+                self.library.desktop_lyrics_font
+            } else {
+                25.0
+            },
+            lyrics_locked: self.library.desktop_lyrics_locked,
             ..OverlayState::default()
         };
 
@@ -1393,6 +1399,14 @@ impl RPlayerApp {
                 OverlayCommand::Seek(seconds) => self.seek_to(seconds),
                 OverlayCommand::SetLyricsOpacity(opacity) => {
                     self.library.desktop_lyrics_opacity = opacity.clamp(0.35, 1.0);
+                    self.prefs_dirty = true;
+                }
+                OverlayCommand::SetLyricsFont(font) => {
+                    self.library.desktop_lyrics_font = font.clamp(18.0, 40.0);
+                    self.prefs_dirty = true;
+                }
+                OverlayCommand::SetLyricsLocked(locked) => {
+                    self.library.desktop_lyrics_locked = locked;
                     self.prefs_dirty = true;
                 }
                 OverlayCommand::CloseLyrics => {

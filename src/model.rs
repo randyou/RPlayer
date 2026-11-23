@@ -180,6 +180,10 @@ pub struct Library {
     pub desktop_lyrics: bool,
     /// Background opacity of the desktop lyrics card (0.35–1.0).
     pub desktop_lyrics_opacity: f32,
+    /// Desktop lyric font size in points (18–40).
+    pub desktop_lyrics_font: f32,
+    /// Whether the desktop lyric window position is locked.
+    pub desktop_lyrics_locked: bool,
     /// Fetch missing lyrics from LRCLIB automatically when a track starts.
     pub auto_lyrics: bool,
     /// Match missing covers through MusicBrainz/Cover Art Archive.
@@ -205,6 +209,8 @@ impl Default for Library {
             theme_preset: "paper".to_string(),
             desktop_lyrics: false,
             desktop_lyrics_opacity: 0.85,
+            desktop_lyrics_font: 25.0,
+            desktop_lyrics_locked: false,
             auto_lyrics: true,
             auto_cover: true,
             replaygain: "off".to_string(),

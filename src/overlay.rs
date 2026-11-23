@@ -32,6 +32,8 @@ pub struct OverlayState {
     pub lyric_next: String,
     pub has_lyrics: bool,
     pub lyrics_opacity: f32,
+    pub lyrics_font: f32,
+    pub lyrics_locked: bool,
     pub cover_id: Option<u64>,
     pub cover: Option<Arc<ColorImage>>,
 }
@@ -44,6 +46,8 @@ pub enum OverlayCommand {
     ToggleFavorite,
     Seek(f64),
     SetLyricsOpacity(f32),
+    SetLyricsFont(f32),
+    SetLyricsLocked(bool),
     CloseLyrics,
     CloseMini,
     OpenMain,
@@ -175,7 +179,7 @@ pub fn show_lyrics(
                         ui.painter(),
                         Pos2::new(center_x, capsule.center().y + 1.0),
                         lyric,
-                        FontId::proportional(25.0),
+                        FontId::proportional(snapshot.lyrics_font),
                         theme::c().accent,
                         shadow,
                     );
@@ -235,11 +239,17 @@ pub fn show_lyrics(
                     Id::new("lyrics-drag"),
                     Sense::drag(),
                 );
-                if drag.dragged() {
+                if drag.dragged() && !snapshot.lyrics_locked {
                     ctx.send_viewport_cmd(ViewportCommand::StartDrag);
                 }
                 let mut opacity = snapshot.lyrics_opacity;
-                drag.on_hover_cursor(egui::CursorIcon::Grab)
+                let mut font = snapshot.lyrics_font;
+                let mut locked = snapshot.lyrics_locked;
+                drag.on_hover_cursor(if snapshot.lyrics_locked {
+                    egui::CursorIcon::Default
+                } else {
+                    egui::CursorIcon::Grab
+                })
                     .context_menu(|ui| {
                         ui.label(
                             RichText::new("背景透明度")
@@ -259,6 +269,27 @@ pub fn show_lyrics(
                         if response.changed() {
                             if let Ok(mut queue) = commands.lock() {
                                 queue.push(OverlayCommand::SetLyricsOpacity(opacity));
+                            }
+                        }
+                        ui.add_space(5.0);
+                        ui.label(
+                            RichText::new("字号")
+                                .size(11.0)
+                                .color(theme::c().muted),
+                        );
+                        let font_response = ui.add(
+                            egui::Slider::new(&mut font, 18.0..=40.0)
+                                .show_value(true)
+                                .trailing_fill(true),
+                        );
+                        if font_response.changed() {
+                            if let Ok(mut queue) = commands.lock() {
+                                queue.push(OverlayCommand::SetLyricsFont(font));
+                            }
+                        }
+                        if ui.checkbox(&mut locked, "锁定位置").changed() {
+                            if let Ok(mut queue) = commands.lock() {
+                                queue.push(OverlayCommand::SetLyricsLocked(locked));
                             }
                         }
                         ui.separator();

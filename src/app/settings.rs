@@ -20,6 +20,12 @@ impl RPlayerApp {
         let mut requested_theme: Option<ThemePreset> = None;
         let mut requested_replaygain: Option<String> = None;
         let mut opacity = self.library.desktop_lyrics_opacity;
+        let mut lyrics_font = if self.library.desktop_lyrics_font > 0.0 {
+            self.library.desktop_lyrics_font
+        } else {
+            25.0
+        };
+        let mut lyrics_locked = self.library.desktop_lyrics_locked;
         let mut auto_lyrics = self.library.auto_lyrics;
         let mut auto_cover = self.library.auto_cover;
         let mut clear_covers = false;
@@ -181,6 +187,36 @@ impl RPlayerApp {
                                 );
                             });
                         });
+                        ui.add_space(10.0);
+                        ui.horizontal(|ui| {
+                            ui.label(
+                                RichText::new("字号")
+                                    .size(12.0)
+                                    .color(theme::c().text),
+                            );
+                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                                ui.label(
+                                    RichText::new(format!("{lyrics_font:.0}px"))
+                                        .font(egui::FontId::monospace(10.0))
+                                        .color(theme::c().faint),
+                                );
+                                ui.add(
+                                    egui::Slider::new(&mut lyrics_font, 18.0..=40.0)
+                                        .show_value(false)
+                                        .trailing_fill(true),
+                                );
+                            });
+                        });
+                        ui.horizontal(|ui| {
+                            ui.label(
+                                RichText::new("锁定桌面歌词位置")
+                                    .size(12.0)
+                                    .color(theme::c().text),
+                            );
+                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                                widgets::toggle_switch(ui, &mut lyrics_locked);
+                            });
+                        });
                     });
 
                 ui.add_space(16.0);
@@ -334,6 +370,14 @@ impl RPlayerApp {
         }
         if (opacity - self.library.desktop_lyrics_opacity).abs() > 0.001 {
             self.library.desktop_lyrics_opacity = opacity.clamp(0.35, 1.0);
+            self.prefs_dirty = true;
+        }
+        if (lyrics_font - self.library.desktop_lyrics_font).abs() > 0.01 {
+            self.library.desktop_lyrics_font = lyrics_font.clamp(18.0, 40.0);
+            self.prefs_dirty = true;
+        }
+        if lyrics_locked != self.library.desktop_lyrics_locked {
+            self.library.desktop_lyrics_locked = lyrics_locked;
             self.prefs_dirty = true;
         }
         if auto_lyrics != self.library.auto_lyrics {
