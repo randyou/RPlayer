@@ -334,6 +334,8 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                 }
 
                 Dialog::About => {
+                    let top = ((ui.available_height() - 360.0) * 0.5).max(0.0);
+                    ui.add_space(top);
                     ui.vertical_centered(|ui| {
                         let (rect, _) =
                             ui.allocate_exact_size(Vec2::splat(64.0), Sense::hover());
@@ -346,7 +348,7 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                                 .color(theme::c().text),
                         );
                         ui.label(
-                            RichText::new("0.10.2 · 本地音乐播放器")
+                            RichText::new("0.10.3 · 本地音乐播放器")
                                 .size(11.0)
                                 .color(theme::c().muted),
                         );
@@ -364,30 +366,32 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                     });
 
                     ui.add_space(14.0);
-                    ui.horizontal(|ui| {
-                        widgets::chip(ui, "Rust", false);
-                        widgets::chip(ui, "egui", false);
-                        widgets::chip(ui, "rodio", false);
-                        widgets::chip(ui, "lofty", false);
-                    });
+                    ui.vertical_centered(|ui| {
+                        ui.horizontal(|ui| {
+                            let width = ui.available_width();
+                            ui.add_space(((width - 290.0) * 0.5).max(0.0));
+                            widgets::chip(ui, "Rust", false);
+                            widgets::chip(ui, "egui", false);
+                            widgets::chip(ui, "rodio", false);
+                            widgets::chip(ui, "lofty", false);
+                        });
 
-                    ui.add_space(14.0);
-                    ui.label(
-                        RichText::new("数据目录")
-                            .size(10.0)
-                            .color(theme::c().faint),
-                    );
-                    ui.add(
-                        Label::new(
-                            RichText::new(crate::storage::data_dir().display().to_string())
-                                .font(FontId::monospace(10.5))
-                                .color(theme::c().muted),
-                        )
-                        .wrap(),
-                    );
+                        ui.add_space(14.0);
+                        ui.label(
+                            RichText::new("数据目录")
+                                .size(10.0)
+                                .color(theme::c().faint),
+                        );
+                        ui.add(
+                            Label::new(
+                                RichText::new(crate::storage::data_dir().display().to_string())
+                                    .font(FontId::monospace(10.5))
+                                    .color(theme::c().muted),
+                            )
+                            .wrap(),
+                        );
 
-                    ui.add_space(18.0);
-                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                        ui.add_space(18.0);
                         if widgets::primary_button(ui, "好的").clicked() {
                             outcome = Outcome::Close;
                         }

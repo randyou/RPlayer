@@ -168,7 +168,7 @@ pub fn show_lyrics(
                     );
                 }
 
-                let shadow = theme::white_alpha(0.35);
+                let shadow = theme::white_alpha(0.0);
                 let center_x = capsule.center().x;
 
                 for _ in 0..text_passes {
