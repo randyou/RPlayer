@@ -10,8 +10,8 @@ fn main() {
     resource.set_icon("assets/icon.ico");
     resource.set("ProductName", "RPlayer");
     resource.set("FileDescription", "RPlayer");
-    resource.set("FileVersion", "0.10.1.0");
-    resource.set("ProductVersion", "0.10.1.0");
+    resource.set("FileVersion", "0.10.2.0");
+    resource.set("ProductVersion", "0.10.2.0");
     resource.set("LegalCopyright", "MIT");
     if let Err(error) = resource.compile() {
         panic!("failed to embed Windows icon/version resource: {error}");

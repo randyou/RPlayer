@@ -456,7 +456,7 @@ impl RPlayerApp {
                 ui.add_space(18.0);
                 ui.horizontal(|ui| {
                     ui.label(
-                        RichText::new("RPlayer v0.10.1")
+                        RichText::new("RPlayer v0.10.2")
                             .size(10.0)
                             .color(theme::c().faint),
                     );

@@ -10,7 +10,8 @@
 use std::sync::{Mutex, OnceLock};
 
 use windows::core::{Interface, PCWSTR};
-use windows::Win32::Foundation::{HWND, POINT, RECT};
+use windows::Win32::Foundation::{HWND, LRESULT, POINT, RECT};
+use windows::Win32::Graphics::Gdi::HBRUSH;
 use windows::Win32::Graphics::Direct3D::D3D_DRIVER_TYPE_HARDWARE;
 use windows::Win32::Graphics::Direct3D11::{
     D3D11CreateDevice, ID3D11Device, ID3D11DeviceContext, ID3D11RenderTargetView,
@@ -23,13 +24,15 @@ use windows::Win32::Graphics::DirectComposition::{
 use windows::Win32::Graphics::Dxgi::Common::{
     DXGI_ALPHA_MODE_PREMULTIPLIED, DXGI_FORMAT_B8G8R8A8_UNORM,
 };
-use windows::Win32::Graphics::Dwm::{DwmEnableBlurBehindWindow, DWM_BLURBEHIND, DWM_BB_ENABLE};
+use windows::Win32::Graphics::Dwm::{
+    DwmEnableBlurBehindWindow, DwmSetWindowAttribute, DWMWINDOWATTRIBUTE, DWM_BLURBEHIND, DWM_BB_ENABLE,
+};
 use windows::Win32::Graphics::Dxgi::{IDXGIDevice, IDXGISurface};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExW, FindWindowW, SetWindowPos, ShowWindow, SWP_NOACTIVATE, SWP_SHOWWINDOW,
-    SW_SHOWNOACTIVATE, WS_EX_NOACTIVATE, WS_EX_NOREDIRECTIONBITMAP, WS_EX_TOOLWINDOW,
-    WS_EX_TRANSPARENT, WS_POPUP,
+    CreateWindowExW, DefWindowProcW, FindWindowW, RegisterClassW, SetWindowPos, ShowWindow, HCURSOR, HICON,
+    SWP_NOACTIVATE, SWP_SHOWWINDOW, SW_SHOWNOACTIVATE, WM_ERASEBKGND, WNDCLASSW, WNDPROC,
+    WS_EX_NOACTIVATE, WS_EX_NOREDIRECTIONBITMAP, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT, WS_POPUP,
 };
 
 struct Panel {
@@ -57,11 +60,36 @@ fn wide(value: &str) -> Vec<u16> {
     value.encode_utf16().chain(std::iter::once(0)).collect()
 }
 
+unsafe extern "system" fn panel_proc(
+    hwnd: HWND,
+    msg: u32,
+    wparam: windows::Win32::Foundation::WPARAM,
+    lparam: windows::Win32::Foundation::LPARAM,
+) -> LRESULT {
+    if msg == WM_ERASEBKGND {
+        return LRESULT(1);
+    }
+    DefWindowProcW(hwnd, msg, wparam, lparam)
+}
+
 fn create_window() -> Option<HWND> {
-    let class = wide("STATIC");
+    let class = wide("RPlayerDcompPanel");
     let title = wide("RPlayerLyricDcomp");
     let module = unsafe { GetModuleHandleW(PCWSTR::null()).ok()? };
     unsafe {
+        let wc = WNDCLASSW {
+            style: windows::Win32::UI::WindowsAndMessaging::WNDCLASS_STYLES(0),
+            lpfnWndProc: Some(panel_proc),
+            cbClsExtra: 0,
+            cbWndExtra: 0,
+            hInstance: windows::Win32::Foundation::HINSTANCE(module.0),
+            hIcon: HICON::default(),
+            hCursor: HCURSOR::default(),
+            hbrBackground: HBRUSH::default(),
+            lpszMenuName: PCWSTR::null(),
+            lpszClassName: PCWSTR(class.as_ptr()),
+        };
+        let _ = RegisterClassW(&wc);
         CreateWindowExW(
             WS_EX_NOREDIRECTIONBITMAP
                 | WS_EX_TOOLWINDOW
@@ -103,6 +131,27 @@ fn create_panel(hwnd: HWND) -> windows::core::Result<Panel> {
             .ok_or_else(|| windows::core::Error::from(windows::Win32::Foundation::E_FAIL))?;
         let dxgi: IDXGIDevice = d3d.cast()?;
         let dcomp: IDCompositionDevice = DCompositionCreateDevice(&dxgi)?;
+        let no_border: u32 = 0xFFFF_FFFE;
+        let _ = DwmSetWindowAttribute(
+            hwnd,
+            DWMWINDOWATTRIBUTE(34),
+            &no_border as *const u32 as *const core::ffi::c_void,
+            4,
+        );
+        let square: u32 = 1;
+        let _ = DwmSetWindowAttribute(
+            hwnd,
+            DWMWINDOWATTRIBUTE(33),
+            &square as *const u32 as *const core::ffi::c_void,
+            4,
+        );
+        let no_frame: u32 = 1;
+        let _ = DwmSetWindowAttribute(
+            hwnd,
+            DWMWINDOWATTRIBUTE(2),
+            &no_frame as *const u32 as *const core::ffi::c_void,
+            4,
+        );
         let mut blur = DWM_BLURBEHIND::default();
         blur.dwFlags = DWM_BB_ENABLE;
         blur.fEnable = true.into();

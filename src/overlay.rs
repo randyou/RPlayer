@@ -131,7 +131,7 @@ pub fn show_lyrics(
                 ui.painter().rect_filled(
                     capsule.expand(16.0),
                     CornerRadius::ZERO,
-                    Color32::from_rgb(1, 2, 3),
+                    Color32::from_rgb(242, 242, 242),
                 );
                 let outer = ctx
                     .input(|input| input.viewport().outer_rect)
@@ -168,11 +168,7 @@ pub fn show_lyrics(
                     );
                 }
 
-                let shadow = if dark {
-                    theme::black_alpha(0.85)
-                } else {
-                    theme::white_alpha(0.95)
-                };
+                let shadow = theme::white_alpha(0.35);
                 let center_x = capsule.center().x;
 
                 for _ in 0..text_passes {

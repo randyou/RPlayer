@@ -363,7 +363,7 @@ pub fn set_window_color_key(title: &str, enabled: bool) -> bool {
     const SWP_NOZORDER: u32 = 0x0004;
     const SWP_FRAMECHANGED: u32 = 0x0020;
     // COLORREF is 0x00BBGGRR. Deliberately an unusual color.
-    const KEY: u32 = 0x0003_0201;
+    const KEY: u32 = 0x00F2_F2F2;
 
     let wide: Vec<u16> = title.encode_utf16().chain(std::iter::once(0)).collect();
     let hwnd = unsafe { FindWindowW(std::ptr::null(), wide.as_ptr()) };
