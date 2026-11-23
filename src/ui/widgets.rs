@@ -379,6 +379,10 @@ pub fn volume_bar(ui: &mut Ui, volume: f32) -> Option<f32> {
     None
 }
 
+pub fn text_button(ui: &mut Ui, text: impl Into<egui::WidgetText>) -> Response {
+    ui.button(text).on_hover_cursor(CursorIcon::PointingHand)
+}
+
 pub fn primary_button(ui: &mut Ui, text: &str) -> Response {
     let button = Button::new(RichText::new(text).color(theme::c().on_accent).strong().size(14.0))
         .fill(theme::c().accent)

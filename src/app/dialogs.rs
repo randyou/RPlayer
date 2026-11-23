@@ -383,7 +383,7 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                                 .color(theme::c().text),
                         );
                         ui.label(
-                            RichText::new("0.10.6 · 本地音乐播放器")
+                            RichText::new("0.10.7 · 本地音乐播放器")
                                 .size(11.0)
                                 .color(theme::c().muted),
                         );
@@ -549,7 +549,13 @@ fn dialog_header(ui: &mut Ui, title: &str, subtitle: &str) {
 
 fn tag_field(ui: &mut Ui, label: &str, value: &mut String) {
     ui.horizontal(|ui| {
-        ui.label(RichText::new(label).size(11.0).color(theme::c().muted));
+        ui.allocate_ui_with_layout(
+            Vec2::new(44.0, 20.0),
+            Layout::left_to_right(Align::Center),
+            |ui| {
+                ui.label(RichText::new(label).size(11.0).color(theme::c().muted));
+            },
+        );
         Frame::NONE
             .fill(theme::c().card)
             .stroke(Stroke::new(1.0_f32, theme::c().border))
@@ -620,7 +626,11 @@ fn dialog_footer(ui: &mut Ui, confirm_label: &str, danger: bool) -> FooterAction
                 .corner_radius(10)
                 .min_size(Vec2::new(84.0, 36.0))
             };
-            if ui.add(button).clicked() {
+            if ui
+                .add(button)
+                .on_hover_cursor(egui::CursorIcon::PointingHand)
+                .clicked()
+            {
                 action = FooterAction::Confirm;
             }
             if widgets::secondary_button(ui, "取消").clicked() {

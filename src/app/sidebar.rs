@@ -257,7 +257,7 @@ impl RPlayerApp {
                         self.switch_view(View::Playlist(*id));
                     }
                     response.context_menu(|ui| {
-                        if ui.button("播放").clicked() {
+                        if widgets::text_button(ui, "播放").clicked() {
                             if let Some(playlist) = self.library.playlist(*id) {
                                 let queue: Vec<u64> = playlist
                                     .track_ids
@@ -272,7 +272,7 @@ impl RPlayerApp {
                             ui.close_menu();
                         }
                         ui.separator();
-                        if ui.button("重命名").clicked() {
+                        if widgets::text_button(ui, "重命名").clicked() {
                             self.dialog = Dialog::RenamePlaylist {
                                 id: *id,
                                 name: name.clone(),
@@ -280,7 +280,7 @@ impl RPlayerApp {
                             self.focus_pending = true;
                             ui.close_menu();
                         }
-                        if ui.button("删除播放列表…").clicked() {
+                        if widgets::text_button(ui, "删除播放列表…").clicked() {
                             self.dialog = Dialog::ConfirmDeletePlaylist { id: *id };
                             ui.close_menu();
                         }
@@ -311,7 +311,7 @@ impl RPlayerApp {
                 self.switch_view(View::Smart(*id));
             }
             response.context_menu(|ui| {
-                if ui.button("播放").clicked() {
+                if widgets::text_button(ui, "播放").clicked() {
                     if let Some(playlist) = self.library.smart_playlist(*id) {
                         let queue = self.smart_ids(playlist);
                         if !queue.is_empty() {
@@ -321,11 +321,11 @@ impl RPlayerApp {
                     ui.close_menu();
                 }
                 ui.separator();
-                if ui.button("编辑规则…").clicked() {
+                if widgets::text_button(ui, "编辑规则…").clicked() {
                     self.edit_smart_playlist(*id);
                     ui.close_menu();
                 }
-                if ui.button("删除智能歌单").clicked() {
+                if widgets::text_button(ui, "删除智能歌单").clicked() {
                     self.library.remove_smart_playlist(*id);
                     if self.view == View::Smart(*id) {
                         self.view = View::Library;
@@ -414,20 +414,20 @@ impl RPlayerApp {
 
         ui.add_space(2.0);
         ui.horizontal(|ui| {
-            ui.label(RichText::new("v0.10.6").size(10.0).color(theme::c().faint));
-            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                let about = ui
-                    .add(
-                        egui::Label::new(
-                            RichText::new("关于 RPlayer").size(10.0).color(theme::c().muted),
-                        )
-                        .sense(Sense::click()),
+            ui.add_space(((ui.available_width() - 150.0) * 0.5).max(0.0));
+            ui.label(RichText::new("v0.10.7").size(10.0).color(theme::c().faint));
+            ui.add_space(10.0);
+            let about = ui
+                .add(
+                    egui::Label::new(
+                        RichText::new("关于 RPlayer").size(10.0).color(theme::c().muted),
                     )
-                    .on_hover_cursor(egui::CursorIcon::PointingHand);
-                if about.clicked() {
-                    self.dialog = Dialog::About;
-                }
-            });
+                    .sense(Sense::click()),
+                )
+                .on_hover_cursor(egui::CursorIcon::PointingHand);
+            if about.clicked() {
+                self.dialog = Dialog::About;
+            }
         });
     }
 }

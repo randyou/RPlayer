@@ -834,7 +834,7 @@ impl RPlayerApp {
                     response.dnd_set_drag_payload(drag_ids);
 
                     response.context_menu(|ui| {
-                        if ui.button("播放").clicked() {
+                        if widgets::text_button(ui, "播放").clicked() {
                             self.play_track(ui.ctx(), id);
                             ui.close_menu();
                         }
@@ -858,12 +858,12 @@ impl RPlayerApp {
                                 } else {
                                     format!("{value} 星")
                                 };
-                                if ui.button(label).clicked() {
+                                if widgets::text_button(ui, label).clicked() {
                                     self.set_rating(id, value);
                                     ui.close_menu();
                                 }
                             }
-                            if current > 0 && ui.button("清除评分").clicked() {
+                            if current > 0 && widgets::text_button(ui, "清除评分").clicked() {
                                 self.set_rating(id, 0);
                                 ui.close_menu();
                             }
@@ -882,7 +882,7 @@ impl RPlayerApp {
                                         .size(11.5)
                                         .color(theme::c().faint),
                                 );
-                                if ui.button("新建播放列表…").clicked() {
+                                if widgets::text_button(ui, "新建播放列表…").clicked() {
                                     self.dialog = Dialog::NewPlaylist {
                                         name: String::new(),
                                     };
@@ -891,7 +891,7 @@ impl RPlayerApp {
                                 }
                             } else {
                                 for (playlist_id, name) in playlists {
-                                    if ui.button(name).clicked() {
+                                    if widgets::text_button(ui, name).clicked() {
                                         self.add_track_to_playlist(playlist_id, id);
                                         ui.close_menu();
                                     }
@@ -900,32 +900,32 @@ impl RPlayerApp {
                         });
 
                         if matches!(self.view, View::Playlist(_))
-                            && ui.button("从此播放列表移除").clicked()
+                            && widgets::text_button(ui, "从此播放列表移除").clicked()
                         {
                             self.remove_track_from_view_playlist(id);
                             ui.close_menu();
                         }
 
                         ui.separator();
-                        if ui.button("编辑歌词…").clicked() {
+                        if widgets::text_button(ui, "编辑歌词…").clicked() {
                             self.current = Some(id);
                             self.load_lyrics_for(&track, id);
                             super::lyrics_edit::open(self);
                             ui.close_menu();
                         }
-                        if ui.button("重新匹配歌词…").clicked() {
+                        if widgets::text_button(ui, "重新匹配歌词…").clicked() {
                             self.open_lyrics_match(id);
                             ui.close_menu();
                         }
-                        if ui.button("从 LRCLIB 下载歌词").clicked() {
+                        if widgets::text_button(ui, "从 LRCLIB 下载歌词").clicked() {
                             self.request_lyrics(ui.ctx(), id, true);
                             ui.close_menu();
                         }
-                        if ui.button("在文件夹中显示").clicked() {
+                        if widgets::text_button(ui, "在文件夹中显示").clicked() {
                             self.reveal_in_file_manager(&track.path);
                             ui.close_menu();
                         }
-                        if ui.button("编辑标签…").clicked() {
+                        if widgets::text_button(ui, "编辑标签…").clicked() {
                             if let Some(track) = self.library.track(id) {
                                 self.dialog = Dialog::EditTags {
                                     edit: crate::tag_edit::TagEdit::from_track(track),
@@ -934,7 +934,7 @@ impl RPlayerApp {
                             }
                             ui.close_menu();
                         }
-                        if ui.button("从音乐库移除…").clicked() {
+                        if widgets::text_button(ui, "从音乐库移除…").clicked() {
                             self.dialog = Dialog::ConfirmRemoveTrack { id };
                             ui.close_menu();
                         }

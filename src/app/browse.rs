@@ -341,16 +341,16 @@ impl RPlayerApp {
             self.album_focus = Some(group.key.clone());
         }
         response.context_menu(|ui| {
-            if ui.button("查看专辑").clicked() {
+            if widgets::text_button(ui, "查看专辑").clicked() {
                 self.album_focus = Some(group.key.clone());
                 ui.close_menu();
             }
-            if ui.button("播放专辑").clicked() {
+            if widgets::text_button(ui, "播放专辑").clicked() {
                 let ids = group.ids.clone();
                 self.play_queue(ui.ctx(), ids, 0);
                 ui.close_menu();
             }
-            if ui.button("加入播放队列").clicked() {
+            if widgets::text_button(ui, "加入播放队列").clicked() {
                 self.enqueue_ids(&group.ids);
                 ui.close_menu();
             }
@@ -425,16 +425,16 @@ impl RPlayerApp {
             self.artist_focus = Some(group.name.clone());
         }
         response.context_menu(|ui| {
-            if ui.button("查看艺术家").clicked() {
+            if widgets::text_button(ui, "查看艺术家").clicked() {
                 self.artist_focus = Some(group.name.clone());
                 ui.close_menu();
             }
-            if ui.button("播放全部").clicked() {
+            if widgets::text_button(ui, "播放全部").clicked() {
                 let ids = group.ids.clone();
                 self.play_queue(ui.ctx(), ids, 0);
                 ui.close_menu();
             }
-            if ui.button("加入播放队列").clicked() {
+            if widgets::text_button(ui, "加入播放队列").clicked() {
                 self.enqueue_ids(&group.ids);
                 ui.close_menu();
             }
