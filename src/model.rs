@@ -158,6 +158,10 @@ impl Default for SmartPlaylist {
     }
 }
 
+fn default_offline_mode() -> bool {
+    true
+}
+
 fn default_lyrics_text_opacity() -> f32 {
     1.0
 }
@@ -201,6 +205,9 @@ pub struct Library {
     pub mini_snap: bool,
     /// Last mini player top-left position.
     pub mini_pos: Option<(f32, f32)>,
+    /// Default offline mode: skip all automatic network lookups.
+    #[serde(default = "default_offline_mode")]
+    pub offline_mode: bool,
     /// Fetch missing lyrics from LRCLIB automatically when a track starts.
     pub auto_lyrics: bool,
     /// Match missing covers through MusicBrainz/Cover Art Archive.
@@ -234,6 +241,7 @@ impl Default for Library {
             mini_on_top: true,
             mini_snap: true,
             mini_pos: None,
+            offline_mode: true,
             auto_lyrics: true,
             auto_cover: true,
             replaygain: "off".to_string(),

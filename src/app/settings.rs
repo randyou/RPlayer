@@ -34,6 +34,7 @@ impl RPlayerApp {
         };
         let mut mini_on_top = self.library.mini_on_top;
         let mut mini_snap = self.library.mini_snap;
+        let mut offline_mode = self.library.offline_mode;
         let mut auto_lyrics = self.library.auto_lyrics;
         let mut auto_cover = self.library.auto_cover;
         let mut clear_covers = false;
@@ -316,6 +317,34 @@ impl RPlayerApp {
                     });
 
                 ui.add_space(16.0);
+                section(ui, "离线模式");
+                Frame::NONE
+                    .fill(theme::c().card)
+                    .stroke(Stroke::new(1.0_f32, theme::c().border_soft))
+                    .corner_radius(CornerRadius::same(12))
+                    .inner_margin(egui::Margin::symmetric(12, 10))
+                    .show(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            ui.label(
+                                RichText::new("默认离线")
+                                    .size(12.0)
+                                    .color(theme::c().text),
+                            );
+                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                                widgets::toggle_switch(ui, &mut offline_mode);
+                            });
+                        });
+                        ui.add_space(4.0);
+                        ui.label(
+                            RichText::new(
+                                "开启后不会自动联网；手动点击封面/歌词仍可在需要时联网补全。",
+                            )
+                            .size(10.5)
+                            .color(theme::c().faint),
+                        );
+                    });
+
+                ui.add_space(16.0);
                 section(ui, "在线内容");
                 Frame::NONE
                     .fill(theme::c().card)
@@ -508,6 +537,10 @@ impl RPlayerApp {
         if mini_snap != self.library.mini_snap {
             self.library.mini_snap = mini_snap;
             self.prefs_dirty = true;
+        }
+        if offline_mode != self.library.offline_mode {
+            self.library.offline_mode = offline_mode;
+            self.persist();
         }
         if auto_lyrics != self.library.auto_lyrics {
             self.library.auto_lyrics = auto_lyrics;
