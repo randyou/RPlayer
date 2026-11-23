@@ -31,6 +31,76 @@ fn main() {
         CreateWindowExW, HMENU, WINDOW_EX_STYLE, WINDOW_STYLE,
     };
 
+    #[link(name = "shell32")]
+    extern "system" {
+        fn SetCurrentProcessExplicitAppUserModelID(app_id: *const u16) -> i32;
+    }
+
+    #[link(name = "advapi32")]
+    extern "system" {
+        fn RegCreateKeyExW(
+            key: *mut std::ffi::c_void,
+            sub_key: *const u16,
+            reserved: u32,
+            class: *const u16,
+            options: u32,
+            sam: u32,
+            security: *mut std::ffi::c_void,
+            result: *mut *mut std::ffi::c_void,
+            disposition: *mut u32,
+        ) -> i32;
+        fn RegSetValueExW(
+            key: *mut std::ffi::c_void,
+            value: *const u16,
+            reserved: u32,
+            kind: u32,
+            data: *const u8,
+            len: u32,
+        ) -> i32;
+        fn RegCloseKey(key: *mut std::ffi::c_void) -> i32;
+    }
+
+    let wide = |value: &str| -> Vec<u16> {
+        value.encode_utf16().chain(std::iter::once(0)).collect()
+    };
+
+    let app_id = "RPlayer";
+    let sub_key = wide(&format!("Software\\Classes\\AppUserModelId\\{app_id}"));
+    let display_name = wide("RPlayer");
+    let mut key = std::ptr::null_mut();
+    let mut disposition = 0u32;
+    let created = unsafe {
+        RegCreateKeyExW(
+            0x8000_0001usize as *mut std::ffi::c_void,
+            sub_key.as_ptr(),
+            0,
+            std::ptr::null(),
+            0,
+            0x2_0006,
+            std::ptr::null_mut(),
+            &mut key,
+            &mut disposition,
+        )
+    };
+    if created == 0 {
+        let value_name = wide("DisplayName");
+        unsafe {
+            let _ = RegSetValueExW(
+                key,
+                value_name.as_ptr(),
+                0,
+                1,
+                display_name.as_ptr() as *const u8,
+                (display_name.len() * 2) as u32,
+            );
+            let _ = RegCloseKey(key);
+        }
+    }
+    let app_id_wide = wide(app_id);
+    unsafe {
+        let _ = SetCurrentProcessExplicitAppUserModelID(app_id_wide.as_ptr());
+    }
+
     let Some(hwnd) = std::env::args().nth(1).and_then(|arg| arg.parse::<isize>().ok()) else {
         return;
     };
