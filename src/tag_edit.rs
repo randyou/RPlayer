@@ -123,6 +123,29 @@ mod tests {
     use lofty::tag::Accessor;
 
     #[test]
+    fn rewrites_a_temporary_copy() {
+        let source = PathBuf::from(
+            r"C:\Users\Randy\Downloads\徐薇+-+Last+Dance_EG.flac",
+        );
+        if !source.is_file() {
+            return;
+        }
+        let target = std::env::temp_dir().join("rplayer-tag-edit-test.flac");
+        std::fs::copy(&source, &target).unwrap();
+        let track = Track::from_path(&target).unwrap();
+        let mut edit = TagEdit::from_track(&track);
+        edit.title = "RPlayer Tag Test".to_string();
+        edit.artist = "RPlayer".to_string();
+        let updated = save(&edit).unwrap();
+        assert_eq!(updated.title, "RPlayer Tag Test");
+        assert_eq!(updated.artist, "RPlayer");
+        let reread = Track::from_path(&target).unwrap();
+        assert_eq!(reread.title, "RPlayer Tag Test");
+        assert_eq!(reread.artist, "RPlayer");
+        let _ = std::fs::remove_file(target);
+    }
+
+    #[test]
     fn ignores_empty_values() {
         let mut tag = lofty::tag::Tag::new(lofty::tag::TagType::Id3v2);
         insert(&mut tag, ItemKey::TrackTitle, "  ").unwrap();
