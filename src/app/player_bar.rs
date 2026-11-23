@@ -23,31 +23,52 @@ impl RPlayerApp {
                     .inner_margin(Margin::symmetric(20, 10)),
             )
             .show(ctx, |ui| {
-                let available = ui.available_width();
-                let left = (available * 0.30).clamp(230.0, 380.0);
-                let right = 252.0;
-                let center = (available - left - right - 28.0).max(300.0);
+                let screen = ui.ctx().screen_rect();
+                let bar_top = ui.max_rect().top();
+                let bar_bottom = ui.max_rect().bottom();
+                let full = Rect::from_min_max(
+                    Pos2::new(screen.left() + 20.0, bar_top),
+                    Pos2::new(screen.right() - 20.0, bar_bottom),
+                );
+                let width = full.width();
+                // Symmetric side columns keep the transport cluster at the
+                // real window centre instead of the centre of leftover space.
+                let side = if width >= 1040.0 { 300.0 } else { 260.0 };
+                let center = (width - side * 2.0 - 24.0).max(300.0);
 
-                ui.horizontal(|ui| {
-                    ui.allocate_ui_with_layout(
-                        Vec2::new(left, ui.available_height()),
-                        Layout::left_to_right(Align::Center),
-                        |ui| self.player_info(ui),
-                    );
+                ui.scope_builder(egui::UiBuilder::new().max_rect(full), |ui| {
+                    ui.set_clip_rect(screen);
+                    ui.horizontal(|ui| {
+                        ui.spacing_mut().item_spacing.x = 0.0;
+                        ui.allocate_ui_with_layout(
+                            Vec2::new(side, ui.available_height()),
+                            Layout::left_to_right(Align::Center),
+                            |ui| {
+                                ui.set_min_width(side);
+                                self.player_info(ui);
+                            },
+                        );
 
-                    ui.add_space(14.0);
-                    ui.allocate_ui_with_layout(
-                        Vec2::new(center, ui.available_height()),
-                        Layout::top_down(Align::Center),
-                        |ui| self.player_controls(ui, ctx),
-                    );
+                        ui.add_space(12.0);
+                        ui.allocate_ui_with_layout(
+                            Vec2::new(center, ui.available_height()),
+                            Layout::top_down(Align::Center),
+                            |ui| {
+                                ui.set_min_width(center);
+                                self.player_controls(ui, ctx);
+                            },
+                        );
 
-                    ui.add_space(14.0);
-                    ui.allocate_ui_with_layout(
-                        Vec2::new(right, ui.available_height()),
-                        Layout::right_to_left(Align::Center),
-                        |ui| self.player_extras(ui),
-                    );
+                        ui.add_space(12.0);
+                        ui.allocate_ui_with_layout(
+                            Vec2::new(side, ui.available_height()),
+                            Layout::right_to_left(Align::Center),
+                            |ui| {
+                                ui.set_min_width(side);
+                                self.player_extras(ui);
+                            },
+                        );
+                    });
                 });
             });
     }

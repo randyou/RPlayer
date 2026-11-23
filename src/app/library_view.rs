@@ -294,7 +294,7 @@ impl RPlayerApp {
 
         ui.add_space(12.0);
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = 8.0;
+            ui.spacing_mut().item_spacing.x = 10.0;
             if !ids.is_empty() && widgets::primary_button(ui, "播放全部").clicked() {
                 self.play_queue(ui.ctx(), ids.to_vec(), 0);
             }
@@ -748,7 +748,7 @@ impl RPlayerApp {
 
     fn folders_page(&mut self, ui: &mut Ui) {
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = 8.0;
+            ui.spacing_mut().item_spacing.x = 10.0;
             if widgets::primary_button(ui, "添加文件夹").clicked() {
                 self.open_folder_picker();
             }

@@ -57,7 +57,7 @@ impl RPlayerApp {
 
         ui.add_space(8.0);
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = 6.0;
+            ui.spacing_mut().item_spacing.x = 8.0;
             if widgets::chip(ui, "正在播放", !self.rail_queue).clicked() {
                 self.rail_queue = false;
             }

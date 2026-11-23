@@ -302,9 +302,9 @@ impl RPlayerApp {
                 }
             });
 
-        ui.add_space(8.0);
+        ui.add_space(2.0);
         ui.horizontal(|ui| {
-            ui.label(RichText::new("v0.5.0").size(10.0).color(theme::c().faint));
+            ui.label(RichText::new("v0.6.0-dev").size(10.0).color(theme::c().faint));
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                 let about = ui
                     .add(

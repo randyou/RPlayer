@@ -321,17 +321,27 @@ pub fn primary_button(ui: &mut Ui, text: &str) -> Response {
     let button = Button::new(RichText::new(text).color(theme::c().on_accent).strong().size(14.0))
         .fill(theme::c().accent)
         .corner_radius(10)
-        .min_size(Vec2::new(0.0, 38.0));
+        .min_size(Vec2::new(96.0, 40.0));
     ui.add(button)
 }
 
 pub fn primary_button_full(ui: &mut Ui, text: &str) -> Response {
-    let width = ui.available_width();
-    let button = Button::new(RichText::new(text).color(theme::c().on_accent).strong().size(14.0))
-        .fill(theme::c().accent)
-        .corner_radius(10)
-        .min_size(Vec2::new(width, 38.0));
-    ui.add(button)
+    let width = ui.available_width().max(120.0);
+    let (rect, response) = ui.allocate_exact_size(Vec2::new(width, 42.0), Sense::click());
+    let fill = if response.hovered() {
+        theme::c().accent.gamma_multiply(1.06)
+    } else {
+        theme::c().accent
+    };
+    ui.painter().rect_filled(rect, CornerRadius::same(10), fill);
+    ui.painter().text(
+        rect.center(),
+        Align2::CENTER_CENTER,
+        text,
+        FontId::proportional(14.0),
+        theme::c().on_accent,
+    );
+    response.on_hover_cursor(CursorIcon::PointingHand)
 }
 
 pub fn secondary_button(ui: &mut Ui, text: &str) -> Response {
@@ -339,7 +349,7 @@ pub fn secondary_button(ui: &mut Ui, text: &str) -> Response {
         .fill(theme::c().card)
         .stroke(Stroke::new(1.0_f32, theme::c().border))
         .corner_radius(10)
-        .min_size(Vec2::new(0.0, 36.0));
+        .min_size(Vec2::new(72.0, 38.0));
     ui.add(button)
 }
 
@@ -348,7 +358,7 @@ pub fn danger_button(ui: &mut Ui, text: &str) -> Response {
         .fill(theme::c().danger.gamma_multiply(0.12))
         .stroke(Stroke::new(1.0_f32, theme::c().danger.gamma_multiply(0.45)))
         .corner_radius(10)
-        .min_size(Vec2::new(0.0, 36.0));
+        .min_size(Vec2::new(72.0, 38.0));
     ui.add(button)
 }
 
@@ -372,7 +382,7 @@ pub fn chip(ui: &mut Ui, text: &str, selected: bool) -> Response {
         },
     ))
     .corner_radius(CornerRadius::same(99))
-    .min_size(Vec2::new(0.0, 28.0));
+    .min_size(Vec2::new(64.0, 30.0));
     ui.add(button).on_hover_cursor(CursorIcon::PointingHand)
 }
 

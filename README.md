@@ -4,6 +4,8 @@ RPlayer 是一个用 **Rust** 编写的本地桌面音乐播放器。它不依�
 
 v0.5 参考 Spotify 桌面端“左侧曲库 + 右侧 Now Playing”和 Apple Music 的全屏歌词，把播放页做成真正的第二界面：曲库右侧常驻封面、歌词与队列，按 `F` 进入沉浸式歌词页。同时加入 MusicBrainz / Cover Art Archive 在线封面、播放会话恢复、队列拖动排序、文件夹监听，以及本地/在线封面优先级与缓存。
 
+v0.6 正在开发：第一个增量已完成底栏三段布局、按钮间距统一和 Windows exe/helper 图标资源；专辑/艺术家、评分统计、智能歌单、标签编辑与更多主题仍在后续增量。
+
 ![RPlayer 浅色音乐库](docs/screenshot.png)
 
 ![RPlayer 深色正在播放](docs/screenshot-dark.png)
@@ -228,6 +230,13 @@ v0.5 的页面设计、在线封面方案、验收标准与后续增量见 [docs
 v0.6 的曲库深度规划、专辑/艺术家视图、评分与统计、智能歌单、标签编辑、M3U、ReplayGain 与版本拆分见 [docs/V0.6_PLAN.md](docs/V0.6_PLAN.md)。
 
 ## 版本记录
+
+### v0.6.0-dev（开发中）
+
+- 底部播放栏改为左/中/右三段：播放控制居中，音量/队列/侧栏工具组贴右，进度条占满中段。
+- 主按钮、次按钮、胶囊标签统一内边距、最小宽度、高度与操作行间距；侧栏“添加音乐文件夹”文字居中。
+- `build.rs` 将 `assets/icon.ico` 与版本信息嵌入 `RPlayer.exe` 和 `rplayer-smtc.exe`；资源管理器/任务栏/窗口图标统一为 RPlayer。
+- 版本号进入 v0.6 开发线。
 
 ### v0.5.0
 
