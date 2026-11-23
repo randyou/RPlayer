@@ -1,0 +1,152 @@
+# RPlayer
+
+RPlayer 是一个用 **Rust** 编写的本地桌面音乐播放器。它不依赖账号、云服务或网页技术栈，启动即用：选择音乐文件夹，扫描标签与封面，然后在清爽的深色界面里听歌。
+
+![RPlayer 音乐库](docs/screenshot.png)
+
+![RPlayer 正在播放](docs/screenshot-playing.png)
+
+## 特性
+
+- **本地音乐扫描**：递归扫描文件夹，支持常见音频格式，自动读取标题、艺术家、专辑、流派、年份、音轨号与时长。
+- **封面读取**：优先读取音频内嵌封面，在播放栏中展示。
+- **音乐库管理**：按标题、艺术家、专辑或时长排序；支持关键词搜索。
+- **播放列表**：创建、重命名、删除播放列表；右键歌曲即可加入；播放列表只保存歌曲引用，不复制文件。
+- **播放队列**：查看当前队列、跳播、清空；支持随机播放与单曲/列表循环。
+- **拖放导入**：把文件夹或音频文件直接拖进窗口即可导入。
+- **桌面体验**：深色主题、原生窗口、无系统托盘常驻；Windows 下自动启用深色标题栏。
+- **数据本地化**：音乐库、播放列表与音量保存在本地 JSON 文件，不上传任何数据。
+
+## 支持的格式
+
+`mp3` · `flac` · `wav` · `ogg` · `oga` · `m4a` · `aac`
+
+具体解码能力由 [Symphonia](https://github.com/pdeljanov/Symphonia) 提供，实际可播放格式取决于编译时启用的解码器。
+
+## 快速开始
+
+### Windows
+
+需要先安装 Rust 与 C/C++ 链接器。推荐使用 [rustup](https://rustup.rs/) + **Visual Studio Build Tools**（MSVC 工具链）：
+
+```powershell
+rustup default stable-msvc
+cargo run --release
+```
+
+如果使用 MinGW-w64（GNU 工具链），请确保 `gcc` 在 `PATH` 中：
+
+```powershell
+rustup default stable-gnu
+cargo run --release
+```
+
+### macOS
+
+```bash
+xcode-select --install
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+cargo run --release
+```
+
+### Linux（可选）
+
+需要 ALSA、X11/Wayland 与字体相关开发包，例如 Debian/Ubuntu：
+
+```bash
+sudo apt install build-essential pkg-config libasound2-dev libxkbcommon-dev \
+  libwayland-dev libx11-dev libxi-dev libxcursor-dev libxrandr-dev libgl1-mesa-dev
+cargo run --release
+```
+
+### 构建与测试
+
+```bash
+cargo build --release   # 生成 target/release/rplayer
+cargo test              # 模型、存储与扫描的单元测试
+```
+
+## 使用说明
+
+1. 点击左上角 **添加音乐文件夹**，选择一个包含音乐的目录。
+2. RPlayer 会在后台扫描，扫描完成后歌曲出现在 **音乐库**。
+3. 双击歌曲播放，或选中后按空格；底部播放栏支持上一首/下一首、进度拖动与音量调节。
+4. 右键歌曲可以加入播放列表、在文件夹中显示或从音乐库移除。
+5. 点击侧栏 **播放队列** 或底部右侧队列按钮查看当前队列。
+
+### 快捷键
+
+| 快捷键 | 功能 |
+| --- | --- |
+| `Space` | 播放 / 暂停 |
+| `Ctrl + O` | 添加音乐文件夹 |
+| `Ctrl + N` | 新建播放列表 |
+| `Ctrl + F` | 聚焦搜索框 |
+| `Ctrl + ← / →` | 上一首 / 下一首 |
+| `← / →` | 后退 / 前进 5 秒 |
+| `↑ / ↓` | 音量 ±5% |
+| `Delete` | 从音乐库移除选中歌曲（需确认） |
+| `Esc` | 关闭对话框或播放队列 |
+
+> macOS 上把 `Ctrl` 换成 `Command` 即可。
+
+## 数据存放位置
+
+| 平台 | 路径 |
+| --- | --- |
+| Windows | `%APPDATA%\RPlayer\library.json` |
+| macOS | `~/Library/Application Support/RPlayer/library.json` |
+| Linux | `~/.local/share/RPlayer/library.json` |
+
+文件包含音乐文件夹、歌曲元数据、播放列表与音量。删除该文件即可恢复空白音乐库。
+
+## 技术栈
+
+| 领域 | 选择 |
+| --- | --- |
+| GUI | [egui](https://github.com/emilk/egui) / eframe 0.31 |
+| 音频播放 | [rodio](https://github.com/RustAudio/rodio) 0.19 + Symphonia |
+| 标签读取 | [lofty](https://github.com/Serial-ATA/lofty-rs) 0.21 |
+| 封面处理 | image 0.25 |
+| 文件夹选择 | rfd 0.15 |
+| 目录遍历 | walkdir 2.5 |
+| 序列化 | serde / serde_json |
+
+界面全部由 egui 即时绘制，图标与进度条为自绘，不依赖 WebView 或前端资源。
+
+## 项目结构
+
+```text
+RPlayer/
+├─ assets/              应用图标
+├─ docs/                README 截图
+├─ src/
+│  ├─ main.rs           入口与窗口配置
+│  ├─ app/
+│  │  ├─ mod.rs         应用状态、播放调度、快捷键
+│  │  ├─ sidebar.rs     侧栏与播放列表
+│  │  ├─ library_view.rs 音乐库表格与空状态
+│  │  ├─ player_bar.rs  底部播放栏与队列
+│  │  └─ dialogs.rs     新建/重命名/删除/文件夹/关于
+│  ├─ audio.rs          rodio 播放引擎
+│  ├─ model.rs          Track / Playlist / Library 与标签读取
+│  ├─ scanner.rs        后台扫描线程
+│  ├─ storage.rs        library.json 读写
+│  ├─ theme.rs          配色、字体、控件样式
+│  ├─ platform.rs       Windows 深色标题栏
+│  └─ ui/               自绘图标与通用控件
+├─ tools/               测试音乐生成脚本
+└─ Cargo.toml
+```
+
+## 开发说明
+
+- 扫描在独立线程中进行，通过 `mpsc` 事件把结果送回 UI，扫描时仍可继续操作。
+- 播放位置来自 `rodio::Sink::get_pos()`，拖动进度条时调用 `try_seek`，并把已补偿的位置写回。
+- 音乐库以原子方式保存：先写 `library.json.tmp`，再替换正式文件，避免异常退出损坏数据。
+- 歌曲 ID 由规范化路径的 FNV-1a 哈希生成；Windows 下路径比较不区分大小写。
+- 当前版本只播放本地文件，不包含在线音乐、歌词或音效功能。
+
+## License
+
+MIT

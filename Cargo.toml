@@ -1,0 +1,48 @@
+[package]
+name = "rplayer"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+description = "RPlayer - a fast, local-first desktop music player"
+authors = ["RPlayer"]
+license = "MIT"
+
+[dependencies]
+anyhow = "1.0"
+dirs = "5.0"
+egui = "0.31.1"
+eframe = { version = "0.31.1", default-features = false, features = [
+    "default_fonts",
+    "glow",
+    "wayland",
+    "x11",
+] }
+image = { version = "0.25", default-features = false, features = [
+    "jpeg",
+    "png",
+    "webp",
+] }
+lofty = "0.21.1"
+rand = "0.8"
+rfd = "0.15"
+rodio = { version = "0.19", features = ["symphonia-all"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+walkdir = "2.5"
+
+[profile.dev]
+opt-level = 0
+debug = 0
+
+# Keep dependency compilation light: this machine has a tight Windows commit
+# limit, and debug metadata multiplies rustc's memory use.
+[profile.dev.package."*"]
+opt-level = 0
+debug = false
+
+[profile.release]
+# Keep release builds within this machine's commit limit: thin LTO + one
+# codegen unit can exhaust the page file with the multimedia dependency tree.
+lto = "off"
+codegen-units = 16
+strip = true
