@@ -480,7 +480,21 @@ impl RPlayerApp {
         self.scan_done = 0;
         self.scan_seen.clear();
         self.scan_errors.clear();
-        self.scan_rx = Some(scanner::start_scan(self.library.folders.clone()));
+        let known: std::collections::HashMap<String, (u64, u64)> = self
+            .library
+            .tracks
+            .iter()
+            .map(|track| {
+                (
+                    crate::model::path_key(&track.path),
+                    (track.id, track.modified),
+                )
+            })
+            .collect();
+        self.scan_rx = Some(scanner::start_scan(
+            self.library.folders.clone(),
+            known,
+        ));
     }
 
     fn poll_scan(&mut self) {
@@ -518,6 +532,9 @@ impl RPlayerApp {
                     } else {
                         self.library.tracks.push(*track);
                     }
+                }
+                ScanEvent::Unchanged(id) => {
+                    self.scan_seen.insert(id);
                 }
                 ScanEvent::Progress { scanned, total } => {
                     self.scan_done = scanned;

@@ -22,6 +22,9 @@ pub struct Track {
     pub track_number: Option<u32>,
     pub duration: f64,
     pub added_at: u64,
+    /// File modification time in milliseconds since the Unix epoch.
+    #[serde(default)]
+    pub modified: u64,
 }
 
 impl Track {
@@ -65,6 +68,12 @@ impl Track {
         let year = tag.and_then(|t| t.year());
         let track_number = tag.and_then(|t| t.track());
 
+        let modified = std::fs::metadata(path)
+            .and_then(|meta| meta.modified())
+            .ok()
+            .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|duration| duration.as_millis() as u64)
+            .unwrap_or(0);
         Ok(Self {
             id: stable_id(path),
             path: path.to_path_buf(),
@@ -76,6 +85,7 @@ impl Track {
             track_number,
             duration: props.duration().as_secs_f64(),
             added_at: now_millis(),
+            modified,
         })
     }
 

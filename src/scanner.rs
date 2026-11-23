@@ -3,7 +3,7 @@
 //! Metadata parsing can be slow on large libraries, so it runs on a worker
 //! thread and streams results back to the UI through a channel.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
@@ -15,21 +15,29 @@ use crate::model::{is_audio_file, path_key, Track};
 pub enum ScanEvent {
     Started { total: usize },
     Track(Box<Track>),
+    Unchanged(u64),
     Progress { scanned: usize, total: usize },
     Finished { errors: Vec<String> },
 }
 
 /// Starts scanning all folders. The returned receiver is polled by the UI.
-pub fn start_scan(folders: Vec<PathBuf>) -> Receiver<ScanEvent> {
+pub fn start_scan(
+    folders: Vec<PathBuf>,
+    known: HashMap<String, (u64, u64)>,
+) -> Receiver<ScanEvent> {
     let (tx, rx) = mpsc::channel();
     thread::Builder::new()
         .name("rplayer-scanner".into())
-        .spawn(move || scan_worker(folders, tx))
+        .spawn(move || scan_worker(folders, known, tx))
         .expect("failed to spawn scanner thread");
     rx
 }
 
-fn scan_worker(folders: Vec<PathBuf>, tx: Sender<ScanEvent>) {
+fn scan_worker(
+    folders: Vec<PathBuf>,
+    known: HashMap<String, (u64, u64)>,
+    tx: Sender<ScanEvent>,
+) {
     let mut files = Vec::new();
     let mut seen = HashSet::new();
 
@@ -62,6 +70,23 @@ fn scan_worker(folders: Vec<PathBuf>, tx: Sender<ScanEvent>) {
     let mut scanned = 0usize;
 
     for path in files {
+        let key = path_key(&path);
+        let modified = std::fs::metadata(&path)
+            .and_then(|meta| meta.modified())
+            .ok()
+            .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|duration| duration.as_millis() as u64)
+            .unwrap_or(0);
+        if let Some((id, known_modified)) = known.get(&key) {
+            if modified > 0 && *known_modified == modified {
+                scanned += 1;
+                if tx.send(ScanEvent::Unchanged(*id)).is_err() {
+                    return;
+                }
+                let _ = tx.send(ScanEvent::Progress { scanned, total });
+                continue;
+            }
+        }
         match Track::from_path(&path) {
             Ok(track) => {
                 scanned += 1;
@@ -96,7 +121,7 @@ fn should_enter(entry: &DirEntry) -> bool {
 /// Scans a folder synchronously. Useful for tests and command-line tooling.
 #[allow(dead_code)]
 pub fn scan_folder(folder: &Path) -> Vec<Track> {
-    let rx = start_scan(vec![folder.to_path_buf()]);
+    let rx = start_scan(vec![folder.to_path_buf()], HashMap::new());
     let mut tracks = Vec::new();
     while let Ok(event) = rx.recv() {
         match event {
