@@ -1,11 +1,26 @@
-//! Windows system tray integration.
+//! Native Win32 system tray icon and popup menu.
+//!
+//! `tray-icon`/`muda` delivered menu events through an extra event loop that
+//! could go silent while the eframe root window was minimized. This module owns
+//! a message-only window on a dedicated thread, so menu commands are always
+//! pumped and queued independently of the UI.
 
 use std::sync::{Mutex, OnceLock};
-use std::sync::atomic::{AtomicBool, Ordering};
 
-use tray_icon::{
-    menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem},
-    Icon, MouseButton, TrayIcon, TrayIconBuilder, TrayIconEvent,
+use winapi::shared::minwindef::{LPARAM, LRESULT, UINT, WPARAM};
+use winapi::shared::windef::{HICON, HMENU, HWND, POINT};
+use winapi::um::libloaderapi::GetModuleHandleW;
+use winapi::um::shellapi::{
+    ExtractIconExW, Shell_NotifyIconW, NIF_ICON, NIF_MESSAGE, NIF_TIP, NIM_ADD, NIM_DELETE,
+    NOTIFYICONDATAW,
+};
+use winapi::um::winuser::{
+    AppendMenuW, CreatePopupMenu, CreateWindowExW, DefWindowProcW, DestroyMenu, DestroyWindow,
+    DispatchMessageW, GetCursorPos, GetMessageW, LoadIconW, PostMessageW, PostQuitMessage,
+    RegisterClassW, SetForegroundWindow, ShowWindow, TrackPopupMenu, TranslateMessage,
+    UpdateWindow, IDI_APPLICATION, MF_STRING, SW_RESTORE, DestroyIcon,
+    TPM_RETURNCMD, TPM_RIGHTBUTTON, WM_APP, WM_CLOSE, WM_CONTEXTMENU, WM_DESTROY, WS_POPUP,
+    WM_LBUTTONDBLCLK, WM_LBUTTONUP, WM_NULL, WM_RBUTTONUP, WNDCLASSW,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -20,54 +35,47 @@ pub enum TrayAction {
 }
 
 pub struct Tray {
-    _icon: TrayIcon,
+    hwnd: isize,
 }
 
 impl Tray {
     pub fn create() -> Option<Self> {
-        let menu = Menu::new();
-        let show = MenuItem::with_id("show", "显示主窗口", true, None);
-        let toggle = MenuItem::with_id("toggle", "播放 / 暂停", true, None);
-        let previous = MenuItem::with_id("previous", "上一首", true, None);
-        let next = MenuItem::with_id("next", "下一首", true, None);
-        let lyrics = MenuItem::with_id("lyrics", "桌面歌词", true, None);
-        let settings = MenuItem::with_id("settings", "设置", true, None);
-        let exit = MenuItem::with_id("exit", "退出 RPlayer", true, None);
-        let separator = PredefinedMenuItem::separator();
-        menu.append_items(&[
-            &show,
-            &toggle,
-            &previous,
-            &next,
-            &separator,
-            &lyrics,
-            &settings,
-            &separator,
-            &exit,
-        ])
-        .ok()?;
-
-        let image = image::load_from_memory(include_bytes!("../../assets/icon-256.png")).ok()?;
-        let rgba = image.to_rgba8();
-        let icon = Icon::from_rgba(
-            rgba.as_raw().to_vec(),
-            rgba.width(),
-            rgba.height(),
-        )
-        .ok()?;
-        let tray = TrayIconBuilder::new()
-            .with_menu(Box::new(menu))
-            .with_tooltip("RPlayer")
-            .with_icon(icon)
-            .build()
+        let (sender, receiver) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let hwnd = unsafe { create_tray_window() };
+            let _ = sender.send(hwnd.map(|hwnd| hwnd as isize).unwrap_or(0));
+            if hwnd.is_none() {
+                return;
+            }
+            unsafe {
+                let mut message = std::mem::zeroed();
+                while GetMessageW(&mut message, std::ptr::null_mut(), 0, 0) > 0 {
+                    TranslateMessage(&message);
+                    DispatchMessageW(&message);
+                }
+            }
+        });
+        let hwnd = receiver
+            .recv_timeout(std::time::Duration::from_secs(3))
             .ok()?;
-        start_event_thread();
-        Some(Self { _icon: tray })
+        if hwnd == 0 {
+            None
+        } else {
+            Some(Self { hwnd })
+        }
     }
 
     pub fn poll() -> Vec<TrayAction> {
         let mut queue = actions().lock().unwrap_or_else(|error| error.into_inner());
         std::mem::take(&mut *queue)
+    }
+}
+
+impl Drop for Tray {
+    fn drop(&mut self) {
+        unsafe {
+            PostMessageW(self.hwnd as HWND, WM_CLOSE, 0, 0);
+        }
     }
 }
 
@@ -82,56 +90,163 @@ fn push(action: TrayAction) {
     }
 }
 
-fn start_event_thread() {
-    static STARTED: AtomicBool = AtomicBool::new(false);
-    if STARTED.swap(true, Ordering::SeqCst) {
-        return;
+const WM_TRAY: UINT = WM_APP + 1;
+
+fn wide(value: &str) -> Vec<u16> {
+    value.encode_utf16().chain(std::iter::once(0)).collect()
+}
+
+unsafe fn create_tray_window() -> Option<HWND> {
+    let class_name = wide(&format!("RPlayerTrayWindow{}", std::process::id()));
+    let instance = GetModuleHandleW(std::ptr::null());
+    let mut class: WNDCLASSW = std::mem::zeroed();
+    class.lpfnWndProc = Some(wndproc);
+    class.hInstance = instance;
+    class.lpszClassName = class_name.as_ptr();
+    RegisterClassW(&class);
+
+    let title = wide("RPlayer Tray");
+    let hwnd = CreateWindowExW(
+        0,
+        class_name.as_ptr(),
+        title.as_ptr(),
+        WS_POPUP,
+        0,
+        0,
+        0,
+        0,
+        std::ptr::null_mut(),
+        std::ptr::null_mut(),
+        instance,
+        std::ptr::null_mut(),
+    );
+    if hwnd.is_null() {
+        return None;
     }
-    std::thread::spawn(|| {
-        loop {
-        let mut has_action = false;
-        while let Ok(event) = TrayIconEvent::receiver().try_recv() {
-            if matches!(
-                event,
-                TrayIconEvent::Click {
-                    button: MouseButton::Left,
-                    ..
-                } | TrayIconEvent::DoubleClick { .. }
-            ) {
+
+    let menu = CreatePopupMenu();
+    if menu.is_null() {
+        DestroyWindow(hwnd);
+        return None;
+    }
+    for (id, label) in [
+        (1001, "显示主窗口"),
+        (1002, "播放 / 暂停"),
+        (1003, "上一首"),
+        (1004, "下一首"),
+        (1005, "桌面歌词"),
+        (1006, "设置"),
+        (1007, "退出 RPlayer"),
+    ] {
+        let text = wide(label);
+        AppendMenuW(menu, MF_STRING, id, text.as_ptr());
+    }
+    MENU.set(menu as isize).ok();
+
+    let mut icon: HICON = std::ptr::null_mut();
+    if let Ok(exe) = std::env::current_exe() {
+        let exe = wide(&exe.to_string_lossy());
+        let mut large: HICON = std::ptr::null_mut();
+        ExtractIconExW(exe.as_ptr(), 0, &mut large, &mut icon, 1);
+        if !large.is_null() {
+            // Small is what the notification area uses; large is not needed.
+            DestroyIcon(large);
+        }
+    }
+    if icon.is_null() {
+        icon = LoadIconW(std::ptr::null_mut(), IDI_APPLICATION);
+    }
+
+    let mut data: NOTIFYICONDATAW = std::mem::zeroed();
+    data.cbSize = std::mem::size_of::<NOTIFYICONDATAW>() as u32;
+    data.hWnd = hwnd;
+    data.uID = 1;
+    data.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
+    data.uCallbackMessage = WM_TRAY;
+    data.hIcon = icon;
+    let tip = wide("RPlayer");
+    let count = tip.len().min(data.szTip.len());
+    data.szTip[..count].copy_from_slice(&tip[..count]);
+    if Shell_NotifyIconW(NIM_ADD, &mut data) == 0 {
+        DestroyMenu(menu);
+        DestroyWindow(hwnd);
+        return None;
+    }
+    UpdateWindow(hwnd);
+    Some(hwnd)
+}
+
+static MENU: OnceLock<isize> = OnceLock::new();
+
+unsafe extern "system" fn wndproc(
+    hwnd: HWND,
+    message: UINT,
+    wparam: WPARAM,
+    lparam: LPARAM,
+) -> LRESULT {
+    match message {
+        WM_TRAY => {
+            let event = lparam as u32;
+            if event == WM_LBUTTONUP || event == WM_LBUTTONDBLCLK {
                 push(TrayAction::Show);
-                has_action = true;
+                restore_main_window();
+            } else if event == WM_RBUTTONUP || event == WM_CONTEXTMENU {
+                show_menu(hwnd);
             }
+            0
         }
-        while let Ok(event) = MenuEvent::receiver().try_recv() {
-            let action = match event.id.0.as_str() {
-                "show" => TrayAction::Show,
-                "toggle" => TrayAction::TogglePlay,
-                "previous" => TrayAction::Previous,
-                "next" => TrayAction::Next,
-                "lyrics" => TrayAction::DesktopLyrics,
-                "settings" => TrayAction::Settings,
-                "exit" => TrayAction::Exit,
-                _ => continue,
-            };
-            push(action);
-            has_action = true;
+        WM_DESTROY => {
+            let mut data: NOTIFYICONDATAW = std::mem::zeroed();
+            data.cbSize = std::mem::size_of::<NOTIFYICONDATAW>() as u32;
+            data.hWnd = hwnd;
+            data.uID = 1;
+            Shell_NotifyIconW(NIM_DELETE, &mut data);
+            PostQuitMessage(0);
+            0
         }
-        if has_action {
-            // The UI may be minimized; unminimize natively so egui resumes
-            // updating and can consume the queued action immediately.
-            restore_main_window();
-        }
-        std::thread::sleep(std::time::Duration::from_millis(80));
-        }
-    });
+        _ => DefWindowProcW(hwnd, message, wparam, lparam),
+    }
+}
+
+unsafe fn show_menu(hwnd: HWND) {
+    let Some(menu) = MENU.get().copied() else {
+        return;
+    };
+    let mut point: POINT = std::mem::zeroed();
+    GetCursorPos(&mut point);
+    SetForegroundWindow(hwnd);
+    let command = TrackPopupMenu(
+        menu as HMENU,
+        TPM_RETURNCMD | TPM_RIGHTBUTTON,
+        point.x,
+        point.y,
+        0,
+        hwnd,
+        std::ptr::null_mut(),
+    );
+    // Required so the popup dismisses when clicking elsewhere.
+    PostMessageW(hwnd, WM_NULL, 0, 0);
+    let action = match command {
+        1001 => Some(TrayAction::Show),
+        1002 => Some(TrayAction::TogglePlay),
+        1003 => Some(TrayAction::Previous),
+        1004 => Some(TrayAction::Next),
+        1005 => Some(TrayAction::DesktopLyrics),
+        1006 => Some(TrayAction::Settings),
+        1007 => Some(TrayAction::Exit),
+        _ => None,
+    };
+    if let Some(action) = action {
+        push(action);
+        restore_main_window();
+    }
 }
 
 fn restore_main_window() {
-    #[cfg(target_os = "windows")]
     unsafe {
-        use winapi::um::winuser::{SetForegroundWindow, ShowWindow, SW_RESTORE};
+        use winapi::um::winuser::SetForegroundWindow;
         if let Some(hwnd) = crate::platform::main_window_handle() {
-            let hwnd = hwnd as winapi::shared::windef::HWND;
+            let hwnd = hwnd as HWND;
             ShowWindow(hwnd, SW_RESTORE);
             SetForegroundWindow(hwnd);
         }

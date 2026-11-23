@@ -26,17 +26,23 @@
 
 ### 修复
 
-- 新增独立托盘事件线程，持续读取 `TrayIconEvent` 与 `MenuEvent`。
-- 菜单动作写入独立队列，不再依赖主 UI 轮询。
-- 收到动作后先通过 Win32 `ShowWindow(SW_RESTORE)` / `SetForegroundWindow` 恢复主窗口，唤醒 eframe 再消费队列。
-- 关闭到托盘改为最小化窗口，而不是 `Visible(false)`，避免事件循环完全停摆。
+- 移除 `tray-icon` / `muda` 菜单实现，改为原生 Win32：
+  - `Shell_NotifyIconW` 注册托盘图标；
+  - 独立线程 + message-only/隐藏窗口消息循环；
+  - `CreatePopupMenu` + `TrackPopupMenu` 显示原生菜单；
+  - 菜单项直接通过 ID 分发，不再依赖 `MenuEvent` 回调。
+- 菜单动作写入独立队列。
+- 收到动作后通过 Win32 `ShowWindow(SW_RESTORE)` / `SetForegroundWindow` 恢复主窗口，唤醒 eframe 再消费队列。
+- 关闭到托盘使用最小化窗口，而不是 `Visible(false)`。
 - 主窗口保留 250ms 重绘心跳。
+- 已删除 `tray-icon` 依赖。
 
 ### 验证
 
 - Release 构建通过；24 个单元测试通过。
-- 自动化环境重启 Explorer 后托盘图标未稳定出现在溢出区，因此托盘菜单点击仍需用户在真实桌面复验。
-- 已确认独立托盘事件线程成功启动。
+- 原生图标成功注册，`Shell_NotifyIconGetRect` 返回有效坐标。
+- 自动化环境会把托盘图标放进 Windows 溢出区，且存在旧图标/闪烁问题，无法可靠地用合成鼠标点中菜单项；**需要用户在真实桌面点击菜单复验**。
+- 菜单本身由 Windows 原生 `TrackPopupMenu` 绘制，不再经过第三方菜单事件通道。
 
 ## BUG-001 · 设置窗口顶部超出屏幕，无法关闭
 
