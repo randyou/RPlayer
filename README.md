@@ -225,6 +225,8 @@ RPlayer/
 
 v0.5 的页面设计、在线封面方案、验收标准与后续增量见 [docs/V0.5_PLAN.md](docs/V0.5_PLAN.md)；设计参考与实机效果见 [docs/V0.5_DESIGN.md](docs/V0.5_DESIGN.md)。
 
+v0.6 的曲库深度规划、专辑/艺术家视图、评分与统计、智能歌单、标签编辑、M3U、ReplayGain 与版本拆分见 [docs/V0.6_PLAN.md](docs/V0.6_PLAN.md)。
+
 ## 版本记录
 
 ### v0.5.0
