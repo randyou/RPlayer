@@ -222,7 +222,6 @@ pub struct RPlayerApp {
     mini_placed: bool,
     lyrics_region: bool,
     mini_region: bool,
-    lyrics_key_mode: bool,
     lyrics_viewport_active: bool,
     mini_viewport_active: bool,
     lyrics: Option<crate::lyrics::Lyrics>,
@@ -358,7 +357,6 @@ impl RPlayerApp {
             mini_placed: false,
             lyrics_region: false,
             mini_region: false,
-            lyrics_key_mode: false,
             lyrics_viewport_active: false,
             mini_viewport_active: false,
             lyrics: None,
@@ -1535,7 +1533,6 @@ impl RPlayerApp {
                     self.desktop_lyrics_open = false;
                     self.library.desktop_lyrics = false;
                     self.lyrics_viewport_active = false;
-                    self.lyrics_key_mode = false;
                     ctx.send_viewport_cmd_to(
                         overlay::lyrics_viewport(),
                         ViewportCommand::Close,
@@ -1601,25 +1598,9 @@ impl RPlayerApp {
                 crate::platform::set_window_borderless("RPlayer 桌面歌词");
                 self.lyrics_region = true;
             }
-            // The GL surface has no usable per-pixel alpha. At exactly 0% we
-            // switch the window to color-key transparency so the panel is
-            // genuinely invisible; text is still painted opaque on top.
-            let key_mode = self.library.desktop_lyrics_opacity <= 0.001;
-            if key_mode != self.lyrics_key_mode {
-                if crate::platform::set_window_color_key("RPlayer 桌面歌词", key_mode) {
-                    self.lyrics_key_mode = key_mode;
-                }
-            }
         } else if self.lyrics_viewport_active {
             self.lyrics_viewport_active = false;
-                    self.lyrics_key_mode = false;
-            crate::platform::update_lyrics_backdrop(
-                        "RPlayer 桌面歌词",
-                        (0, 0, 0, 0),
-                        0.0,
-                        (0, 0, 0),
-                    );
-                    ctx.send_viewport_cmd_to(overlay::lyrics_viewport(), ViewportCommand::Close);
+            ctx.send_viewport_cmd_to(overlay::lyrics_viewport(), ViewportCommand::Close);
         }
 
         if self.mini_open {
@@ -1822,15 +1803,8 @@ impl RPlayerApp {
             self.lyrics_region = false;
         } else {
             self.lyrics_viewport_active = false;
-                    self.lyrics_key_mode = false;
             self.lyrics_region = false;
-            crate::platform::update_lyrics_backdrop(
-                        "RPlayer 桌面歌词",
-                        (0, 0, 0, 0),
-                        0.0,
-                        (0, 0, 0),
-                    );
-                    ctx.send_viewport_cmd_to(overlay::lyrics_viewport(), ViewportCommand::Close);
+            ctx.send_viewport_cmd_to(overlay::lyrics_viewport(), ViewportCommand::Close);
         }
         self.persist();
     }

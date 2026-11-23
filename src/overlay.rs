@@ -18,32 +18,6 @@ use crate::ui::widgets;
 
 const LYRICS_SIZE: Vec2 = Vec2::new(860.0, 158.0);
 
-static LYRICS_WINDOW_MODE: std::sync::atomic::AtomicU8 =
-    std::sync::atomic::AtomicU8::new(255);
-
-pub fn reset_lyrics_window_mode() {
-    LYRICS_WINDOW_MODE.store(255, std::sync::atomic::Ordering::SeqCst);
-}
-
-fn set_lyrics_window_mode(mode: u8) {
-    use std::sync::atomic::Ordering;
-    if LYRICS_WINDOW_MODE.swap(mode, Ordering::SeqCst) == mode {
-        return;
-    }
-    match mode {
-        0 => {
-            crate::platform::set_window_color_key("RPlayer 桌面歌词", true);
-        }
-        1 => {
-            crate::platform::set_window_color_key("RPlayer 桌面歌词", false);
-            crate::platform::set_window_alpha("RPlayer 桌面歌词", 0.16);
-        }
-        _ => {
-            crate::platform::set_window_color_key("RPlayer 桌面歌词", false);
-            crate::platform::set_window_alpha("RPlayer 桌面歌词", 1.0);
-        }
-    }
-}
 const MINI_SIZE: Vec2 = Vec2::new(410.0, 146.0);
 
 #[derive(Clone, Default)]
@@ -142,42 +116,24 @@ pub fn show_lyrics(
                 ui.set_min_size(LYRICS_SIZE);
                 let capsule = ui.max_rect();
                 let dark = theme::c().dark;
-                let key_mode = snapshot.lyrics_opacity <= 0.001;
-                let hover = crate::platform::cursor_in_window("RPlayer 桌面歌词");
-                let panel_alpha = if key_mode {
+                let hover = snapshot.lyrics_opacity <= 0.001
+                    && crate::platform::cursor_in_window("RPlayer 桌面歌词");
+                let panel_alpha = if snapshot.lyrics_opacity <= 0.001 {
                     if hover { 0.16 } else { 0.0 }
                 } else {
                     snapshot.lyrics_opacity.clamp(0.0, 1.0)
                 };
                 let text_alpha = snapshot.lyrics_text_opacity.clamp(0.0, 1.0);
-                // The lyric window itself is always color-key transparent; a
-                // separate native backdrop provides frosted-glass opacity and
-                // never affects text alpha.
-                set_lyrics_window_mode(0);
-                let outer = ctx
-                    .input(|input| input.viewport().outer_rect)
-                    .unwrap_or(capsule);
-                let panel_color = theme::c().panel;
-                crate::platform::update_lyrics_backdrop(
-                    "RPlayer 桌面歌词",
-                    (
-                        outer.min.x as i32,
-                        outer.min.y as i32,
-                        outer.width() as i32,
-                        outer.height() as i32,
-                    ),
-                    panel_alpha,
-                    (panel_color.r(), panel_color.g(), panel_color.b()),
-                );
-                ui.painter().rect_filled(
-                    capsule.expand(16.0),
-                    CornerRadius::ZERO,
-                    Color32::from_rgb(1, 2, 3),
-                );
+                let text_passes = 1;
                 if panel_alpha > 0.001 {
+                    ui.painter().rect_filled(
+                        capsule,
+                        CornerRadius::same(18),
+                        with_alpha(theme::c().panel, panel_alpha),
+                    );
                     ui.painter().rect_stroke(
                         capsule.shrink(1.0),
-                        CornerRadius::ZERO,
+                        CornerRadius::same(18),
                         Stroke::new(
                             1.0_f32,
                             with_alpha(
@@ -192,7 +148,6 @@ pub fn show_lyrics(
                         egui::StrokeKind::Inside,
                     );
                 }
-                let text_passes = 1;
 
                 let shadow = if dark {
                     theme::black_alpha(0.85)

@@ -14,7 +14,7 @@ egui = "0.31.1"
 eframe = { version = "0.31.1", default-features = false, features = [
     "accesskit",
     "default_fonts",
-    "glow",
+    "wgpu",
     "wayland",
     "x11",
 ] }
@@ -53,3 +53,6 @@ debug = false
 lto = "off"
 codegen-units = 16
 strip = true
+
+[patch.crates-io]
+egui-wgpu = { path = "vendor/egui-wgpu" }
