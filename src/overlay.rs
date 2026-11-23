@@ -17,6 +17,33 @@ use crate::ui::icons::{self, Icon};
 use crate::ui::widgets;
 
 const LYRICS_SIZE: Vec2 = Vec2::new(860.0, 158.0);
+
+static LYRICS_WINDOW_MODE: std::sync::atomic::AtomicU8 =
+    std::sync::atomic::AtomicU8::new(255);
+
+pub fn reset_lyrics_window_mode() {
+    LYRICS_WINDOW_MODE.store(255, std::sync::atomic::Ordering::SeqCst);
+}
+
+fn set_lyrics_window_mode(mode: u8) {
+    use std::sync::atomic::Ordering;
+    if LYRICS_WINDOW_MODE.swap(mode, Ordering::SeqCst) == mode {
+        return;
+    }
+    match mode {
+        0 => {
+            crate::platform::set_window_color_key("RPlayer 桌面歌词", true);
+        }
+        1 => {
+            crate::platform::set_window_color_key("RPlayer 桌面歌词", false);
+            crate::platform::set_window_alpha("RPlayer 桌面歌词", 0.16);
+        }
+        _ => {
+            crate::platform::set_window_color_key("RPlayer 桌面歌词", false);
+            crate::platform::set_window_alpha("RPlayer 桌面歌词", 1.0);
+        }
+    }
+}
 const MINI_SIZE: Vec2 = Vec2::new(410.0, 146.0);
 
 #[derive(Clone, Default)]
@@ -93,7 +120,8 @@ pub fn show_lyrics(
         .with_resizable(false)
         .with_inner_size(LYRICS_SIZE)
         .with_min_inner_size(LYRICS_SIZE)
-        .with_taskbar(false);
+        .with_taskbar(false)
+        .with_active(false);
     if let Some(position) = initial_position {
         builder = builder.with_position(position);
     }
@@ -115,16 +143,25 @@ pub fn show_lyrics(
                 let capsule = ui.max_rect();
                 let dark = theme::c().dark;
                 let key_mode = snapshot.lyrics_opacity <= 0.001;
+                let hover = key_mode
+                    && crate::platform::cursor_in_window("RPlayer 桌面歌词");
+                let window_mode = if key_mode {
+                    if hover { 1 } else { 0 }
+                } else {
+                    2
+                };
+                set_lyrics_window_mode(window_mode);
                 let panel_alpha = if key_mode {
-                    0.0
+                    if hover { 1.0 } else { 0.0 }
                 } else {
                     snapshot.lyrics_opacity.clamp(0.0, 1.0)
                 };
                 let text_alpha = snapshot.lyrics_text_opacity.clamp(0.0, 1.0);
-                if key_mode {
+                // When the whole layered window is at 16% for the hover hint,
+                // repeat text passes so the lyrics remain legible.
+                let text_passes = if key_mode && hover { 6 } else { 1 };
+                if key_mode && !hover {
                     // Must match `set_window_color_key` (COLORREF 0x00030201).
-                    // Expand slightly so antialiased edge pixels don't leave a
-                    // black 1px frame.
                     ui.painter().rect_filled(
                         capsule.expand(16.0),
                         CornerRadius::ZERO,
@@ -161,6 +198,7 @@ pub fn show_lyrics(
                 };
                 let center_x = capsule.center().x;
 
+                for _ in 0..text_passes {
                 if !snapshot.has_track {
                     shadow_text(
                         ui.painter(),
@@ -244,6 +282,7 @@ pub fn show_lyrics(
                         text_alpha,
                         );
                     }
+                }
                 }
 
                 let close_rect = Rect::from_min_size(

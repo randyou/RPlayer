@@ -465,6 +465,55 @@ pub fn set_window_borderless(title: &str) {
     }
 }
 
+#[cfg(target_os = "windows")]
+pub fn cursor_in_window(title: &str) -> bool {
+    #[link(name = "user32")]
+    extern "system" {
+        fn FindWindowW(class_name: *const u16, window_name: *const u16) -> isize;
+        fn GetWindowRect(hwnd: isize, rect: *mut RectI) -> i32;
+        fn GetCursorPos(point: *mut PointI) -> i32;
+    }
+    #[repr(C)]
+    struct RectI {
+        left: i32,
+        top: i32,
+        right: i32,
+        bottom: i32,
+    }
+    #[repr(C)]
+    struct PointI {
+        x: i32,
+        y: i32,
+    }
+
+    let wide: Vec<u16> = title.encode_utf16().chain(std::iter::once(0)).collect();
+    let hwnd = unsafe { FindWindowW(std::ptr::null(), wide.as_ptr()) };
+    if hwnd == 0 {
+        return false;
+    }
+    let mut rect = RectI {
+        left: 0,
+        top: 0,
+        right: 0,
+        bottom: 0,
+    };
+    let mut point = PointI { x: 0, y: 0 };
+    unsafe {
+        if GetWindowRect(hwnd, &mut rect) == 0 || GetCursorPos(&mut point) == 0 {
+            return false;
+        }
+    }
+    point.x >= rect.left
+        && point.x < rect.right
+        && point.y >= rect.top
+        && point.y < rect.bottom
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn cursor_in_window(_title: &str) -> bool {
+    false
+}
+
 #[cfg(not(target_os = "windows"))]
 pub fn set_window_borderless(_title: &str) {}
 
