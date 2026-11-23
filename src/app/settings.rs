@@ -18,6 +18,7 @@ impl RPlayerApp {
 
         let mut close = false;
         let mut requested_theme: Option<ThemePreset> = None;
+        let mut requested_replaygain: Option<String> = None;
         let mut opacity = self.library.desktop_lyrics_opacity;
         let mut auto_lyrics = self.library.auto_lyrics;
         let mut auto_cover = self.library.auto_cover;
@@ -31,7 +32,7 @@ impl RPlayerApp {
             .resizable(false)
             .collapsible(false)
             .anchor(Align2::CENTER_CENTER, Vec2::ZERO)
-            .fixed_size(Vec2::new(470.0, 590.0))
+            .fixed_size(Vec2::new(470.0, 640.0))
             .frame(
                 Frame::NONE
                     .fill(theme::c().panel)
@@ -123,6 +124,23 @@ impl RPlayerApp {
                             .size(10.0)
                             .color(theme::c().faint),
                         );
+                        ui.add_space(6.0);
+                        ui.horizontal(|ui| {
+                            ui.label(
+                                RichText::new("ReplayGain")
+                                    .size(11.0)
+                                    .color(theme::c().muted),
+                            );
+                            for (id, label) in
+                                [("off", "关闭"), ("track", "单曲"), ("album", "专辑")]
+                            {
+                                if widgets::chip(ui, label, self.library.replaygain == id)
+                                    .clicked()
+                                {
+                                    requested_replaygain = Some(id.to_string());
+                                }
+                            }
+                        });
                     });
 
                 ui.add_space(16.0);
@@ -293,6 +311,26 @@ impl RPlayerApp {
 
         if let Some(preset) = requested_theme {
             self.set_theme_preset(ctx, preset);
+        }
+        if let Some(mode) = requested_replaygain {
+            if self.library.replaygain != mode {
+                self.library.replaygain = mode.clone();
+                if let Some(audio) = &mut self.audio {
+                    audio.set_replaygain_mode(&mode);
+                }
+                self.persist();
+                self.toast(
+                    format!(
+                        "ReplayGain：{}",
+                        match mode.as_str() {
+                            "track" => "单曲",
+                            "album" => "专辑",
+                            _ => "关闭",
+                        }
+                    ),
+                    super::ToastKind::Info,
+                );
+            }
         }
         if (opacity - self.library.desktop_lyrics_opacity).abs() > 0.001 {
             self.library.desktop_lyrics_opacity = opacity.clamp(0.35, 1.0);

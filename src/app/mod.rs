@@ -259,11 +259,14 @@ impl RPlayerApp {
         let (lyrics_tx, lyrics_rx) = mpsc::channel();
         let (cover_tx, cover_rx) = mpsc::channel();
         let eq = EqShared::new(library.eq.clone());
-        let (audio, audio_error) = match AudioEngine::new(volume, eq.clone()) {
+        let (mut audio, audio_error) = match AudioEngine::new(volume, eq.clone()) {
             Ok(engine) => (Some(engine), None),
             Err(err) => (None, Some(format!("{err:#}"))),
         };
 
+        if let Some(engine) = &mut audio {
+            engine.set_replaygain_mode(&library.replaygain);
+        }
         let mut app = Self {
             volume,
             last_saved_volume: volume,

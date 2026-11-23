@@ -184,6 +184,8 @@ pub struct Library {
     pub auto_lyrics: bool,
     /// Match missing covers through MusicBrainz/Cover Art Archive.
     pub auto_cover: bool,
+    /// ReplayGain mode: off / track / album.
+    pub replaygain: String,
     /// Ten-band equalizer settings.
     pub eq: crate::eq::EqSettings,
 }
@@ -205,6 +207,7 @@ impl Default for Library {
             desktop_lyrics_opacity: 0.85,
             auto_lyrics: true,
             auto_cover: true,
+            replaygain: "off".to_string(),
             eq: crate::eq::EqSettings::default(),
         }
     }

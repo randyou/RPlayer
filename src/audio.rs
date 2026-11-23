@@ -11,6 +11,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
+use lofty::file::TaggedFileExt;
 use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink, Source};
 
 use crate::eq::{EqShared, EqualizerSource};
@@ -96,6 +97,10 @@ pub struct AudioEngine {
     boundary: Arc<AtomicU64>,
     queued_next: bool,
     current_path: Option<std::path::PathBuf>,
+    replaygain_mode: String,
+    replaygain: f32,
+    queued_path: Option<std::path::PathBuf>,
+    queued_gain: f32,
 }
 
 impl AudioEngine {
@@ -115,6 +120,10 @@ impl AudioEngine {
             boundary: Arc::new(AtomicU64::new(0)),
             queued_next: false,
             current_path: None,
+            replaygain_mode: "off".to_string(),
+            replaygain: 1.0,
+            queued_path: None,
+            queued_gain: 1.0,
         })
     }
 
@@ -156,8 +165,9 @@ impl AudioEngine {
 
         self.stop();
         self.current_path = Some(path.to_path_buf());
+        self.replaygain = gain_for(path, &self.replaygain_mode);
         let sink = Sink::try_new(&self.handle).context("create audio sink")?;
-        sink.set_volume(self.volume);
+        sink.set_volume(self.volume * self.replaygain);
         let converted = decoder.convert_samples::<f32>();
         let boundary = Arc::new(AtomicU64::new(0));
         sink.append(BoundarySource::new(
@@ -192,6 +202,8 @@ impl AudioEngine {
         if let Some(sink) = &self.sink {
             sink.append(source);
             self.queued_next = true;
+            self.queued_path = Some(path.to_path_buf());
+            self.queued_gain = gain_for(path, &self.replaygain_mode);
             Ok(())
         } else {
             anyhow::bail!("no active sink");
@@ -218,6 +230,11 @@ impl AudioEngine {
         self.position_offset = 0.0;
         self.queued_next = false;
         self.reported_finished = false;
+        if let Some(path) = self.queued_path.take() {
+            self.current_path = Some(path);
+            self.replaygain = self.queued_gain;
+            self.apply_volume();
+        }
     }
 
     pub fn stop(&mut self) {
@@ -229,6 +246,7 @@ impl AudioEngine {
         self.position_offset = 0.0;
         self.track_origin = 0.0;
         self.queued_next = false;
+        self.queued_path = None;
     }
 
     pub fn toggle_pause(&mut self) {
@@ -274,9 +292,30 @@ impl AudioEngine {
 
     pub fn set_volume(&mut self, volume: f32) {
         self.volume = volume.clamp(0.0, 1.0);
+        self.apply_volume();
+    }
+
+    fn apply_volume(&self) {
         if let Some(sink) = &self.sink {
-            sink.set_volume(self.volume);
+            sink.set_volume(self.volume * self.replaygain);
         }
+    }
+
+    pub fn set_replaygain_mode(&mut self, mode: &str) {
+        if self.replaygain_mode == mode {
+            return;
+        }
+        self.replaygain_mode = mode.to_string();
+        self.replaygain = self
+            .current_path
+            .as_deref()
+            .map(|path| gain_for(path, &self.replaygain_mode))
+            .unwrap_or(1.0);
+        self.apply_volume();
+    }
+
+    pub fn replaygain(&self) -> f32 {
+        self.replaygain
     }
 
     pub fn volume(&self) -> f32 {
@@ -332,5 +371,53 @@ impl AudioEngine {
             return true;
         }
         false
+    }
+}
+
+fn gain_for(path: &Path, mode: &str) -> f32 {
+    if mode == "off" {
+        return 1.0;
+    }
+    let Ok(tagged) = lofty::read_from_path(path) else {
+        return 1.0;
+    };
+    let Some(tag) = tagged.primary_tag().or_else(|| tagged.first_tag()) else {
+        return 1.0;
+    };
+    let track = tag.get_string(&lofty::tag::ItemKey::ReplayGainTrackGain);
+    let album = tag.get_string(&lofty::tag::ItemKey::ReplayGainAlbumGain);
+    let raw = if mode == "album" {
+        album.or(track)
+    } else {
+        track.or(album)
+    };
+    raw.and_then(parse_db)
+        .map(|db| {
+            // Conservative limiter against broken tags.
+            10f32.powf(db.clamp(-12.0, 12.0) / 20.0)
+        })
+        .unwrap_or(1.0)
+}
+
+fn parse_db(value: &str) -> Option<f32> {
+    value
+        .trim()
+        .trim_end_matches("dB")
+        .trim_end_matches("db")
+        .trim()
+        .parse::<f32>()
+        .ok()
+        .filter(|value| value.is_finite())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_db;
+
+    #[test]
+    fn parses_replaygain_db_values() {
+        assert_eq!(parse_db("-7.50 dB"), Some(-7.5));
+        assert_eq!(parse_db("+3.2db"), Some(3.2));
+        assert_eq!(parse_db("nonsense"), None);
     }
 }
