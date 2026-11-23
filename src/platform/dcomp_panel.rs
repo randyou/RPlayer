@@ -29,9 +29,9 @@ use windows::Win32::Graphics::Dwm::{
 };
 use windows::Win32::Graphics::Dxgi::{IDXGIDevice, IDXGISurface};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
-use windows::Win32::UI::Input::KeyboardAndMouse::EnableWindow;
+use windows::Win32::UI::Input::KeyboardAndMouse::ReleaseCapture;
 use windows::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExW, DefWindowProcW, FindWindowW, RegisterClassW, SetWindowPos, ShowWindow, HCURSOR, HICON,
+    CreateWindowExW, DefWindowProcW, FindWindowW, GetClientRect, PostMessageW, RegisterClassW, SendMessageW, SetWindowPos, ShowWindow, HCURSOR, HICON,
     SWP_NOACTIVATE, SWP_SHOWWINDOW, SW_SHOWNOACTIVATE, WM_ERASEBKGND, WNDCLASSW, WNDPROC,
     WS_EX_NOACTIVATE, WS_EX_NOREDIRECTIONBITMAP, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT, WS_POPUP,
 };
@@ -50,6 +50,9 @@ struct Panel {
 }
 
 unsafe impl Send for Panel {}
+
+static PANEL_OWNER: std::sync::atomic::AtomicIsize =
+    std::sync::atomic::AtomicIsize::new(0);
 
 static PANEL: OnceLock<Mutex<Option<Panel>>> = OnceLock::new();
 
@@ -70,9 +73,52 @@ unsafe extern "system" fn panel_proc(
     if msg == WM_ERASEBKGND {
         return LRESULT(1);
     }
+    #[link(name = "user32")]
+    extern "system" {
+        fn ScreenToClient(hwnd: HWND, point: *mut windows::Win32::Foundation::POINT) -> i32;
+    }
     if msg == 0x0084 {
-        // WM_NCHITTEST: let every click fall through to the lyric window.
-        return LRESULT(-1);
+        let mut point = windows::Win32::Foundation::POINT {
+            x: (lparam.0 as i32) & 0xFFFF,
+            y: ((lparam.0 as i32) >> 16) & 0xFFFF,
+        };
+        let mut rect = windows::Win32::Foundation::RECT::default();
+        let _ = unsafe { ScreenToClient(hwnd, &mut point) };
+        let _ = unsafe { GetClientRect(hwnd, &mut rect) };
+        let width = rect.right - rect.left;
+        let controls = (point.x < 230 && point.y < 130)
+            || (point.x > width - 56 && point.y < 46);
+        return LRESULT(1);
+    }
+    if msg == 0x0201 {
+        let owner = PANEL_OWNER.load(std::sync::atomic::Ordering::SeqCst);
+        if owner != 0 {
+            let x = (lparam.0 as i32) & 0xFFFF;
+            let y = ((lparam.0 as i32) >> 16) & 0xFFFF;
+            let mut rect = windows::Win32::Foundation::RECT::default();
+            let _ = unsafe { GetClientRect(hwnd, &mut rect) };
+            let width = rect.right - rect.left;
+            let controls = (x < 230 && y < 130) || (x > width - 56 && y < 46);
+            if controls {
+                let owner_hwnd = HWND(owner as *mut core::ffi::c_void);
+                let packed = (((y as isize) << 16) | (x as isize)) as isize;
+                unsafe {
+                    let _ = PostMessageW(owner_hwnd, 0x0201, windows::Win32::Foundation::WPARAM(1), windows::Win32::Foundation::LPARAM(packed));
+                    let _ = PostMessageW(owner_hwnd, 0x0202, windows::Win32::Foundation::WPARAM(0), windows::Win32::Foundation::LPARAM(packed));
+                }
+            } else {
+                unsafe {
+                    let _ = ReleaseCapture();
+                    let _ = SendMessageW(
+                        HWND(owner as *mut core::ffi::c_void),
+                        0x00A1,
+                        windows::Win32::Foundation::WPARAM(2),
+                        windows::Win32::Foundation::LPARAM(0),
+                    );
+                }
+            }
+            return LRESULT(0);
+        }
     }
     DefWindowProcW(hwnd, msg, wparam, lparam)
 }
@@ -161,7 +207,6 @@ fn create_panel(hwnd: HWND) -> windows::core::Result<Panel> {
         blur.dwFlags = DWM_BB_ENABLE;
         blur.fEnable = true.into();
         let _ = DwmEnableBlurBehindWindow(hwnd, &blur);
-        let _ = EnableWindow(hwnd, false);
         let target = dcomp.CreateTargetForHwnd(hwnd, false)?;
         let visual = dcomp.CreateVisual()?;
         target.SetRoot(&visual)?;
@@ -289,6 +334,7 @@ pub fn update(title: &str, rect: (i32, i32, i32, i32), alpha: f32, rgb: (u8, u8,
     let Some(owner) = owner else {
         return false;
     };
+    PANEL_OWNER.store(owner.0 as isize, std::sync::atomic::Ordering::SeqCst);
     unsafe {
         if SetWindowPos(
             panel.hwnd,
