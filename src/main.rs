@@ -4,6 +4,7 @@
 
 mod app;
 mod audio;
+mod lyrics;
 mod model;
 mod platform;
 mod scanner;

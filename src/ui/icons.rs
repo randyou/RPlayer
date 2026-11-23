@@ -27,6 +27,7 @@ pub enum Icon {
     Close,
     More,
     ChevronDown,
+    ChevronUp,
     ChevronLeft,
     ChevronRight,
     Trash,
@@ -36,6 +37,10 @@ pub enum Icon {
     Check,
     Grid,
     Queue,
+    Heart,
+    HeartFilled,
+    Sun,
+    Moon,
 }
 
 struct Canvas {
@@ -218,6 +223,9 @@ pub fn paint(painter: &Painter, rect: Rect, icon: Icon, color: Color32) {
         Icon::ChevronDown => {
             c.polyline(&[(0.24, 0.40), (0.50, 0.64), (0.76, 0.40)]);
         }
+        Icon::ChevronUp => {
+            c.polyline(&[(0.24, 0.60), (0.50, 0.36), (0.76, 0.60)]);
+        }
         Icon::ChevronLeft => {
             c.polyline(&[(0.60, 0.22), (0.36, 0.50), (0.60, 0.78)]);
         }
@@ -269,6 +277,48 @@ pub fn paint(painter: &Painter, rect: Rect, icon: Icon, color: Color32) {
             c.polyline(&[(0.12, 0.50), (0.62, 0.50)]);
             c.polyline(&[(0.12, 0.70), (0.48, 0.70)]);
             c.fill(&[(0.64, 0.60), (0.88, 0.73), (0.64, 0.86)]);
+        }
+        Icon::Heart | Icon::HeartFilled => {
+            let points = [
+                (0.50, 0.84),
+                (0.16, 0.51),
+                (0.14, 0.34),
+                (0.25, 0.21),
+                (0.40, 0.21),
+                (0.50, 0.34),
+                (0.60, 0.21),
+                (0.75, 0.21),
+                (0.86, 0.34),
+                (0.84, 0.51),
+                (0.50, 0.84),
+            ];
+            if matches!(icon, Icon::HeartFilled) {
+                c.fill(&points);
+            } else {
+                c.polyline(&points);
+            }
+        }
+        Icon::Sun => {
+            c.ring(0.50, 0.50, 0.17);
+            for angle in 0..8 {
+                let radians = angle as f32 * std::f32::consts::TAU / 8.0;
+                let inner = 0.28;
+                let outer = 0.40;
+                c.line(
+                    (
+                        0.50 + inner * radians.cos(),
+                        0.50 + inner * radians.sin(),
+                    ),
+                    (
+                        0.50 + outer * radians.cos(),
+                        0.50 + outer * radians.sin(),
+                    ),
+                );
+            }
+        }
+        Icon::Moon => {
+            c.arc(0.50, 0.50, 0.31, -1.35, 1.35);
+            c.arc(0.63, 0.50, 0.24, 1.75, 4.50);
         }
     }
 }

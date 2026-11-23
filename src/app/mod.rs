@@ -2,6 +2,7 @@
 
 mod dialogs;
 mod library_view;
+mod now_playing;
 mod player_bar;
 mod sidebar;
 
@@ -26,6 +27,9 @@ use crate::ui::icons::{self, Icon};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum View {
     Library,
+    Favorites,
+    Recent,
+    Folders,
     Playlist(u64),
 }
 
@@ -112,6 +116,11 @@ pub struct RPlayerApp {
     last_saved_volume: f32,
     cover: Option<TextureHandle>,
     cover_for: Option<u64>,
+    lyrics: Option<crate::lyrics::Lyrics>,
+    lyrics_for: Option<u64>,
+    expanded: bool,
+    batch_mode: bool,
+    checked: HashSet<u64>,
     scanning: bool,
     scan_rx: Option<Receiver<ScanEvent>>,
     scan_total: usize,
@@ -158,6 +167,11 @@ impl RPlayerApp {
             repeat: RepeatMode::Off,
             cover: None,
             cover_for: None,
+            lyrics: None,
+            lyrics_for: None,
+            expanded: false,
+            batch_mode: false,
+            checked: HashSet::new(),
             scanning: false,
             scan_rx: None,
             scan_total: 0,
@@ -482,7 +496,11 @@ impl RPlayerApp {
         match audio.play_path(&track.path) {
             Ok(()) => {
                 self.current = Some(id);
+                self.library.mark_played(id);
+                self.lyrics = crate::lyrics::load(&track.path);
+                self.lyrics_for = Some(id);
                 self.load_cover(ctx, id);
+                self.persist();
                 true
             }
             Err(err) => {
@@ -734,6 +752,92 @@ impl RPlayerApp {
         }
     }
 
+    fn switch_view(&mut self, view: View) {
+        if self.view == view {
+            return;
+        }
+        self.view = view;
+        self.selected = None;
+        self.batch_mode = false;
+        self.checked.clear();
+    }
+
+    fn toggle_favorite(&mut self, id: u64) {
+        let favorite = self.library.toggle_favorite(id);
+        self.persist();
+        self.toast(
+            if favorite {
+                "已添加到我的收藏"
+            } else {
+                "已取消收藏"
+            },
+            ToastKind::Info,
+        );
+    }
+
+    fn toggle_checked(&mut self, id: u64) {
+        if !self.checked.remove(&id) {
+            self.checked.insert(id);
+        }
+    }
+
+    fn set_all_checked(&mut self, ids: &[u64], checked: bool) {
+        if checked {
+            self.checked.extend(ids.iter().copied());
+        } else {
+            for id in ids {
+                self.checked.remove(id);
+            }
+        }
+    }
+
+    fn batch_add_to_playlist(&mut self, playlist_id: u64) {
+        let ids: Vec<u64> = self.checked.iter().copied().collect();
+        let mut added = 0usize;
+        for id in ids {
+            if self.library.add_to_playlist(playlist_id, id) {
+                added += 1;
+            }
+        }
+        let name = self
+            .library
+            .playlist(playlist_id)
+            .map(|playlist| playlist.name.clone())
+            .unwrap_or_default();
+        self.persist();
+        self.toast(
+            format!("已添加 {added} 首歌曲到「{name}」"),
+            ToastKind::Success,
+        );
+    }
+
+    fn batch_remove_from_current(&mut self) {
+        let ids: Vec<u64> = self.checked.iter().copied().collect();
+        match self.view {
+            View::Playlist(playlist_id) => {
+                for id in &ids {
+                    self.library.remove_from_playlist(playlist_id, *id);
+                }
+                self.persist();
+                self.toast(
+                    format!("已从当前播放列表移除 {} 首歌曲", ids.len()),
+                    ToastKind::Info,
+                );
+            }
+            View::Favorites => {
+                let checked = self.checked.clone();
+                self.library.favorites.retain(|id| !checked.contains(id));
+                self.persist();
+                self.toast(
+                    format!("已取消收藏 {} 首歌曲", ids.len()),
+                    ToastKind::Info,
+                );
+            }
+            _ => {}
+        }
+        self.checked.clear();
+    }
+
     fn reveal_in_file_manager(&self, path: &Path) {
         #[cfg(target_os = "windows")]
         {
@@ -795,6 +899,27 @@ impl RPlayerApp {
                     .map(|track| track.id)
                     .collect()
             }
+            View::Favorites => {
+                let mut tracks: Vec<&Track> = self
+                    .library
+                    .favorites
+                    .iter()
+                    .filter_map(|id| self.library.track(*id))
+                    .filter(|track| track_matches(track, &terms))
+                    .collect();
+                let sort = self.sort;
+                tracks.sort_by(|a, b| compare_tracks(a, b, sort));
+                tracks.into_iter().map(|track| track.id).collect()
+            }
+            View::Recent => self
+                .library
+                .recent
+                .iter()
+                .filter_map(|id| self.library.track(*id))
+                .filter(|track| track_matches(track, &terms))
+                .map(|track| track.id)
+                .collect(),
+            View::Folders => Vec::new(),
             View::Library => {
                 let mut tracks: Vec<&Track> = self
                     .library
@@ -812,8 +937,20 @@ impl RPlayerApp {
     fn view_header(&self, count: usize, total_seconds: f64) -> (String, String) {
         match self.view {
             View::Library => (
-                "音乐库".to_string(),
+                "本地曲库".to_string(),
                 model::format_library_summary(count, total_seconds),
+            ),
+            View::Favorites => (
+                "我的收藏".to_string(),
+                format!("{count} 首歌曲"),
+            ),
+            View::Recent => (
+                "最近播放".to_string(),
+                format!("{count} 首歌曲"),
+            ),
+            View::Folders => (
+                "音乐目录".to_string(),
+                format!("{} 个文件夹", self.library.folders.len()),
             ),
             View::Playlist(id) => {
                 let name = self
@@ -873,8 +1010,10 @@ impl RPlayerApp {
         if ctx.input(|i| i.key_pressed(Key::Escape)) {
             if self.dialog != Dialog::None {
                 self.dialog = Dialog::None;
-            } else {
+            } else if self.queue_open {
                 self.queue_open = false;
+            } else if self.expanded {
+                self.expanded = false;
             }
         }
 
@@ -910,6 +1049,9 @@ impl RPlayerApp {
 
         if modifiers.command && find {
             self.focus_search = true;
+        } else if find && self.current.is_some() {
+            self.expanded = !self.expanded;
+            self.queue_open = false;
         }
         if modifiers.command && open_folder {
             self.open_folder_picker();
@@ -1144,6 +1286,20 @@ impl eframe::App for RPlayerApp {
             .sum();
 
         self.update_title(ctx);
+
+        if self.current.is_none() {
+            self.expanded = false;
+        }
+
+        if self.expanded && self.current.is_some() {
+            self.now_playing(ctx);
+            self.render_dialog(ctx);
+            self.render_toast(ctx);
+            self.render_drop_overlay(ctx);
+            self.request_repaint(ctx);
+            return;
+        }
+
         self.player_bar(ctx);
         self.sidebar_panel(ctx);
         self.central_panel(ctx, &ids, total_seconds);

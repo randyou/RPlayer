@@ -53,14 +53,49 @@ impl RPlayerApp {
         if widgets::nav_item(
             ui,
             Icon::Disc,
-            "音乐库",
+            "本地曲库",
             Some(self.library.tracks.len()),
             self.view == View::Library,
         )
         .clicked()
         {
-            self.view = View::Library;
-            self.selected = None;
+            self.switch_view(View::Library);
+        }
+
+        if widgets::nav_item(
+            ui,
+            Icon::Heart,
+            "我的收藏",
+            Some(self.library.favorites.len()),
+            self.view == View::Favorites,
+        )
+        .clicked()
+        {
+            self.switch_view(View::Favorites);
+        }
+
+        if widgets::nav_item(
+            ui,
+            Icon::Clock,
+            "最近播放",
+            Some(self.library.recent.len()),
+            self.view == View::Recent,
+        )
+        .clicked()
+        {
+            self.switch_view(View::Recent);
+        }
+
+        if widgets::nav_item(
+            ui,
+            Icon::Folder,
+            "音乐目录",
+            Some(self.library.folders.len()),
+            self.view == View::Folders,
+        )
+        .clicked()
+        {
+            self.switch_view(View::Folders);
         }
 
         if widgets::nav_item(
@@ -73,18 +108,6 @@ impl RPlayerApp {
         .clicked()
         {
             self.queue_open = !self.queue_open;
-        }
-
-        if widgets::nav_item(
-            ui,
-            Icon::Folder,
-            "音乐文件夹",
-            Some(self.library.folders.len()),
-            self.dialog == Dialog::Folders,
-        )
-        .clicked()
-        {
-            self.dialog = Dialog::Folders;
         }
 
         // Playlists
@@ -136,8 +159,7 @@ impl RPlayerApp {
                     let selected = self.view == View::Playlist(*id);
                     let response = widgets::playlist_item(ui, name, selected);
                     if response.clicked() {
-                        self.view = View::Playlist(*id);
-                        self.selected = None;
+                        self.switch_view(View::Playlist(*id));
                     }
                     response.context_menu(|ui| {
                         if ui.button("播放").clicked() {
@@ -245,14 +267,14 @@ impl RPlayerApp {
                         )
                         .clicked()
                     {
-                        self.dialog = Dialog::Folders;
+                        self.switch_view(View::Folders);
                     }
                 }
             });
 
         ui.add_space(8.0);
         ui.horizontal(|ui| {
-            ui.label(RichText::new("v0.1.0").size(10.0).color(theme::FAINT));
+            ui.label(RichText::new("v0.2.0").size(10.0).color(theme::FAINT));
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                 let about = ui
                     .add(

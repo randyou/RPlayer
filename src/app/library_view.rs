@@ -1,9 +1,10 @@
-//! Central content area: header, search, sortable track table and empty states.
+//! Central content area: header, actions, sortable track table, folders page
+//! and the various empty states.
 
 use eframe::egui;
 use egui::{
     Align, Align2, CornerRadius, FontId, Frame, Label, Layout, Margin, Pos2, Rect, RichText,
-    ScrollArea, Sense, Shape, Stroke, Ui, Vec2,
+    ScrollArea, Sense, Stroke, Ui, Vec2,
 };
 
 use super::{Dialog, RPlayerApp, View};
@@ -12,7 +13,7 @@ use crate::theme;
 use crate::ui::icons::{self, Icon};
 use crate::ui::widgets;
 
-const ROW_HEIGHT: f32 = 44.0;
+const ROW_HEIGHT: f32 = 46.0;
 const HEADER_HEIGHT: f32 = 34.0;
 const SIDE_PAD: f32 = 14.0;
 
@@ -22,23 +23,44 @@ struct Columns {
     title: f32,
     artist: f32,
     album: f32,
+    format: f32,
     duration: f32,
+    actions: f32,
 }
 
 impl Columns {
     fn for_width(width: f32) -> Self {
-        let artist = (width * 0.22).max(120.0);
-        let album = (width * 0.20).max(100.0);
-        let duration = 62.0;
-        let index = 38.0;
-        let title = (width - SIDE_PAD * 2.0 - index - artist - album - duration - 16.0).max(96.0);
+        let index = 40.0;
+        let artist = (width * 0.16).clamp(106.0, 170.0);
+        let album = (width * 0.18).clamp(100.0, 190.0);
+        let format = 54.0;
+        let duration = 58.0;
+        let actions = 62.0;
+        let title = (width
+            - SIDE_PAD * 2.0
+            - index
+            - artist
+            - album
+            - format
+            - duration
+            - actions)
+            .max(120.0);
         Self {
             index,
             title,
             artist,
             album,
+            format,
             duration,
+            actions,
         }
+    }
+
+    fn index_rect(&self, row: Rect) -> Rect {
+        Rect::from_min_size(
+            Pos2::new(row.left() + SIDE_PAD, row.top()),
+            Vec2::new(self.index, row.height()),
+        )
     }
 
     fn title_rect(&self, row: Rect) -> Rect {
@@ -65,17 +87,26 @@ impl Columns {
         )
     }
 
-    fn duration_rect(&self, row: Rect) -> Rect {
+    fn format_rect(&self, row: Rect) -> Rect {
+        let left = self.album_rect(row).right();
         Rect::from_min_size(
-            Pos2::new(row.right() - SIDE_PAD - self.duration, row.top()),
+            Pos2::new(left, row.top()),
+            Vec2::new(self.format, row.height()),
+        )
+    }
+
+    fn duration_rect(&self, row: Rect) -> Rect {
+        let left = self.format_rect(row).right();
+        Rect::from_min_size(
+            Pos2::new(left, row.top()),
             Vec2::new(self.duration, row.height()),
         )
     }
 
-    fn index_rect(&self, row: Rect) -> Rect {
+    fn actions_rect(&self, row: Rect) -> Rect {
         Rect::from_min_size(
-            Pos2::new(row.left() + SIDE_PAD, row.top()),
-            Vec2::new(self.index, row.height()),
+            Pos2::new(row.right() - SIDE_PAD - self.actions, row.top()),
+            Vec2::new(self.actions, row.height()),
         )
     }
 }
@@ -91,11 +122,21 @@ impl RPlayerApp {
             }))
             .show(ctx, |ui| {
                 self.central_header(ui, ids, total_seconds);
-                ui.add_space(16.0);
+                ui.add_space(14.0);
+
+                if self.view == View::Folders {
+                    self.folders_page(ui);
+                    return;
+                }
 
                 if self.library.tracks.is_empty() {
                     self.empty_library_state(ui);
                     return;
+                }
+
+                if self.batch_mode {
+                    self.batch_bar(ui, ids);
+                    ui.add_space(8.0);
                 }
 
                 let columns = Columns::for_width(ui.available_width());
@@ -113,24 +154,9 @@ impl RPlayerApp {
         let (title, subtitle) = self.view_header(ids.len(), total_seconds);
         ui.horizontal(|ui| {
             ui.vertical(|ui| {
-                ui.spacing_mut().item_spacing.y = 3.0;
-                ui.label(RichText::new(title).size(26.0).strong().color(theme::TEXT));
-                ui.horizontal(|ui| {
-                    ui.label(RichText::new(subtitle).size(12.0).color(theme::MUTED));
-                    if !ids.is_empty() {
-                        ui.add_space(6.0);
-                        let play_all = ui.add(
-                            Label::new(RichText::new("播放全部").size(11.5).color(theme::ACCENT))
-                                .sense(Sense::click()),
-                        );
-                        if play_all
-                            .on_hover_cursor(egui::CursorIcon::PointingHand)
-                            .clicked()
-                        {
-                            self.play_queue(ui.ctx(), ids.to_vec(), 0);
-                        }
-                    }
-                });
+                ui.spacing_mut().item_spacing.y = 2.0;
+                ui.label(RichText::new(title).size(27.0).strong().color(theme::TEXT));
+                ui.label(RichText::new(subtitle).size(12.0).color(theme::MUTED));
             });
 
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
@@ -152,17 +178,114 @@ impl RPlayerApp {
                 }
             });
         });
+
+        ui.add_space(12.0);
+        ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = 8.0;
+            if !ids.is_empty() && widgets::primary_button(ui, "播放全部").clicked() {
+                self.play_queue(ui.ctx(), ids.to_vec(), 0);
+            }
+            if self.view != View::Folders && widgets::secondary_button(ui, "添加").clicked() {
+                self.open_folder_picker();
+            }
+
+            if self.view != View::Folders {
+                let label = if self.batch_mode { "完成" } else { "批量操作" };
+                if widgets::secondary_button(ui, label).clicked() {
+                    self.batch_mode = !self.batch_mode;
+                    if !self.batch_mode {
+                        self.checked.clear();
+                    }
+                }
+            }
+
+            if self.batch_mode {
+                ui.add_space(4.0);
+                ui.label(
+                    RichText::new(format!("已选 {} 首", self.checked.len()))
+                        .size(11.5)
+                        .color(theme::ACCENT),
+                );
+                if widgets::chip(ui, "全选", false).clicked() {
+                    self.set_all_checked(ids, true);
+                }
+                if widgets::chip(ui, "清空", false).clicked() {
+                    self.checked.clear();
+                }
+                if matches!(self.view, View::Playlist(_) | View::Favorites)
+                    && !self.checked.is_empty()
+                    && widgets::chip(ui, "移除选中", false).clicked()
+                {
+                    self.batch_remove_from_current();
+                }
+            }
+        });
+    }
+
+    fn batch_bar(&mut self, ui: &mut Ui, _ids: &[u64]) {
+        Frame::NONE
+            .fill(theme::accent_alpha(0.06))
+            .stroke(Stroke::new(1.0_f32, theme::accent_alpha(0.16)))
+            .corner_radius(CornerRadius::same(10))
+            .inner_margin(Margin::symmetric(12, 7))
+            .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new(if self.checked.is_empty() {
+                            "批量操作：点击歌曲勾选".to_string()
+                        } else {
+                            format!("已选择 {} 首歌曲", self.checked.len())
+                        })
+                        .size(11.5)
+                        .color(if self.checked.is_empty() {
+                            theme::MUTED
+                        } else {
+                            theme::ACCENT
+                        }),
+                    );
+                });
+
+                if !self.checked.is_empty() {
+                    let playlists: Vec<(u64, String)> = self
+                        .library
+                        .playlists
+                        .iter()
+                        .map(|playlist| (playlist.id, playlist.name.clone()))
+                        .collect();
+                    ui.add_space(6.0);
+                    ui.horizontal_wrapped(|ui| {
+                        ui.label(
+                            RichText::new("加入歌单")
+                                .size(11.5)
+                                .color(theme::FAINT),
+                        );
+                        if playlists.is_empty() {
+                            if widgets::chip(ui, "新建歌单…", false).clicked() {
+                                self.dialog = Dialog::NewPlaylist {
+                                    name: String::new(),
+                                };
+                                self.focus_pending = true;
+                            }
+                        } else {
+                            for (playlist_id, name) in &playlists {
+                                if widgets::chip(ui, name, false).clicked() {
+                                    self.batch_add_to_playlist(*playlist_id);
+                                }
+                            }
+                        }
+                    });
+                }
+            });
     }
 
     fn table_header(&mut self, ui: &mut Ui, columns: Columns) {
         let width = ui.available_width();
         let (rect, _) = ui.allocate_exact_size(Vec2::new(width, HEADER_HEIGHT), Sense::hover());
         ui.painter()
-            .rect_filled(rect, CornerRadius::same(10), theme::CARD);
+            .rect_filled(rect, CornerRadius::same(9), theme::CARD);
 
-        let index_rect = columns.index_rect(rect);
         ui.painter().text(
-            Pos2::new(index_rect.left() + 5.0, index_rect.center().y),
+            Pos2::new(columns.index_rect(rect).left() + 5.0, rect.center().y),
             Align2::LEFT_CENTER,
             "#",
             FontId::proportional(11.0),
@@ -175,7 +298,7 @@ impl RPlayerApp {
         if sort_column(
             ui,
             columns.title_rect(rect),
-            "标题",
+            "曲名",
             SortField::Title,
             sort,
             false,
@@ -185,7 +308,7 @@ impl RPlayerApp {
         if sort_column(
             ui,
             columns.artist_rect(rect),
-            "艺术家",
+            "歌手",
             SortField::Artist,
             sort,
             false,
@@ -202,6 +325,15 @@ impl RPlayerApp {
         ) {
             clicked = Some(SortField::Album);
         }
+
+        ui.painter().text(
+            Pos2::new(columns.format_rect(rect).left() + 2.0, rect.center().y),
+            Align2::LEFT_CENTER,
+            "格式",
+            FontId::proportional(11.0),
+            theme::FAINT,
+        );
+
         if sort_column(
             ui,
             columns.duration_rect(rect),
@@ -212,6 +344,14 @@ impl RPlayerApp {
         ) {
             clicked = Some(SortField::Duration);
         }
+
+        ui.painter().text(
+            Pos2::new(columns.actions_rect(rect).center().x, rect.center().y),
+            Align2::CENTER_CENTER,
+            "操作",
+            FontId::proportional(11.0),
+            theme::FAINT,
+        );
 
         if let Some(field) = clicked {
             self.sort = SortState {
@@ -243,12 +383,13 @@ impl RPlayerApp {
                     let response = response.on_hover_cursor(egui::CursorIcon::PointingHand);
                     let current = self.current == Some(id);
                     let selected = self.selected == Some(id);
+                    let checked = self.checked.contains(&id);
                     let hovered = response.hovered();
 
                     let painter = ui.painter();
                     let pill = rect.shrink2(Vec2::new(0.0, 1.0));
                     if current {
-                        painter.rect_filled(pill, CornerRadius::same(9), theme::accent_alpha(0.07));
+                        painter.rect_filled(pill, CornerRadius::same(9), theme::accent_alpha(0.08));
                         painter.rect_filled(
                             Rect::from_min_size(
                                 Pos2::new(pill.left() + 1.0, pill.center().y - 9.0),
@@ -257,6 +398,8 @@ impl RPlayerApp {
                             CornerRadius::same(2),
                             theme::ACCENT,
                         );
+                    } else if checked {
+                        painter.rect_filled(pill, CornerRadius::same(9), theme::accent_alpha(0.05));
                     } else if selected {
                         painter.rect_filled(pill, CornerRadius::same(9), theme::HOVER);
                     } else if hovered {
@@ -264,7 +407,27 @@ impl RPlayerApp {
                     }
 
                     let index_rect = columns.index_rect(rect);
-                    if current {
+                    if self.batch_mode {
+                        let box_rect =
+                            Rect::from_center_size(index_rect.center(), Vec2::splat(15.0));
+                        painter.rect_filled(
+                            box_rect,
+                            CornerRadius::same(4),
+                            if checked { theme::ACCENT } else { theme::CARD },
+                        );
+                        painter.rect_stroke(
+                            box_rect,
+                            CornerRadius::same(4),
+                            Stroke::new(
+                                1.0_f32,
+                                if checked { theme::ACCENT } else { theme::BORDER },
+                            ),
+                            egui::StrokeKind::Inside,
+                        );
+                        if checked {
+                            icons::paint(painter, box_rect.shrink(2.5), Icon::Check, theme::BG);
+                        }
+                    } else if current {
                         let playing = self.is_playing();
                         let time = ui.input(|i| i.time) as f32;
                         painter_eq(painter, index_rect.center(), time, playing);
@@ -280,19 +443,34 @@ impl RPlayerApp {
                             index_rect.center(),
                             Align2::CENTER_CENTER,
                             format!("{}", index + 1),
-                            FontId::proportional(11.5),
+                            FontId::proportional(11.0),
                             theme::FAINT,
                         );
                     }
 
                     let title_rect = columns.title_rect(rect);
-                    let title_clip =
-                        painter.with_clip_rect(title_rect.shrink2(Vec2::new(2.0, 0.0)));
+                    let cover_rect = Rect::from_center_size(
+                        Pos2::new(title_rect.left() + 15.0, title_rect.center().y),
+                        Vec2::splat(28.0),
+                    );
+                    painter.rect_filled(cover_rect, CornerRadius::same(6), theme::CARD);
+                    icons::paint(
+                        painter,
+                        cover_rect.shrink(7.0),
+                        Icon::Music,
+                        if current { theme::ACCENT } else { theme::FAINT },
+                    );
+
+                    let text_left = title_rect.left() + 36.0;
+                    let title_clip = painter.with_clip_rect(Rect::from_min_max(
+                        Pos2::new(text_left, title_rect.top()),
+                        Pos2::new(title_rect.right() - 2.0, title_rect.bottom()),
+                    ));
                     title_clip.text(
-                        Pos2::new(title_rect.left() + 2.0, title_rect.center().y),
+                        Pos2::new(text_left, title_rect.center().y),
                         Align2::LEFT_CENTER,
                         &track.title,
-                        FontId::proportional(13.5),
+                        FontId::proportional(13.0),
                         if current { theme::ACCENT } else { theme::TEXT },
                     );
 
@@ -302,33 +480,85 @@ impl RPlayerApp {
                         Pos2::new(artist_rect.left() + 2.0, artist_rect.center().y),
                         Align2::LEFT_CENTER,
                         &track.artist,
-                        FontId::proportional(12.5),
+                        FontId::proportional(12.0),
                         if current { theme::TEXT } else { theme::MUTED },
                     );
 
                     let album_rect = columns.album_rect(rect);
-                    let album_clip = painter.with_clip_rect(album_rect);
-                    album_clip.text(
+                    painter.with_clip_rect(album_rect).text(
                         Pos2::new(album_rect.left() + 2.0, album_rect.center().y),
                         Align2::LEFT_CENTER,
                         &track.album,
-                        FontId::proportional(12.0),
-                        if current { theme::MUTED } else { theme::FAINT },
-                    );
-
-                    let duration_rect = columns.duration_rect(rect);
-                    painter.text(
-                        Pos2::new(duration_rect.right() - 2.0, duration_rect.center().y),
-                        Align2::RIGHT_CENTER,
-                        model::format_duration(track.duration),
                         FontId::proportional(11.5),
                         if current { theme::MUTED } else { theme::FAINT },
                     );
 
-                    if response.double_clicked() {
+                    painter.text(
+                        Pos2::new(
+                            columns.format_rect(rect).left() + 2.0,
+                            columns.format_rect(rect).center().y,
+                        ),
+                        Align2::LEFT_CENTER,
+                        track.format_label(),
+                        FontId::proportional(10.0),
+                        if current { theme::MUTED } else { theme::FAINT },
+                    );
+
+                    painter.text(
+                        Pos2::new(
+                            columns.duration_rect(rect).right() - 2.0,
+                            columns.duration_rect(rect).center().y,
+                        ),
+                        Align2::RIGHT_CENTER,
+                        model::format_duration(track.duration),
+                        FontId::proportional(11.0),
+                        if current { theme::MUTED } else { theme::FAINT },
+                    );
+
+                    let actions_rect = columns.actions_rect(rect);
+                    let heart_rect = Rect::from_center_size(
+                        Pos2::new(actions_rect.left() + 18.0, actions_rect.center().y),
+                        Vec2::splat(26.0),
+                    );
+                    let favorite = self.library.is_favorite(id);
+                    let pointer = response.hover_pos();
+                    let heart_hovered = pointer.is_some_and(|pos| heart_rect.contains(pos));
+                    icons::paint(
+                        ui.painter(),
+                        heart_rect.shrink(6.0),
+                        if favorite {
+                            Icon::HeartFilled
+                        } else {
+                            Icon::Heart
+                        },
+                        if favorite {
+                            theme::ACCENT
+                        } else if heart_hovered {
+                            theme::TEXT
+                        } else {
+                            theme::FAINT
+                        },
+                    );
+
+                    let more_rect = Rect::from_center_size(
+                        Pos2::new(actions_rect.right() - 12.0, actions_rect.center().y),
+                        Vec2::splat(26.0),
+                    );
+                    icons::paint(ui.painter(), more_rect.shrink(7.0), Icon::More, theme::FAINT);
+
+                    let click_pos = response.interact_pointer_pos();
+                    let heart_clicked =
+                        response.clicked() && click_pos.is_some_and(|pos| heart_rect.contains(pos));
+                    if heart_clicked {
+                        self.toggle_favorite(id);
+                    } else if response.double_clicked() {
                         self.play_track(ui.ctx(), id);
                     } else if response.clicked() {
-                        self.selected = Some(id);
+                        if self.batch_mode {
+                            self.toggle_checked(id);
+                        } else {
+                            self.selected = Some(id);
+                        }
                     }
 
                     response.context_menu(|ui| {
@@ -336,9 +566,26 @@ impl RPlayerApp {
                             self.play_track(ui.ctx(), id);
                             ui.close_menu();
                         }
+                        if ui
+                            .button(if self.library.is_favorite(id) {
+                                "取消收藏"
+                            } else {
+                                "添加到我的收藏"
+                            })
+                            .clicked()
+                        {
+                            self.toggle_favorite(id);
+                            ui.close_menu();
+                        }
 
                         ui.menu_button("添加到播放列表", |ui| {
-                            if self.library.playlists.is_empty() {
+                            let playlists: Vec<(u64, String)> = self
+                                .library
+                                .playlists
+                                .iter()
+                                .map(|playlist| (playlist.id, playlist.name.clone()))
+                                .collect();
+                            if playlists.is_empty() {
                                 ui.label(
                                     RichText::new("还没有播放列表")
                                         .size(11.5)
@@ -352,12 +599,6 @@ impl RPlayerApp {
                                     ui.close_menu();
                                 }
                             } else {
-                                let playlists: Vec<(u64, String)> = self
-                                    .library
-                                    .playlists
-                                    .iter()
-                                    .map(|p| (p.id, p.name.clone()))
-                                    .collect();
                                 for (playlist_id, name) in playlists {
                                     if ui.button(name).clicked() {
                                         self.add_track_to_playlist(playlist_id, id);
@@ -388,6 +629,107 @@ impl RPlayerApp {
             });
     }
 
+    fn folders_page(&mut self, ui: &mut Ui) {
+        ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = 8.0;
+            if widgets::primary_button(ui, "添加文件夹").clicked() {
+                self.open_folder_picker();
+            }
+            if widgets::secondary_button(ui, "重新扫描").clicked()
+                && !self.library.folders.is_empty()
+            {
+                self.start_scan();
+            }
+            if self.scanning {
+                ui.label(
+                    RichText::new(format!("正在扫描 {}/{}", self.scan_done, self.scan_total))
+                        .size(11.0)
+                        .color(theme::ACCENT),
+                );
+            }
+        });
+        ui.add_space(14.0);
+
+        if self.library.folders.is_empty() {
+            ui.vertical_centered(|ui| {
+                ui.add_space(70.0);
+                widgets::empty_illustration(ui, 96.0);
+                ui.add_space(14.0);
+                ui.label(
+                    RichText::new("还没有音乐目录")
+                        .size(17.0)
+                        .strong()
+                        .color(theme::TEXT),
+                );
+                ui.add_space(4.0);
+                ui.label(
+                    RichText::new("添加一个文件夹，RPlayer 会递归扫描其中的音频文件。")
+                        .size(12.0)
+                        .color(theme::MUTED),
+                );
+            });
+            return;
+        }
+
+        let folders = self.library.folders.clone();
+        ScrollArea::vertical()
+            .id_salt("rplayer-folders")
+            .auto_shrink([false, false])
+            .show(ui, |ui| {
+                ui.spacing_mut().item_spacing.y = 8.0;
+                for folder in folders {
+                    let count = self
+                        .library
+                        .tracks
+                        .iter()
+                        .filter(|track| super::path_is_under(&folder, &track.path))
+                        .count();
+                    Frame::NONE
+                        .fill(theme::CARD)
+                        .stroke(Stroke::new(1.0_f32, theme::BORDER_SOFT))
+                        .corner_radius(CornerRadius::same(10))
+                        .inner_margin(Margin::symmetric(14, 11))
+                        .show(ui, |ui| {
+                            ui.horizontal(|ui| {
+                                let (icon_rect, _) =
+                                    ui.allocate_exact_size(Vec2::splat(18.0), Sense::hover());
+                                icons::paint(
+                                    ui.painter(),
+                                    icon_rect,
+                                    Icon::Folder,
+                                    theme::ACCENT,
+                                );
+                                ui.add_space(6.0);
+                                ui.vertical(|ui| {
+                                    ui.spacing_mut().item_spacing.y = 1.0;
+                                    ui.add(
+                                        Label::new(
+                                            RichText::new(folder.display().to_string())
+                                                .size(12.5)
+                                                .color(theme::TEXT),
+                                        )
+                                        .truncate(),
+                                    );
+                                    ui.label(
+                                        RichText::new(format!("{count} 首歌曲"))
+                                            .size(10.5)
+                                            .color(theme::FAINT),
+                                    );
+                                });
+                                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                                    if widgets::icon_button(ui, Icon::Trash, 28.0, "移除此目录")
+                                        .clicked()
+                                    {
+                                        self.remove_folder(&folder);
+                                        self.toast("已移除音乐目录", super::ToastKind::Info);
+                                    }
+                                });
+                            });
+                        });
+                }
+            });
+    }
+
     fn empty_library_state(&mut self, ui: &mut Ui) {
         if self.scanning {
             let fraction = if self.scan_total > 0 {
@@ -395,39 +737,32 @@ impl RPlayerApp {
             } else {
                 0.0
             };
-            ui.add_space((ui.available_height() * 0.20).max(30.0));
             ui.vertical_centered(|ui| {
+                ui.add_space(80.0);
                 widgets::empty_illustration(ui, 96.0);
-                ui.add_space(12.0);
+                ui.add_space(14.0);
                 ui.label(
-                    RichText::new("正在扫描你的音乐库")
-                        .size(21.0)
+                    RichText::new("正在扫描音乐")
+                        .size(17.0)
                         .strong()
                         .color(theme::TEXT),
                 );
-                ui.add_space(2.0);
-                ui.label(
-                    RichText::new("正在读取标签、时长与封面，请稍候…")
-                        .size(12.5)
-                        .color(theme::MUTED),
-                );
-                ui.add_space(18.0);
-                progress_bar(ui, fraction, 300.0);
                 ui.add_space(6.0);
                 ui.label(
                     RichText::new(format!("{} / {}", self.scan_done, self.scan_total))
-                        .size(11.0)
-                        .color(theme::FAINT),
+                        .size(11.5)
+                        .color(theme::MUTED),
                 );
+                ui.add_space(12.0);
+                progress_bar(ui, fraction, 260.0);
             });
             return;
         }
 
-        ui.add_space((ui.available_height() * 0.16).max(24.0));
         ui.vertical_centered(|ui| {
-            let (rect, _) = ui.allocate_exact_size(Vec2::splat(92.0), Sense::hover());
+            ui.add_space(30.0);
+            let (rect, _) = ui.allocate_exact_size(Vec2::splat(96.0), Sense::hover());
             icons::logo(ui.painter(), rect);
-
             ui.add_space(18.0);
             ui.label(
                 RichText::new("让本地音乐，回到桌面")
@@ -477,44 +812,36 @@ impl RPlayerApp {
     }
 
     fn no_results_state(&mut self, ui: &mut Ui) {
-        ui.add_space((ui.available_height() * 0.22).max(20.0));
+        let has_search = !self.search.trim().is_empty();
+        let (title, subtitle) = if has_search {
+            ("没有找到匹配的歌曲", "试试其他关键词，或清除搜索条件")
+        } else {
+            match self.view {
+                View::Favorites => ("这里还没有收藏的歌曲", "点击歌曲右侧的爱心，把它加入收藏"),
+                View::Recent => ("还没有播放记录", "从曲库中播放一首歌，这里会留下记录"),
+                View::Playlist(_) => (
+                    "这个播放列表还是空的",
+                    "在曲库中右键歌曲，把它添加到播放列表",
+                ),
+                _ => ("没有找到匹配的歌曲", "试试其他关键词，或清除搜索条件"),
+            }
+        };
+
         ui.vertical_centered(|ui| {
-            if self.search.trim().is_empty() && matches!(self.view, View::Playlist(_)) {
-                widgets::empty_illustration(ui, 86.0);
-                ui.add_space(12.0);
-                ui.label(
-                    RichText::new("这个播放列表还是空的")
-                        .size(19.0)
-                        .strong()
-                        .color(theme::TEXT),
-                );
-                ui.add_space(2.0);
-                ui.label(
-                    RichText::new("在音乐库中右键歌曲，把它添加到播放列表")
-                        .size(12.0)
-                        .color(theme::MUTED),
-                );
-                ui.add_space(16.0);
-                if widgets::secondary_button(ui, "去音乐库看看").clicked() {
-                    self.view = View::Library;
-                }
-            } else {
-                ui.label(
-                    RichText::new("没有找到匹配的歌曲")
-                        .size(19.0)
-                        .strong()
-                        .color(theme::TEXT),
-                );
-                ui.add_space(4.0);
-                ui.label(
-                    RichText::new("试试其他关键词，或清除搜索条件")
-                        .size(12.0)
-                        .color(theme::MUTED),
-                );
-                ui.add_space(14.0);
-                if widgets::secondary_button(ui, "清除搜索").clicked() {
-                    self.search.clear();
-                }
+            ui.add_space(72.0);
+            widgets::empty_illustration(ui, 88.0);
+            ui.add_space(14.0);
+            ui.label(
+                RichText::new(title)
+                    .size(16.0)
+                    .strong()
+                    .color(theme::TEXT),
+            );
+            ui.add_space(4.0);
+            ui.label(RichText::new(subtitle).size(11.5).color(theme::MUTED));
+            ui.add_space(14.0);
+            if has_search && widgets::secondary_button(ui, "清除搜索").clicked() {
+                self.search.clear();
             }
         });
     }
@@ -528,80 +855,98 @@ fn sort_column(
     sort: SortState,
     align_right: bool,
 ) -> bool {
-    let response = ui.interact(rect, ui.id().with(("rplayer-sort", label)), Sense::click());
-    let active = sort.field == field;
-    let painter = ui.painter();
+    let response = ui.interact(rect, egui::Id::new(("rplayer-sort", label)), Sense::click());
     if response.hovered() {
-        painter.rect_filled(rect.shrink(3.0), CornerRadius::same(6), theme::HOVER);
+        ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
     }
-
-    let color = if active { theme::TEXT } else { theme::MUTED };
-    let font = FontId::proportional(11.0);
-    let galley = painter.layout_no_wrap(label.to_string(), font, color);
+    let color = if sort.field == field {
+        theme::TEXT
+    } else {
+        theme::FAINT
+    };
+    let anchor = if align_right {
+        Align2::RIGHT_CENTER
+    } else {
+        Align2::LEFT_CENTER
+    };
     let x = if align_right {
-        rect.right() - 10.0 - galley.size().x
+        rect.right() - 2.0
     } else {
         rect.left() + 2.0
     };
-    let y = rect.center().y - galley.size().y / 2.0;
-    painter.galley(Pos2::new(x, y), galley.clone(), color);
+    ui.painter().text(
+        Pos2::new(x, rect.center().y),
+        anchor,
+        label,
+        FontId::proportional(11.0),
+        color,
+    );
 
-    if active {
-        let cx = if align_right {
-            x - 12.0
-        } else {
-            x + galley.size().x + 12.0
-        };
-        let cy = rect.center().y;
+    if sort.field == field {
+        let center = Pos2::new(
+            if align_right {
+                rect.right() - 4.0
+            } else {
+                rect.left() + 4.0 + ui.painter().layout_no_wrap(
+                    label.to_string(),
+                    FontId::proportional(11.0),
+                    color,
+                ).size().x
+                    + 8.0
+            },
+            rect.center().y,
+        );
         let points = if sort.ascending {
             vec![
-                Pos2::new(cx - 4.0, cy + 2.0),
-                Pos2::new(cx + 4.0, cy + 2.0),
-                Pos2::new(cx, cy - 3.0),
+                Pos2::new(center.x - 3.5, center.y + 2.0),
+                Pos2::new(center.x, center.y - 2.0),
+                Pos2::new(center.x + 3.5, center.y + 2.0),
             ]
         } else {
             vec![
-                Pos2::new(cx - 4.0, cy - 2.0),
-                Pos2::new(cx + 4.0, cy - 2.0),
-                Pos2::new(cx, cy + 3.0),
+                Pos2::new(center.x - 3.5, center.y - 2.0),
+                Pos2::new(center.x, center.y + 2.0),
+                Pos2::new(center.x + 3.5, center.y - 2.0),
             ]
         };
-        painter.add(Shape::convex_polygon(points, theme::ACCENT, Stroke::NONE));
+        ui.painter().add(egui::Shape::convex_polygon(
+            points,
+            theme::ACCENT,
+            Stroke::NONE,
+        ));
     }
 
-    response
-        .on_hover_cursor(egui::CursorIcon::PointingHand)
-        .clicked()
+    response.clicked()
 }
 
 fn painter_eq(painter: &egui::Painter, center: Pos2, time: f32, playing: bool) {
-    let bars = 4;
-    let gap = 3.6;
-    let start_x = center.x - (bars as f32 - 1.0) * gap / 2.0 - 1.0;
-    for bar in 0..bars {
-        let phase = time * 7.0 + bar as f32 * 1.4;
+    for bar in 0..4 {
+        let phase = time * 6.0 + bar as f32 * 1.4;
         let height = if playing {
-            4.0 + (phase.sin() * 0.5 + 0.5) * 11.0
+            4.0 + (phase.sin() * 0.5 + 0.5) * 10.0
         } else {
-            4.0 + bar as f32 * 1.8
+            4.0 + bar as f32 * 1.2
         };
-        let rect = Rect::from_min_size(
-            Pos2::new(start_x + bar as f32 * gap, center.y + 8.0 - height),
-            Vec2::new(2.4, height),
+        let x = center.x - 7.0 + bar as f32 * 4.0;
+        painter.rect_filled(
+            Rect::from_min_size(
+                Pos2::new(x, center.y + 7.0 - height),
+                Vec2::new(2.4, height),
+            ),
+            CornerRadius::same(1),
+            theme::ACCENT,
         );
-        painter.rect_filled(rect, CornerRadius::same(1), theme::ACCENT);
     }
 }
 
 fn progress_bar(ui: &mut Ui, fraction: f32, width: f32) {
-    let (rect, _) = ui.allocate_exact_size(Vec2::new(width, 6.0), Sense::hover());
+    let (rect, _) = ui.allocate_exact_size(Vec2::new(width, 5.0), Sense::hover());
     ui.painter()
-        .rect_filled(rect, CornerRadius::same(3), theme::BORDER);
-    let fraction = fraction.clamp(0.0, 1.0);
-    if fraction > 0.0 {
-        let filled =
-            Rect::from_min_size(rect.min, Vec2::new(rect.width() * fraction, rect.height()));
-        ui.painter()
-            .rect_filled(filled, CornerRadius::same(3), theme::ACCENT);
-    }
+        .rect_filled(rect, CornerRadius::same(99), theme::BORDER);
+    let filled = Rect::from_min_size(
+        rect.min,
+        Vec2::new(rect.width() * fraction.clamp(0.0, 1.0), rect.height()),
+    );
+    ui.painter()
+        .rect_filled(filled, CornerRadius::same(99), theme::ACCENT);
 }

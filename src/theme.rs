@@ -25,17 +25,26 @@ pub const ACCENT: Color32 = Color32::from_rgb(0x8B, 0xFF, 0xB2);
 pub const ACCENT_DARK: Color32 = Color32::from_rgb(0x2E, 0x6B, 0x48);
 pub const DANGER: Color32 = Color32::from_rgb(0xFF, 0x7A, 0x8A);
 
+/// Translucent accent colour. `egui` meshes are composited from
+/// premultiplied colours, so compute the premultiplied RGB ourselves instead
+/// of handing raw RGB with a low alpha to the painter (which would otherwise
+/// make every "12% accent" surface look almost solid).
 pub fn accent_alpha(alpha: f32) -> Color32 {
-    Color32::from_rgba_unmultiplied(
-        ACCENT.r(),
-        ACCENT.g(),
-        ACCENT.b(),
-        (alpha.clamp(0.0, 1.0) * 255.0) as u8,
+    let alpha = alpha.clamp(0.0, 1.0);
+    let a = (alpha * 255.0).round() as u32;
+    Color32::from_rgba_premultiplied(
+        (ACCENT.r() as u32 * a / 255) as u8,
+        (ACCENT.g() as u32 * a / 255) as u8,
+        (ACCENT.b() as u32 * a / 255) as u8,
+        a as u8,
     )
 }
 
 pub fn white_alpha(alpha: f32) -> Color32 {
-    Color32::from_rgba_unmultiplied(255, 255, 255, (alpha.clamp(0.0, 1.0) * 255.0) as u8)
+    let alpha = alpha.clamp(0.0, 1.0);
+    let a = (alpha * 255.0).round() as u32;
+    let value = (255 * a / 255) as u8;
+    Color32::from_rgba_premultiplied(value, value, value, a as u8)
 }
 
 pub fn install(ctx: &egui::Context) {

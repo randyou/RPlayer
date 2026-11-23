@@ -85,6 +85,11 @@ impl Track {
             .map(|e| e.to_string_lossy().to_ascii_lowercase())
             .unwrap_or_default()
     }
+
+    /// Short uppercase codec label shown in the table ("FLAC", "MP3").
+    pub fn format_label(&self) -> String {
+        self.extension().to_ascii_uppercase()
+    }
 }
 
 /// A user-created, ordered collection of track ids.
@@ -116,16 +121,25 @@ pub struct Library {
     pub tracks: Vec<Track>,
     pub playlists: Vec<Playlist>,
     pub volume: f32,
+    /// Track ids the listener has hearted, newest first.
+    pub favorites: Vec<u64>,
+    /// Recently played track ids, newest first (capped at 100).
+    pub recent: Vec<u64>,
+    /// Persisted appearance preference.
+    pub light_theme: bool,
 }
 
 impl Default for Library {
     fn default() -> Self {
         Self {
-            version: 1,
+            version: 2,
             folders: Vec::new(),
             tracks: Vec::new(),
             playlists: Vec::new(),
             volume: 0.72,
+            favorites: Vec::new(),
+            recent: Vec::new(),
+            light_theme: false,
         }
     }
 }
@@ -185,6 +199,36 @@ impl Library {
         for playlist in &mut self.playlists {
             playlist.track_ids.retain(|id| known.contains(id));
         }
+        self.favorites.retain(|id| known.contains(id));
+        self.recent.retain(|id| known.contains(id));
+    }
+
+    pub fn is_favorite(&self, track_id: u64) -> bool {
+        self.favorites.contains(&track_id)
+    }
+
+    /// Hearts or unhearts a track. Returns the new favorite state.
+    pub fn toggle_favorite(&mut self, track_id: u64) -> bool {
+        if self.track(track_id).is_none() {
+            return false;
+        }
+        if let Some(index) = self.favorites.iter().position(|id| *id == track_id) {
+            self.favorites.remove(index);
+            false
+        } else {
+            self.favorites.insert(0, track_id);
+            true
+        }
+    }
+
+    /// Records a play, moving the track to the front of 最近播放.
+    pub fn mark_played(&mut self, track_id: u64) {
+        if self.track(track_id).is_none() {
+            return;
+        }
+        self.recent.retain(|id| *id != track_id);
+        self.recent.insert(0, track_id);
+        self.recent.truncate(100);
     }
 
     pub fn total_duration(&self) -> f64 {

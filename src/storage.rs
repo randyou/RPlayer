@@ -10,6 +10,7 @@ use crate::model::Library;
 
 pub const APP_DIR_NAME: &str = "RPlayer";
 pub const LIBRARY_FILE: &str = "library.json";
+pub const SCHEMA_VERSION: u32 = 2;
 
 /// Per-user data directory:
 /// - Windows: `%APPDATA%\RPlayer`
@@ -61,7 +62,7 @@ pub fn save_library(library: &Library) -> Result<()> {
     fs::create_dir_all(&dir).with_context(|| format!("create {}", dir.display()))?;
     let path = dir.join(LIBRARY_FILE);
     let payload = LibraryFile {
-        schema: 1,
+        schema: SCHEMA_VERSION,
         library: library.clone(),
     };
     let bytes = serde_json::to_vec_pretty(&payload)?;
@@ -86,12 +87,12 @@ mod tests {
         lib.volume = 0.33;
         lib.folders.push(PathBuf::from("D:/Music"));
         let payload = LibraryFile {
-            schema: 1,
+            schema: SCHEMA_VERSION,
             library: lib,
         };
         let bytes = serde_json::to_vec(&payload).unwrap();
         let decoded: LibraryFile = serde_json::from_slice(&bytes).unwrap();
-        assert_eq!(decoded.schema, 1);
+        assert_eq!(decoded.schema, SCHEMA_VERSION);
         assert_eq!(decoded.library.volume, 0.33);
         assert_eq!(decoded.library.folders.len(), 1);
     }

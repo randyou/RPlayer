@@ -230,6 +230,13 @@ impl RPlayerApp {
         {
             self.toggle_mute();
         }
+
+        if widgets::icon_button(ui, Icon::ChevronUp, 30.0, "打开正在播放").clicked()
+            && self.current.is_some()
+        {
+            self.queue_open = false;
+            self.expanded = true;
+        }
     }
 
     pub(super) fn queue_window(&mut self, ctx: &egui::Context) {
