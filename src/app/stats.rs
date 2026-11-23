@@ -9,6 +9,20 @@ impl RPlayerApp {
         self.stats.rating(id)
     }
 
+    pub(super) fn lyrics_offset(&self) -> f32 {
+        self.current
+            .map(|id| self.stats.lyrics_offset(id))
+            .unwrap_or(0.0)
+    }
+
+    pub(super) fn adjust_lyrics_offset(&mut self, delta: f32) {
+        if let Some(id) = self.current {
+            let value = (self.stats.lyrics_offset(id) + delta).clamp(-5.0, 5.0);
+            self.stats.set_lyrics_offset(id, value);
+            self.stats_dirty = true;
+        }
+    }
+
     pub(super) fn set_rating(&mut self, id: u64, rating: u8) {
         if self.stats.rate(id, rating) {
             self.stats_dirty = true;

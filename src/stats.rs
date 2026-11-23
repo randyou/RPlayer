@@ -26,6 +26,8 @@ pub struct TrackStats {
     pub first_played_at: u64,
     pub last_played_at: u64,
     pub last_skipped_at: u64,
+    /// Per-track user calibration for lyric timestamps, in seconds.
+    pub lyrics_offset: f32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -65,6 +67,17 @@ impl PlaybackStats {
         }
         entry.rating = rating;
         true
+    }
+
+    pub fn lyrics_offset(&self, id: u64) -> f32 {
+        self.tracks
+            .get(&id)
+            .map(|stats| stats.lyrics_offset.clamp(-5.0, 5.0))
+            .unwrap_or(0.0)
+    }
+
+    pub fn set_lyrics_offset(&mut self, id: u64, offset: f32) {
+        self.tracks.entry(id).or_default().lyrics_offset = offset.clamp(-5.0, 5.0);
     }
 
     pub fn mark_play(&mut self, id: u64) {

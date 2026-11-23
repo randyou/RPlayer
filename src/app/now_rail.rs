@@ -281,7 +281,7 @@ impl RPlayerApp {
     }
 
     fn rail_lyrics(&mut self, ui: &mut Ui, track: &model::Track) {
-        let current = self.current_position();
+        let current = (self.current_position() - self.lyrics_offset() as f64).max(0.0);
         let (lines, active) = {
             let Some(lyrics) = self
                 .lyrics

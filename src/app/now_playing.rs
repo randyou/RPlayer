@@ -346,10 +346,24 @@ impl RPlayerApp {
                         .color(theme::c().accent),
                 );
             }
+            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                let offset = self.lyrics_offset();
+                if widgets::icon_button(ui, Icon::Plus, 20.0, "歌词延后 0.5 秒").clicked() {
+                    self.adjust_lyrics_offset(0.5);
+                }
+                ui.label(
+                    RichText::new(format!("{offset:+.1}s"))
+                        .size(9.5)
+                        .color(theme::c().faint),
+                );
+                if widgets::icon_button(ui, Icon::Refresh, 20.0, "歌词提前 0.5 秒").clicked() {
+                    self.adjust_lyrics_offset(-0.5);
+                }
+            });
         });
         ui.add_space(10.0);
 
-        let current = self.current_position();
+        let current = (self.current_position() - self.lyrics_offset() as f64).max(0.0);
         let (lines, active) = {
             let Some(lyrics) = self
                 .lyrics

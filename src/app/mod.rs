@@ -1341,7 +1341,9 @@ impl RPlayerApp {
                 if let Some(lyrics) = &self.lyrics {
                     state.has_lyrics = !lyrics.lines.is_empty();
                     if state.has_lyrics {
-                        let active = lyrics.active_index(position).unwrap_or(0);
+                        let lyric_position =
+                            (position - self.lyrics_offset() as f64).max(0.0);
+                        let active = lyrics.active_index(lyric_position).unwrap_or(0);
                         state.lyric_previous = active
                             .checked_sub(1)
                             .and_then(|index| lyrics.lines.get(index))
