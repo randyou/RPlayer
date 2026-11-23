@@ -549,6 +549,14 @@ pub fn update_lyrics_panel(
 }
 
 #[cfg(target_os = "windows")]
+pub fn hide_lyrics_panel() {
+    update_lyrics_panel("RPlayer 桌面歌词", (0, 0, 0, 0), 0.0, (0, 0, 0), 0.0);
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn hide_lyrics_panel() {}
+
+#[cfg(target_os = "windows")]
 fn update_lyrics_panel_impl(
     title: &str,
     rect: (i32, i32, i32, i32),

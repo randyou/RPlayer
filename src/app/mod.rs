@@ -1567,6 +1567,7 @@ impl RPlayerApp {
                     self.desktop_lyrics_open = false;
                     self.library.desktop_lyrics = false;
                     self.lyrics_viewport_active = false;
+                    crate::platform::hide_lyrics_panel();
                     ctx.send_viewport_cmd_to(
                         overlay::lyrics_viewport(),
                         ViewportCommand::Close,
@@ -1634,6 +1635,7 @@ impl RPlayerApp {
             }
         } else if self.lyrics_viewport_active {
             self.lyrics_viewport_active = false;
+            crate::platform::hide_lyrics_panel();
             ctx.send_viewport_cmd_to(overlay::lyrics_viewport(), ViewportCommand::Close);
         }
 
@@ -1838,6 +1840,7 @@ impl RPlayerApp {
         } else {
             self.lyrics_viewport_active = false;
             self.lyrics_region = false;
+            crate::platform::hide_lyrics_panel();
             ctx.send_viewport_cmd_to(overlay::lyrics_viewport(), ViewportCommand::Close);
         }
         self.persist();

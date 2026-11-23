@@ -134,11 +134,12 @@ impl RPlayerApp {
             }))
             .show(ctx, |ui| {
                 let dt = ctx.input(|input| input.stable_dt).min(0.1);
-                self.view_fade = (self.view_fade + dt * 6.0).min(1.0);
+                self.view_fade = (self.view_fade + dt * 4.0).min(1.0);
                 if self.view_fade < 1.0 {
                     ctx.request_repaint();
                 }
                 let fade = 1.0 - (1.0 - self.view_fade).powi(3);
+                ui.add_space((1.0 - fade) * 10.0);
                 ui.multiply_opacity(fade);
                 self.central_header(ui, ids, total_seconds);
                 ui.add_space(10.0);
@@ -176,7 +177,7 @@ impl RPlayerApp {
                     .fill(theme::c().panel)
                     .stroke(Stroke::new(1.0_f32, theme::c().border_soft))
                     .corner_radius(CornerRadius::same(14))
-                    .inner_margin(Margin::symmetric(0, 4))
+                    .inner_margin(Margin::symmetric(0, 0))
                     .show(ui, |ui| {
                         let columns = Columns::for_width(ui.available_width());
                         self.table_header(ui, columns);
