@@ -1358,6 +1358,11 @@ impl RPlayerApp {
                 25.0
             },
             lyrics_locked: self.library.desktop_lyrics_locked,
+            mini_style: if self.library.mini_style == "compact" {
+                "compact".to_string()
+            } else {
+                "classic".to_string()
+            },
             ..OverlayState::default()
         };
 

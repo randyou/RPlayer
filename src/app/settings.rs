@@ -26,6 +26,11 @@ impl RPlayerApp {
             25.0
         };
         let mut lyrics_locked = self.library.desktop_lyrics_locked;
+        let mut mini_style = if self.library.mini_style.is_empty() {
+            "classic".to_string()
+        } else {
+            self.library.mini_style.clone()
+        };
         let mut auto_lyrics = self.library.auto_lyrics;
         let mut auto_cover = self.library.auto_cover;
         let mut clear_covers = false;
@@ -238,6 +243,35 @@ impl RPlayerApp {
                     });
 
                 ui.add_space(16.0);
+                section(ui, "迷你播放器");
+                Frame::NONE
+                    .fill(theme::c().card)
+                    .stroke(Stroke::new(1.0_f32, theme::c().border_soft))
+                    .corner_radius(CornerRadius::same(12))
+                    .inner_margin(egui::Margin::symmetric(12, 10))
+                    .show(ui, |ui| {
+                        ui.label(
+                            RichText::new("样式")
+                                .size(12.0)
+                                .color(theme::c().text),
+                        );
+                        ui.add_space(7.0);
+                        ui.horizontal(|ui| {
+                            for (id, label) in [("classic", "经典"), ("compact", "紧凑")] {
+                                if widgets::chip(ui, label, mini_style == id).clicked() {
+                                    mini_style = id.to_string();
+                                }
+                            }
+                        });
+                        ui.add_space(4.0);
+                        ui.label(
+                            RichText::new("底部播放栏的迷你播放器按钮可随时打开/关闭。")
+                                .size(10.0)
+                                .color(theme::c().faint),
+                        );
+                    });
+
+                ui.add_space(16.0);
                 section(ui, "在线内容");
                 Frame::NONE
                     .fill(theme::c().card)
@@ -403,6 +437,10 @@ impl RPlayerApp {
         }
         if lyrics_locked != self.library.desktop_lyrics_locked {
             self.library.desktop_lyrics_locked = lyrics_locked;
+            self.prefs_dirty = true;
+        }
+        if mini_style != self.library.mini_style {
+            self.library.mini_style = mini_style;
             self.prefs_dirty = true;
         }
         if auto_lyrics != self.library.auto_lyrics {

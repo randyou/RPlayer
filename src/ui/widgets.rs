@@ -57,6 +57,41 @@ pub fn icon_button_tinted(
     response
 }
 
+/// Compact text glyph button used for the desktop lyric "词" shortcut.
+pub fn glyph_button_tinted(
+    ui: &mut Ui,
+    glyph: &str,
+    size: f32,
+    tint: Color32,
+    active: bool,
+    tooltip: &str,
+) -> Response {
+    let (rect, response) = ui.allocate_exact_size(Vec2::splat(size), Sense::click());
+    if active || response.hovered() {
+        ui.painter()
+            .rect_filled(rect, CornerRadius::same(9), theme::accent_alpha(0.12));
+    }
+    let color = if active {
+        theme::c().accent
+    } else if response.hovered() {
+        theme::c().text
+    } else {
+        tint
+    };
+    ui.painter().text(
+        rect.center(),
+        Align2::CENTER_CENTER,
+        glyph,
+        FontId::proportional(size * 0.46),
+        color,
+    );
+    let response = response
+        .on_hover_cursor(CursorIcon::PointingHand)
+        .on_hover_text(tooltip);
+    mark(&response, WidgetType::Button, tooltip, Some(active));
+    response
+}
+
 pub fn circle_button(
     ui: &mut Ui,
     icon: Icon,

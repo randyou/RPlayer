@@ -263,9 +263,9 @@ impl RPlayerApp {
                                 self.toggle_theme(ui.ctx());
                             }
                             if !compact {
-                                if widgets::icon_button_tinted(
+                                if widgets::glyph_button_tinted(
                                     ui,
-                                    Icon::Lyrics,
+                                    "词",
                                     30.0,
                                     theme::c().muted,
                                     self.desktop_lyrics_open,

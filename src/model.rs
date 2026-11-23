@@ -186,6 +186,8 @@ pub struct Library {
     pub desktop_lyrics_locked: bool,
     /// Last desktop lyric window top-left position.
     pub desktop_lyrics_pos: Option<(f32, f32)>,
+    /// Mini player layout: "classic" or "compact".
+    pub mini_style: String,
     /// Fetch missing lyrics from LRCLIB automatically when a track starts.
     pub auto_lyrics: bool,
     /// Match missing covers through MusicBrainz/Cover Art Archive.
@@ -214,6 +216,7 @@ impl Default for Library {
             desktop_lyrics_font: 25.0,
             desktop_lyrics_locked: false,
             desktop_lyrics_pos: None,
+            mini_style: "classic".to_string(),
             auto_lyrics: true,
             auto_cover: true,
             replaygain: "off".to_string(),

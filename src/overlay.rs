@@ -34,6 +34,7 @@ pub struct OverlayState {
     pub lyrics_opacity: f32,
     pub lyrics_font: f32,
     pub lyrics_locked: bool,
+    pub mini_style: String,
     pub cover_id: Option<u64>,
     pub cover: Option<Arc<ColorImage>>,
 }
@@ -372,6 +373,16 @@ pub fn show_mini(
                     theme::c().accent,
                 );
 
+                if snapshot.mini_style == "compact" {
+                    draw_mini_compact(
+                        ui,
+                        ctx,
+                        &snapshot,
+                        &commands,
+                        &mut close,
+                        &mut open_main,
+                    );
+                } else {
                 ui.allocate_new_ui(
                     egui::UiBuilder::new()
                         .max_rect(card.shrink2(Vec2::new(14.0, 12.0)))
@@ -525,6 +536,7 @@ pub fn show_mini(
                         });
                     },
                 );
+                }
             });
 
         if close {
@@ -539,6 +551,138 @@ pub fn show_mini(
         }
         ctx.request_repaint_after(std::time::Duration::from_millis(33));
     });
+}
+
+fn draw_mini_compact(
+    ui: &mut egui::Ui,
+    ctx: &egui::Context,
+    snapshot: &OverlayState,
+    commands: &Arc<Mutex<Vec<OverlayCommand>>>,
+    close: &mut bool,
+    open_main: &mut bool,
+) {
+    let card = ui.max_rect();
+    let drag_rect = Rect::from_min_size(
+        card.min + Vec2::new(14.0, 10.0),
+        Vec2::new((card.width() - 82.0).max(80.0), 18.0),
+    );
+    let drag = ui.interact(drag_rect, Id::new("mini-compact-drag"), Sense::drag());
+    if drag.dragged() {
+        ctx.send_viewport_cmd(ViewportCommand::StartDrag);
+    }
+
+    ui.allocate_new_ui(
+        egui::UiBuilder::new()
+            .max_rect(card.shrink2(Vec2::new(16.0, 10.0)))
+            .layout(Layout::top_down(Align::Center)),
+        |ui| {
+            ui.horizontal(|ui| {
+                ui.label(
+                    RichText::new("迷你播放器")
+                        .size(9.0)
+                        .color(theme::c().faint),
+                );
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    if widgets::icon_button(ui, Icon::Close, 20.0, "关闭迷你播放器").clicked() {
+                        *close = true;
+                    }
+                    if widgets::icon_button(ui, Icon::Expand, 20.0, "打开主窗口").clicked() {
+                        *open_main = true;
+                    }
+                });
+            });
+
+            ui.add_space(2.0);
+            ui.add(
+                egui::Label::new(
+                    RichText::new(if snapshot.has_track {
+                        &snapshot.title
+                    } else {
+                        "RPlayer 迷你播放器"
+                    })
+                    .size(15.0)
+                    .strong()
+                    .color(theme::c().text),
+                )
+                .truncate(),
+            );
+            ui.add(
+                egui::Label::new(
+                    RichText::new(if snapshot.has_track {
+                        &snapshot.artist
+                    } else {
+                        "从音乐库选择一首歌"
+                    })
+                    .size(10.5)
+                    .color(theme::c().muted),
+                )
+                .truncate(),
+            );
+
+            ui.add_space(3.0);
+            if let Some(seconds) = widgets::seek_bar(ui, snapshot.position, snapshot.duration) {
+                if let Ok(mut queue) = commands.lock() {
+                    queue.push(OverlayCommand::Seek(seconds));
+                }
+            }
+
+            ui.add_space(3.0);
+            let width = ui.available_width();
+            ui.allocate_ui_with_layout(
+                Vec2::new(width, 36.0),
+                Layout::left_to_right(Align::Center),
+                |ui| {
+                    ui.add_space(((width - 152.0) / 2.0).max(0.0));
+                    if widgets::icon_button(ui, Icon::Prev, 26.0, "上一首").clicked() {
+                        if let Ok(mut queue) = commands.lock() {
+                            queue.push(OverlayCommand::Previous);
+                        }
+                    }
+                    if widgets::circle_button(
+                        ui,
+                        if snapshot.playing {
+                            Icon::Pause
+                        } else {
+                            Icon::Play
+                        },
+                        34.0,
+                        theme::c().accent,
+                        theme::c().on_accent,
+                        if snapshot.playing { "暂停" } else { "播放" },
+                    )
+                    .clicked()
+                    {
+                        if let Ok(mut queue) = commands.lock() {
+                            queue.push(OverlayCommand::TogglePlay);
+                        }
+                    }
+                    if widgets::icon_button(ui, Icon::Next, 26.0, "下一首").clicked() {
+                        if let Ok(mut queue) = commands.lock() {
+                            queue.push(OverlayCommand::Next);
+                        }
+                    }
+                    if widgets::icon_button_tinted(
+                        ui,
+                        if snapshot.favorite {
+                            Icon::HeartFilled
+                        } else {
+                            Icon::Heart
+                        },
+                        26.0,
+                        theme::c().muted,
+                        snapshot.favorite,
+                        "收藏",
+                    )
+                    .clicked()
+                    {
+                        if let Ok(mut queue) = commands.lock() {
+                            queue.push(OverlayCommand::ToggleFavorite);
+                        }
+                    }
+                },
+            );
+        },
+    );
 }
 
 fn draw_cover(

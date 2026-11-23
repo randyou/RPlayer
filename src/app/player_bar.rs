@@ -33,7 +33,7 @@ impl RPlayerApp {
                 let width = full.width();
                 // Symmetric side columns keep the transport cluster at the
                 // real window centre instead of the centre of leftover space.
-                let side = if width >= 1040.0 { 300.0 } else { 280.0 };
+                let side = if width >= 1040.0 { 335.0 } else { 280.0 };
                 let center = (width - side * 2.0 - 24.0).max(300.0);
 
                 ui.scope_builder(egui::UiBuilder::new().max_rect(full), |ui| {
@@ -302,9 +302,9 @@ impl RPlayerApp {
             }
         }
 
-        if widgets::icon_button_tinted(
+        if widgets::glyph_button_tinted(
             ui,
-            Icon::Lyrics,
+            "词",
             icon_size,
             theme::c().muted,
             self.desktop_lyrics_open,
@@ -326,6 +326,19 @@ impl RPlayerApp {
         .clicked()
         {
             self.toggle_eq();
+        }
+
+        if widgets::icon_button_tinted(
+            ui,
+            Icon::MiniPlayer,
+            icon_size,
+            theme::c().muted,
+            self.mini_open,
+            "迷你播放器",
+        )
+        .clicked()
+        {
+            self.toggle_mini(ui.ctx());
         }
 
         if let Some(volume) = widgets::volume_bar(ui, self.volume) {
