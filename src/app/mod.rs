@@ -1201,6 +1201,9 @@ impl RPlayerApp {
     }
 
     fn request_cover(&mut self, ctx: &egui::Context, id: u64, manual: bool) {
+        if !manual && self.library.offline_mode {
+            return;
+        }
         if self.cover_fetching == Some(id) {
             return;
         }
@@ -1312,6 +1315,9 @@ impl RPlayerApp {
     // ---------------------------------------------------------------------
 
     fn request_lyrics(&mut self, ctx: &egui::Context, track_id: u64, manual: bool) {
+        if !manual && self.library.offline_mode {
+            return;
+        }
         if self.lyrics_fetching == Some(track_id) {
             return;
         }
