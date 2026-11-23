@@ -734,3 +734,75 @@ fn update_lyrics_panel_impl(
 
 #[cfg(not(target_os = "windows"))]
 pub fn update_lyrics_panel(_title: &str, _rect: (i32, i32, i32, i32), _alpha: f32, _rgb: (u8, u8, u8), _radius: f32) {}
+static LYRICS_OLD_PROC: std::sync::atomic::AtomicIsize =
+    std::sync::atomic::AtomicIsize::new(0);
+
+#[cfg(target_os = "windows")]
+unsafe extern "system" fn lyrics_native_proc(
+    hwnd: isize,
+    msg: u32,
+    wp: usize,
+    lp: isize,
+) -> isize {
+    use std::sync::atomic::Ordering;
+    #[link(name = "user32")]
+    extern "system" {
+        fn GetClientRect(hwnd: isize, rect: *mut RectI) -> i32;
+        fn ScreenToClient(hwnd: isize, point: *mut PointI) -> i32;
+        fn CallWindowProcW(prev: isize, hwnd: isize, msg: u32, wp: usize, lp: isize) -> isize;
+        fn DefWindowProcW(hwnd: isize, msg: u32, wp: usize, lp: isize) -> isize;
+    }
+    #[repr(C)]
+    struct RectI { left: i32, top: i32, right: i32, bottom: i32 }
+    #[repr(C)]
+    struct PointI { x: i32, y: i32 }
+
+    if msg == 0x0084 {
+        let mut point = PointI {
+            x: (lp as i32) & 0xFFFF,
+            y: ((lp as i32) >> 16) & 0xFFFF,
+        };
+        let mut rect = RectI { left: 0, top: 0, right: 0, bottom: 0 };
+        unsafe {
+            ScreenToClient(hwnd, &mut point);
+            GetClientRect(hwnd, &mut rect);
+        }
+        let width = rect.right - rect.left;
+        let controls = (point.x < 230 && point.y < 130)
+            || (point.x > width - 56 && point.y < 46);
+        return if controls { 1 } else { 2 };
+    }
+    let old = LYRICS_OLD_PROC.load(Ordering::SeqCst);
+    unsafe {
+        if old != 0 {
+            CallWindowProcW(old, hwnd, msg, wp, lp)
+        } else {
+            DefWindowProcW(hwnd, msg, wp, lp)
+        }
+    }
+}
+
+/// Lets the user drag the lyric window from any non-control area.
+#[cfg(target_os = "windows")]
+pub fn enable_lyrics_native_drag(title: &str) {
+    use std::sync::atomic::Ordering;
+    #[link(name = "user32")]
+    extern "system" {
+        fn FindWindowW(class_name: *const u16, window_name: *const u16) -> isize;
+        fn SetWindowLongPtrW(hwnd: isize, index: i32, value: isize) -> isize;
+    }
+    let wide: Vec<u16> = title.encode_utf16().chain(std::iter::once(0)).collect();
+    let hwnd = unsafe { FindWindowW(std::ptr::null(), wide.as_ptr()) };
+    if hwnd == 0 || LYRICS_OLD_PROC.load(Ordering::SeqCst) != 0 {
+        return;
+    }
+    let old = unsafe {
+        SetWindowLongPtrW(hwnd, -4, lyrics_native_proc as *const () as isize)
+    };
+    if old != 0 {
+        LYRICS_OLD_PROC.store(old, Ordering::SeqCst);
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn enable_lyrics_native_drag(_title: &str) {}
