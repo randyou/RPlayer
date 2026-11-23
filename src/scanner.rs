@@ -132,3 +132,58 @@ pub fn scan_folder(folder: &Path) -> Vec<Track> {
     }
     tracks
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+
+    fn write_wav(path: &Path) {
+        let samples: Vec<i16> = (0..200).map(|i| ((i * 37) % 1000) as i16).collect();
+        let data_len = (samples.len() * 2) as u32;
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(b"RIFF");
+        bytes.extend_from_slice(&(36 + data_len).to_le_bytes());
+        bytes.extend_from_slice(b"WAVEfmt ");
+        bytes.extend_from_slice(&16u32.to_le_bytes());
+        bytes.extend_from_slice(&1u16.to_le_bytes());
+        bytes.extend_from_slice(&1u16.to_le_bytes());
+        bytes.extend_from_slice(&44_100u32.to_le_bytes());
+        bytes.extend_from_slice(&88_200u32.to_le_bytes());
+        bytes.extend_from_slice(&2u16.to_le_bytes());
+        bytes.extend_from_slice(&16u16.to_le_bytes());
+        bytes.extend_from_slice(b"data");
+        bytes.extend_from_slice(&data_len.to_le_bytes());
+        for sample in samples {
+            bytes.extend_from_slice(&sample.to_le_bytes());
+        }
+        let mut file = std::fs::File::create(path).unwrap();
+        file.write_all(&bytes).unwrap();
+    }
+
+    #[test]
+    fn unchanged_file_is_reused_without_reparsing() {
+        let dir = std::env::temp_dir().join(format!("rplayer-scan-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("probe.wav");
+        write_wav(&path);
+        let track = Track::from_path(&path).unwrap();
+        assert!(track.modified > 0);
+        let known = HashMap::from([(
+            path_key(&path),
+            (track.id, track.modified),
+        )]);
+        let rx = start_scan(vec![dir.clone()], known);
+        let mut reused = None;
+        while let Ok(event) = rx.recv() {
+            match event {
+                ScanEvent::Unchanged(id) => reused = Some(id),
+                ScanEvent::Finished { .. } => break,
+                _ => {}
+            }
+        }
+        assert_eq!(reused, Some(track.id));
+        let _ = std::fs::remove_dir_all(dir);
+    }
+}
