@@ -21,6 +21,8 @@ fn main() {
         MediaPlaybackStatus, MediaPlaybackType, SystemMediaTransportControls,
         SystemMediaTransportControlsButton, SystemMediaTransportControlsTimelineProperties,
     };
+    use windows::Storage::StorageFile;
+    use windows::Storage::Streams::RandomAccessStreamReference;
     use windows::Win32::Foundation::{HINSTANCE, HWND};
     use windows::Win32::System::WinRT::{
         ISystemMediaTransportControlsInterop, RoInitialize, RO_INIT_SINGLETHREADED,
@@ -123,6 +125,23 @@ fn main() {
     for line in stdin.lock().lines().map_while(Result::ok) {
         let mut parts = line.split('\t');
         match parts.next() {
+            Some("A") => {
+                let path = parts.next().unwrap_or("");
+                if !path.is_empty() {
+                    if let Ok(operation) = StorageFile::GetFileFromPathAsync(&HSTRING::from(path)) {
+                        if let Ok(file) = operation.get() {
+                            if let Ok(thumbnail) =
+                                RandomAccessStreamReference::CreateFromFile(&file)
+                            {
+                                if let Ok(updater) = controls.DisplayUpdater() {
+                                    let _ = updater.SetThumbnail(&thumbnail);
+                                    let _ = updater.Update();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             Some("T") => {
                 let title = parts.next().unwrap_or("未知歌曲");
                 let artist = parts.next().unwrap_or("未知艺术家");

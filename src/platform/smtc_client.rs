@@ -76,7 +76,14 @@ impl SmtcClient {
         commands
     }
 
-    pub fn sync(&mut self, track: Option<&Track>, playing: bool, position: f64, duration: f64) {
+    pub fn sync(
+        &mut self,
+        track: Option<&Track>,
+        playing: bool,
+        position: f64,
+        duration: f64,
+        cover: Option<&eframe::egui::ColorImage>,
+    ) {
         let track_id = track.map(|track| track.id);
         if track_id != self.last_track {
             self.last_track = track_id;
@@ -89,6 +96,8 @@ impl SmtcClient {
                     sanitize(&track.artist),
                     sanitize(&track.album)
                 );
+                let path = write_cover(cover);
+                let _ = writeln!(self.stdin, "A\t{}", path.display());
             } else {
                 let _ = writeln!(self.stdin, "C");
             }
@@ -107,6 +116,26 @@ impl SmtcClient {
             let _ = self.stdin.flush();
         }
     }
+}
+
+fn write_cover(cover: Option<&eframe::egui::ColorImage>) -> std::path::PathBuf {
+    let path = std::env::temp_dir().join("rplayer-smtc-cover.png");
+    if let Some(cover) = cover {
+        let mut bytes = Vec::with_capacity(cover.pixels.len() * 4);
+        for pixel in &cover.pixels {
+            bytes.extend_from_slice(&[pixel.r(), pixel.g(), pixel.b(), pixel.a()]);
+        }
+        if let Some(image) =
+            image::RgbaImage::from_raw(cover.size[0] as u32, cover.size[1] as u32, bytes)
+        {
+            let _ = image.save(&path);
+            return path;
+        }
+    }
+    // A transparent 1x1 clears a previous thumbnail on track changes without
+    // cover art.
+    let _ = image::RgbaImage::new(1, 1).save(&path);
+    path
 }
 
 fn helper_path() -> Option<std::path::PathBuf> {

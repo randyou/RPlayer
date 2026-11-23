@@ -2011,7 +2011,13 @@ impl RPlayerApp {
         let position = self.current_position();
         let duration = track.as_ref().map(|track| track.duration).unwrap_or(0.0);
         if let Some(smtc) = &mut self.smtc {
-            smtc.sync(track.as_ref(), playing, position, duration);
+            smtc.sync(
+                track.as_ref(),
+                playing,
+                position,
+                duration,
+                self.cover_image.as_deref(),
+            );
         }
     }
 
