@@ -6,7 +6,7 @@ use egui::{
     RichText, ScrollArea, Sense, Stroke, Ui, Vec2,
 };
 
-use super::{RPlayerApp, RepeatMode};
+use super::RPlayerApp;
 use crate::model;
 use crate::theme;
 use crate::ui::icons::{self, Icon};
@@ -167,7 +167,7 @@ impl RPlayerApp {
 
     fn player_controls(&mut self, ui: &mut Ui, ctx: &egui::Context) {
         let width = ui.available_width();
-        let controls_width = 194.0;
+        let controls_width = 158.0;
 
         ui.allocate_ui_with_layout(
             Vec2::new(width, 50.0),
@@ -175,19 +175,6 @@ impl RPlayerApp {
             |ui| {
                 ui.spacing_mut().item_spacing.x = 6.0;
                 ui.add_space(((width - controls_width) / 2.0).max(0.0));
-
-                if widgets::icon_button_tinted(
-                    ui,
-                    Icon::Shuffle,
-                    30.0,
-                    theme::c().muted,
-                    self.shuffle,
-                    "随机播放",
-                )
-                .clicked()
-                {
-                    self.shuffle = !self.shuffle;
-                }
 
                 if widgets::icon_button(ui, Icon::Prev, 30.0, "上一首").clicked() {
                     self.previous_track(ctx);
@@ -202,18 +189,17 @@ impl RPlayerApp {
                     self.next_track(ctx, false);
                 }
 
-                let repeat_active = self.repeat != RepeatMode::Off;
                 if widgets::icon_button_tinted(
                     ui,
-                    self.repeat.icon(),
+                    self.play_mode.icon(),
                     30.0,
                     theme::c().muted,
-                    repeat_active,
-                    self.repeat.tooltip(),
+                    self.play_mode.active(),
+                    self.play_mode.tooltip(),
                 )
                 .clicked()
                 {
-                    self.cycle_repeat();
+                    self.cycle_play_mode();
                 }
             },
         );

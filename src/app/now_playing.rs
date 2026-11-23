@@ -7,7 +7,7 @@ use egui::{
     RichText, ScrollArea, Sense, Stroke, Ui, Vec2,
 };
 
-use super::{RepeatMode, RPlayerApp};
+use super::RPlayerApp;
 use crate::model;
 use crate::theme;
 use crate::ui::icons::{self, Icon};
@@ -550,28 +550,15 @@ impl RPlayerApp {
                     ui.spacing_mut().item_spacing.x = 5.0;
                     if widgets::icon_button_tinted(
                         ui,
-                        Icon::Shuffle,
+                        self.play_mode.icon(),
                         30.0,
                         theme::c().muted,
-                        self.shuffle,
-                        "随机播放",
+                        self.play_mode.active(),
+                        self.play_mode.tooltip(),
                     )
                     .clicked()
                     {
-                        self.shuffle = !self.shuffle;
-                    }
-                    let repeat_active = self.repeat != RepeatMode::Off;
-                    if widgets::icon_button_tinted(
-                        ui,
-                        self.repeat.icon(),
-                        30.0,
-                        theme::c().muted,
-                        repeat_active,
-                        self.repeat.tooltip(),
-                    )
-                    .clicked()
-                    {
-                        self.cycle_repeat();
+                        self.cycle_play_mode();
                     }
                     ui.add_space(4.0);
                     ui.label(

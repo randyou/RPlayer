@@ -60,34 +60,59 @@ struct QueuedNext {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum RepeatMode {
-    Off,
-    All,
-    One,
+pub(super) enum PlayMode {
+    Sequential,
+    RepeatAll,
+    RepeatOne,
+    Shuffle,
+    ShuffleAll,
 }
 
-impl RepeatMode {
+impl PlayMode {
     fn next(self) -> Self {
         match self {
-            Self::Off => Self::All,
-            Self::All => Self::One,
-            Self::One => Self::Off,
+            Self::Sequential => Self::RepeatAll,
+            Self::RepeatAll => Self::RepeatOne,
+            Self::RepeatOne => Self::Shuffle,
+            Self::Shuffle => Self::ShuffleAll,
+            Self::ShuffleAll => Self::Sequential,
         }
+    }
+
+    fn is_shuffle(self) -> bool {
+        matches!(self, Self::Shuffle | Self::ShuffleAll)
+    }
+
+    fn repeats_all(self) -> bool {
+        matches!(self, Self::RepeatAll | Self::ShuffleAll)
+    }
+
+    fn is_repeat_one(self) -> bool {
+        matches!(self, Self::RepeatOne)
     }
 
     fn icon(self) -> Icon {
         match self {
-            Self::One => Icon::RepeatOne,
-            _ => Icon::Repeat,
+            Self::Sequential => Icon::List,
+            Self::RepeatAll => Icon::Repeat,
+            Self::RepeatOne => Icon::RepeatOne,
+            Self::Shuffle => Icon::Shuffle,
+            Self::ShuffleAll => Icon::ShuffleRepeat,
         }
     }
 
     fn tooltip(self) -> &'static str {
         match self {
-            Self::Off => "循环关闭",
-            Self::All => "列表循环",
-            Self::One => "单曲循环",
+            Self::Sequential => "顺序播放",
+            Self::RepeatAll => "列表循环",
+            Self::RepeatOne => "单曲循环",
+            Self::Shuffle => "随机播放",
+            Self::ShuffleAll => "随机循环",
         }
+    }
+
+    fn active(self) -> bool {
+        !matches!(self, Self::Sequential)
     }
 }
 
@@ -174,8 +199,9 @@ pub struct RPlayerApp {
     current: Option<u64>,
     queue: Vec<u64>,
     queue_index: usize,
-    shuffle: bool,
-    repeat: RepeatMode,
+    play_mode: PlayMode,
+    shuffle_bag: Vec<usize>,
+    shuffle_exhausted: bool,
     volume: f32,
     volume_before_mute: f32,
     last_saved_volume: f32,
@@ -312,8 +338,9 @@ impl RPlayerApp {
             current: None,
             queue: Vec::new(),
             queue_index: 0,
-            shuffle: false,
-            repeat: RepeatMode::Off,
+            play_mode: PlayMode::Sequential,
+            shuffle_bag: Vec::new(),
+            shuffle_exhausted: false,
             cover: None,
             cover_for: None,
             cover_image: None,
@@ -836,6 +863,8 @@ impl RPlayerApp {
         self.credit_current_track(true);
         self.queue = queue;
         self.queue_index = index;
+        self.shuffle_bag.clear();
+        self.shuffle_exhausted = false;
         self.start_current(ctx);
     }
 
@@ -889,7 +918,7 @@ impl RPlayerApp {
             return;
         }
         self.credit_current_track(!automatic);
-        if automatic && self.repeat == RepeatMode::One {
+        if automatic && self.play_mode.is_repeat_one() {
             self.start_current(ctx);
             return;
         }
@@ -915,23 +944,38 @@ impl RPlayerApp {
         }
     }
 
-    fn choose_next(&self) -> Option<usize> {
+    fn choose_next(&mut self) -> Option<usize> {
         let len = self.queue.len();
         if len == 0 {
             return None;
         }
-        if self.shuffle && len > 1 {
-            use rand::Rng;
-            let mut rng = rand::thread_rng();
-            let mut index = rng.gen_range(0..len);
-            if index == self.queue_index {
-                index = (index + 1 + rng.gen_range(0..len - 1)) % len;
+        if self.play_mode.is_shuffle() && len > 1 {
+            self.shuffle_bag.retain(|index| *index < len);
+            if self.shuffle_bag.is_empty() && self.shuffle_exhausted {
+                if !self.play_mode.repeats_all() {
+                    return None;
+                }
+                self.shuffle_exhausted = false;
+            }
+            if self.shuffle_bag.is_empty() {
+                use rand::seq::SliceRandom;
+                let mut rng = rand::thread_rng();
+                let mut bag: Vec<usize> = (0..len)
+                    .filter(|index| *index != self.queue_index)
+                    .collect();
+                bag.shuffle(&mut rng);
+                self.shuffle_bag = bag;
+                self.shuffle_exhausted = false;
+            }
+            let index = self.shuffle_bag.pop()?;
+            if self.shuffle_bag.is_empty() {
+                self.shuffle_exhausted = true;
             }
             return Some(index);
         }
         if self.queue_index + 1 < len {
             Some(self.queue_index + 1)
-        } else if self.repeat == RepeatMode::All {
+        } else if self.play_mode.repeats_all() {
             Some(0)
         } else {
             None
@@ -947,6 +991,8 @@ impl RPlayerApp {
             }
         }
         if added > 0 {
+            self.shuffle_bag.clear();
+            self.shuffle_exhausted = false;
             self.last_session_save =
                 Instant::now() - Duration::from_secs(6);
         }
@@ -960,6 +1006,8 @@ impl RPlayerApp {
         let item = self.queue.remove(from);
         let target = to.min(self.queue.len());
         self.queue.insert(target, item);
+        self.shuffle_bag.clear();
+        self.shuffle_exhausted = false;
         if let Some(current) = self.current {
             if let Some(index) = self.queue.iter().position(|id| *id == current) {
                 self.queue_index = index;
@@ -988,6 +1036,8 @@ impl RPlayerApp {
         }
         self.queue.clear();
         self.queue_index = 0;
+        self.shuffle_bag.clear();
+        self.shuffle_exhausted = false;
         self.current = None;
         self.queued_next = None;
         self.boundary_seen = 0;
@@ -1021,7 +1071,7 @@ impl RPlayerApp {
 
         self.credit_current_track(true);
         let len = self.queue.len();
-        let index = if self.shuffle && len > 1 {
+        let index = if self.play_mode.is_shuffle() && len > 1 {
             use rand::Rng;
             let mut rng = rand::thread_rng();
             let mut index = rng.gen_range(0..len);
@@ -1083,8 +1133,10 @@ impl RPlayerApp {
         self.persist();
     }
 
-    fn cycle_repeat(&mut self) {
-        self.repeat = self.repeat.next();
+    fn cycle_play_mode(&mut self) {
+        self.play_mode = self.play_mode.next();
+        self.shuffle_bag.clear();
+        self.shuffle_exhausted = false;
     }
 
     fn load_lyrics_for(&mut self, track: &Track, id: u64) {
@@ -1363,6 +1415,7 @@ impl RPlayerApp {
             playing: self.is_playing(),
             favorite,
             lyrics_opacity: self.library.desktop_lyrics_opacity,
+            lyrics_text_opacity: self.library.desktop_lyrics_text_opacity,
             lyrics_font: if self.library.desktop_lyrics_font > 0.0 {
                 self.library.desktop_lyrics_font
             } else {
@@ -1436,7 +1489,11 @@ impl RPlayerApp {
                 }
                 OverlayCommand::Seek(seconds) => self.seek_to(seconds),
                 OverlayCommand::SetLyricsOpacity(opacity) => {
-                    self.library.desktop_lyrics_opacity = opacity.clamp(0.35, 1.0);
+                    self.library.desktop_lyrics_opacity = opacity.clamp(0.0, 1.0);
+                    self.prefs_dirty = true;
+                }
+                OverlayCommand::SetLyricsTextOpacity(opacity) => {
+                    self.library.desktop_lyrics_text_opacity = opacity.clamp(0.0, 1.0);
                     self.prefs_dirty = true;
                 }
                 OverlayCommand::SetLyricsFont(font) => {
@@ -1543,10 +1600,11 @@ impl RPlayerApp {
                     26,
                 );
             }
-            let opacity = self.library.desktop_lyrics_opacity.clamp(0.35, 1.0);
-            if (self.lyrics_alpha_applied - opacity).abs() > 0.005 {
-                if crate::platform::set_window_alpha("RPlayer 桌面歌词", opacity) {
-                    self.lyrics_alpha_applied = opacity;
+            // The window itself stays fully opaque; panel and text opacity are
+            // painted separately so a transparent panel never hides lyrics.
+            if (self.lyrics_alpha_applied - 1.0).abs() > 0.005 {
+                if crate::platform::set_window_alpha("RPlayer 桌面歌词", 1.0) {
+                    self.lyrics_alpha_applied = 1.0;
                 }
             }
         } else if self.lyrics_viewport_active {
@@ -2155,7 +2213,7 @@ impl RPlayerApp {
         if track.duration <= 0.0 || track.duration - position > 1.4 {
             return;
         }
-        let next_index = if self.repeat == RepeatMode::One {
+        let next_index = if self.play_mode.is_repeat_one() {
             Some(self.queue_index)
         } else {
             self.choose_next()
@@ -2169,7 +2227,7 @@ impl RPlayerApp {
         let Some(next_track) = self.library.track(next_id).cloned() else {
             return;
         };
-        if next_id == current_id && self.repeat == RepeatMode::Off {
+        if next_id == current_id && self.play_mode == PlayMode::Sequential {
             return;
         }
         if let Some(audio) = &mut self.audio {
@@ -2226,7 +2284,7 @@ impl RPlayerApp {
             .unwrap_or(false);
         if finished {
             self.queued_next = None;
-            let can_continue = if self.repeat == RepeatMode::One {
+            let can_continue = if self.play_mode.is_repeat_one() {
                 self.start_current(ctx)
             } else {
                 match self.choose_next() {
@@ -2760,4 +2818,21 @@ fn path_is_under(folder: &Path, file: &Path) -> bool {
     }
     let prefix = format!("{folder}/");
     file.starts_with(&prefix)
+}
+
+#[cfg(test)]
+mod play_mode_tests {
+    use super::PlayMode;
+
+    #[test]
+    fn play_mode_cycles_through_five_states() {
+        assert_eq!(PlayMode::Sequential.next(), PlayMode::RepeatAll);
+        assert_eq!(PlayMode::RepeatAll.next(), PlayMode::RepeatOne);
+        assert_eq!(PlayMode::RepeatOne.next(), PlayMode::Shuffle);
+        assert_eq!(PlayMode::Shuffle.next(), PlayMode::ShuffleAll);
+        assert_eq!(PlayMode::ShuffleAll.next(), PlayMode::Sequential);
+        assert!(PlayMode::ShuffleAll.repeats_all());
+        assert!(PlayMode::ShuffleAll.is_shuffle());
+        assert!(!PlayMode::Shuffle.repeats_all());
+    }
 }

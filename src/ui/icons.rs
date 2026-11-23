@@ -14,6 +14,7 @@ pub enum Icon {
     Next,
     Prev,
     Shuffle,
+    ShuffleRepeat,
     Repeat,
     RepeatOne,
     VolumeHigh,
@@ -160,6 +161,15 @@ pub fn paint(painter: &Painter, rect: Rect, icon: Icon, color: Color32) {
             c.polyline(&[(0.10, 0.70), (0.32, 0.70), (0.44, 0.56)]);
             c.polyline(&[(0.44, 0.44), (0.62, 0.30), (0.78, 0.30)]);
             c.polyline(&[(0.68, 0.20), (0.78, 0.30), (0.68, 0.40)]);
+        }
+        Icon::ShuffleRepeat => {
+            c.polyline(&[(0.10, 0.26), (0.30, 0.26), (0.56, 0.60), (0.70, 0.60)]);
+            c.polyline(&[(0.60, 0.50), (0.70, 0.60), (0.60, 0.70)]);
+            c.polyline(&[(0.10, 0.60), (0.30, 0.60), (0.40, 0.48)]);
+            c.polyline(&[(0.40, 0.38), (0.56, 0.26), (0.70, 0.26)]);
+            c.polyline(&[(0.60, 0.16), (0.70, 0.26), (0.60, 0.36)]);
+            c.arc(0.50, 0.78, 0.22, 0.15, 3.0);
+            c.polyline(&[(0.66, 0.98), (0.73, 0.86), (0.60, 0.86)]);
         }
         Icon::Repeat => {
             c.arc(0.50, 0.50, 0.30, -2.55, 2.55);

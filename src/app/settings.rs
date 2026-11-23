@@ -20,6 +20,7 @@ impl RPlayerApp {
         let mut requested_theme: Option<ThemePreset> = None;
         let mut requested_replaygain: Option<String> = None;
         let mut opacity = self.library.desktop_lyrics_opacity;
+        let mut text_opacity = self.library.desktop_lyrics_text_opacity;
         let mut lyrics_font = if self.library.desktop_lyrics_font > 0.0 {
             self.library.desktop_lyrics_font
         } else {
@@ -195,7 +196,7 @@ impl RPlayerApp {
                         ui.add_space(10.0);
                         ui.horizontal(|ui| {
                             ui.label(
-                                RichText::new("背景透明度")
+                                RichText::new("面板不透明度")
                                     .size(12.0)
                                     .color(theme::c().text),
                             );
@@ -206,7 +207,27 @@ impl RPlayerApp {
                                         .color(theme::c().faint),
                                 );
                                 ui.add(
-                                    egui::Slider::new(&mut opacity, 0.35..=1.0)
+                                    egui::Slider::new(&mut opacity, 0.0..=1.0)
+                                        .show_value(false)
+                                        .trailing_fill(true),
+                                );
+                            });
+                        });
+                        ui.add_space(10.0);
+                        ui.horizontal(|ui| {
+                            ui.label(
+                                RichText::new("歌词文字不透明度")
+                                    .size(12.0)
+                                    .color(theme::c().text),
+                            );
+                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                                ui.label(
+                                    RichText::new(format!("{:.0}%", text_opacity * 100.0))
+                                        .font(egui::FontId::monospace(10.0))
+                                        .color(theme::c().faint),
+                                );
+                                ui.add(
+                                    egui::Slider::new(&mut text_opacity, 0.0..=1.0)
                                         .show_value(false)
                                         .trailing_fill(true),
                                 );
@@ -406,7 +427,7 @@ impl RPlayerApp {
                 ui.add_space(18.0);
                 ui.horizontal(|ui| {
                     ui.label(
-                        RichText::new("RPlayer v0.6.0-dev")
+                        RichText::new("RPlayer v0.7.0")
                             .size(10.0)
                             .color(theme::c().faint),
                     );
@@ -451,7 +472,11 @@ impl RPlayerApp {
             }
         }
         if (opacity - self.library.desktop_lyrics_opacity).abs() > 0.001 {
-            self.library.desktop_lyrics_opacity = opacity.clamp(0.35, 1.0);
+            self.library.desktop_lyrics_opacity = opacity.clamp(0.0, 1.0);
+            self.prefs_dirty = true;
+        }
+        if (text_opacity - self.library.desktop_lyrics_text_opacity).abs() > 0.001 {
+            self.library.desktop_lyrics_text_opacity = text_opacity.clamp(0.0, 1.0);
             self.prefs_dirty = true;
         }
         if (lyrics_font - self.library.desktop_lyrics_font).abs() > 0.01 {

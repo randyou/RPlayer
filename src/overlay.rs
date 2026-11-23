@@ -8,7 +8,8 @@ use std::sync::{Arc, Mutex};
 use eframe::egui;
 use egui::{
     Align, Align2, Color32, ColorImage, CornerRadius, FontId, Frame, Id, Layout, Pos2, Rect,
-    RichText, Sense, Stroke, TextureHandle, Vec2, ViewportBuilder, ViewportCommand, ViewportId,
+    Margin, RichText, Sense, Stroke, TextureHandle, Vec2, ViewportBuilder, ViewportCommand,
+    ViewportId,
 };
 
 use crate::theme;
@@ -32,6 +33,7 @@ pub struct OverlayState {
     pub lyric_next: String,
     pub has_lyrics: bool,
     pub lyrics_opacity: f32,
+    pub lyrics_text_opacity: f32,
     pub lyrics_font: f32,
     pub lyrics_locked: bool,
     pub mini_style: String,
@@ -50,6 +52,7 @@ pub enum OverlayCommand {
     ToggleFavorite,
     Seek(f64),
     SetLyricsOpacity(f32),
+    SetLyricsTextOpacity(f32),
     SetLyricsFont(f32),
     SetLyricsLocked(bool),
     SetLyricsPosition(f32, f32),
@@ -112,18 +115,26 @@ pub fn show_lyrics(
                 ui.set_min_size(LYRICS_SIZE);
                 let capsule = ui.max_rect();
                 let dark = theme::c().dark;
-                ui.painter()
-                    .rect_filled(capsule, CornerRadius::ZERO, theme::c().panel);
+                let panel_alpha = snapshot.lyrics_opacity.clamp(0.0, 1.0);
+                let text_alpha = snapshot.lyrics_text_opacity.clamp(0.0, 1.0);
+                ui.painter().rect_filled(
+                    capsule,
+                    CornerRadius::ZERO,
+                    with_alpha(theme::c().panel, panel_alpha),
+                );
                 ui.painter().rect_stroke(
                     capsule.shrink(1.0),
                     CornerRadius::ZERO,
                     Stroke::new(
                         1.0_f32,
-                        if dark {
-                            theme::white_alpha(0.10)
-                        } else {
-                            theme::black_alpha(0.08)
-                        },
+                        with_alpha(
+                            if dark {
+                                theme::white_alpha(0.10)
+                            } else {
+                                theme::black_alpha(0.08)
+                            },
+                            panel_alpha,
+                        ),
                     ),
                     egui::StrokeKind::Inside,
                 );
@@ -143,6 +154,7 @@ pub fn show_lyrics(
                         FontId::proportional(22.0),
                         theme::c().text,
                         shadow,
+                        text_alpha,
                     );
                     shadow_text(
                         ui.painter(),
@@ -151,6 +163,7 @@ pub fn show_lyrics(
                         FontId::proportional(12.0),
                         theme::c().muted,
                         shadow,
+                        text_alpha,
                     );
                 } else {
                     let lyric = if snapshot.lyric_current.trim().is_empty() {
@@ -173,6 +186,7 @@ pub fn show_lyrics(
                             FontId::proportional(12.5),
                             theme::c().faint,
                             shadow,
+                        text_alpha,
                         );
                     } else if !snapshot.lyric_previous.trim().is_empty() {
                         shadow_text(
@@ -182,6 +196,7 @@ pub fn show_lyrics(
                             FontId::proportional(12.5),
                             theme::c().faint,
                             shadow,
+                        text_alpha,
                         );
                     }
                     shadow_text(
@@ -191,6 +206,7 @@ pub fn show_lyrics(
                         FontId::proportional(snapshot.lyrics_font),
                         theme::c().accent,
                         shadow,
+                        text_alpha,
                     );
                     if !snapshot.has_lyrics {
                         shadow_text(
@@ -200,6 +216,7 @@ pub fn show_lyrics(
                             FontId::proportional(11.0),
                             theme::c().faint,
                             shadow,
+                        text_alpha,
                         );
                     } else if !snapshot.lyric_next.trim().is_empty() {
                         shadow_text(
@@ -209,6 +226,7 @@ pub fn show_lyrics(
                             FontId::proportional(12.5),
                             theme::c().faint,
                             shadow,
+                        text_alpha,
                         );
                     }
                 }
@@ -261,6 +279,7 @@ pub fn show_lyrics(
                     }
                 }
                 let mut opacity = snapshot.lyrics_opacity;
+                let mut text_opacity = snapshot.lyrics_text_opacity;
                 let mut font = snapshot.lyrics_font;
                 let mut locked = snapshot.lyrics_locked;
                 drag.on_hover_cursor(if snapshot.lyrics_locked {
@@ -270,12 +289,12 @@ pub fn show_lyrics(
                 })
                     .context_menu(|ui| {
                         ui.label(
-                            RichText::new("背景透明度")
+                            RichText::new("面板不透明度")
                                 .size(11.0)
                                 .color(theme::c().muted),
                         );
                         let response = ui.add(
-                            egui::Slider::new(&mut opacity, 0.35..=1.0)
+                            egui::Slider::new(&mut opacity, 0.0..=1.0)
                                 .show_value(false)
                                 .trailing_fill(true),
                         );
@@ -287,6 +306,29 @@ pub fn show_lyrics(
                         if response.changed() {
                             if let Ok(mut queue) = commands.lock() {
                                 queue.push(OverlayCommand::SetLyricsOpacity(opacity));
+                            }
+                        }
+                        ui.add_space(4.0);
+                        ui.label(
+                            RichText::new("歌词文字不透明度")
+                                .size(11.0)
+                                .color(theme::c().muted),
+                        );
+                        let text_response = ui.add(
+                            egui::Slider::new(&mut text_opacity, 0.0..=1.0)
+                                .show_value(false)
+                                .trailing_fill(true),
+                        );
+                        ui.label(
+                            RichText::new(format!("{:.0}%", text_opacity * 100.0))
+                                .size(10.0)
+                                .color(theme::c().faint),
+                        );
+                        if text_response.changed() {
+                            if let Ok(mut queue) = commands.lock() {
+                                queue.push(OverlayCommand::SetLyricsTextOpacity(
+                                    text_opacity,
+                                ));
                             }
                         }
                         ui.add_space(5.0);
@@ -316,6 +358,93 @@ pub fn show_lyrics(
                             ui.close_menu();
                         }
                     });
+
+                // A small always-visible control opens the two opacity sliders
+                // without requiring the right-click menu.
+                let controls_id = Id::new("lyrics-opacity-open");
+                let mut controls_open = ctx
+                    .data(|data| data.get_temp::<bool>(controls_id))
+                    .unwrap_or(false);
+                let button_rect = Rect::from_min_size(
+                    Pos2::new(capsule.left() + 12.0, capsule.top() + 8.0),
+                    Vec2::new(38.0, 22.0),
+                );
+                let button = ui.interact(
+                    button_rect,
+                    Id::new("lyrics-opacity-button"),
+                    Sense::click(),
+                );
+                ui.painter().rect_filled(
+                    button_rect,
+                    CornerRadius::same(7),
+                    theme::c().hover,
+                );
+                ui.painter().text(
+                    button_rect.center(),
+                    Align2::CENTER_CENTER,
+                    "透明",
+                    FontId::proportional(10.0),
+                    theme::c().muted,
+                );
+                if button.clicked() {
+                    controls_open = !controls_open;
+                    ctx.data_mut(|data| data.insert_temp(controls_id, controls_open));
+                }
+                if controls_open {
+                    let mut panel_value = snapshot.lyrics_opacity;
+                    let mut text_value = snapshot.lyrics_text_opacity;
+                    egui::Area::new(Id::new("lyrics-opacity-controls"))
+                        .fixed_pos(capsule.left_top() + Vec2::new(12.0, 34.0))
+                        .order(egui::Order::Foreground)
+                        .show(ctx, |ui| {
+                            Frame::NONE
+                                .fill(theme::c().panel)
+                                .stroke(Stroke::new(1.0_f32, theme::c().border))
+                                .corner_radius(CornerRadius::same(10))
+                                .inner_margin(Margin::symmetric(10, 8))
+                                .show(ui, |ui| {
+                                    ui.set_width(190.0);
+                                    ui.label(
+                                        RichText::new("面板不透明度")
+                                            .size(10.0)
+                                            .color(theme::c().muted),
+                                    );
+                                    if ui
+                                        .add(
+                                            egui::Slider::new(&mut panel_value, 0.0..=1.0)
+                                                .show_value(false)
+                                                .trailing_fill(true),
+                                        )
+                                        .changed()
+                                    {
+                                        if let Ok(mut queue) = commands.lock() {
+                                            queue.push(OverlayCommand::SetLyricsOpacity(
+                                                panel_value,
+                                            ));
+                                        }
+                                    }
+                                    ui.label(
+                                        RichText::new("歌词文字不透明度")
+                                            .size(10.0)
+                                            .color(theme::c().muted),
+                                    );
+                                    if ui
+                                        .add(
+                                            egui::Slider::new(&mut text_value, 0.0..=1.0)
+                                                .show_value(false)
+                                                .trailing_fill(true),
+                                        )
+                                        .changed()
+                                    {
+                                        if let Ok(mut queue) = commands.lock() {
+                                            queue.push(OverlayCommand::SetLyricsTextOpacity(
+                                                text_value,
+                                            ));
+                                        }
+                                    }
+                                });
+                        });
+                }
             });
 
         if close {
@@ -876,13 +1005,29 @@ fn shadow_text(
     font: FontId,
     color: Color32,
     shadow: Color32,
+    alpha: f32,
 ) {
     painter.text(
         pos + Vec2::new(1.0, 2.0),
         Align2::CENTER_CENTER,
         text,
         font.clone(),
-        shadow,
+        with_alpha(shadow, alpha),
     );
-    painter.text(pos, Align2::CENTER_CENTER, text, font, color);
+    painter.text(
+        pos,
+        Align2::CENTER_CENTER,
+        text,
+        font,
+        with_alpha(color, alpha),
+    );
+}
+
+fn with_alpha(color: Color32, alpha: f32) -> Color32 {
+    Color32::from_rgba_unmultiplied(
+        color.r(),
+        color.g(),
+        color.b(),
+        (color.a() as f32 * alpha.clamp(0.0, 1.0)) as u8,
+    )
 }

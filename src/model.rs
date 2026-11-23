@@ -158,6 +158,10 @@ impl Default for SmartPlaylist {
     }
 }
 
+fn default_lyrics_text_opacity() -> f32 {
+    1.0
+}
+
 /// Everything that survives an app restart.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
@@ -178,8 +182,11 @@ pub struct Library {
     pub theme_preset: String,
     /// Whether the desktop lyrics overlay should open with the app.
     pub desktop_lyrics: bool,
-    /// Background opacity of the desktop lyrics card (0.35–1.0).
+    /// Background opacity of the desktop lyrics card (0.0–1.0).
     pub desktop_lyrics_opacity: f32,
+    /// Text opacity of the desktop lyrics (0.0–1.0).
+    #[serde(default = "default_lyrics_text_opacity")]
+    pub desktop_lyrics_text_opacity: f32,
     /// Desktop lyric font size in points (18–40).
     pub desktop_lyrics_font: f32,
     /// Whether the desktop lyric window position is locked.
@@ -219,6 +226,7 @@ impl Default for Library {
             theme_preset: "paper".to_string(),
             desktop_lyrics: false,
             desktop_lyrics_opacity: 0.85,
+            desktop_lyrics_text_opacity: 1.0,
             desktop_lyrics_font: 25.0,
             desktop_lyrics_locked: false,
             desktop_lyrics_pos: None,
