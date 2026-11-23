@@ -561,6 +561,7 @@ pub fn update_lyrics_backdrop(
         fn FillRect(hdc: isize, rect: *const RectI, brush: isize) -> i32;
         fn GetClientRect(hwnd: isize, rect: *mut RectI) -> i32;
         fn InvalidateRect(hwnd: isize, rect: *const RectI, erase: i32) -> i32;
+        fn SetWindowCompositionAttribute(hwnd: isize, data: *mut CompositionData) -> i32;
     }
 
     #[link(name = "gdi32")]
@@ -623,17 +624,10 @@ pub fn update_lyrics_backdrop(
         lp: isize,
     ) -> isize {
         if msg == 0x000F {
-            // WM_PAINT: fill with the current panel tint. Layered alpha then
-            // blends the solid tint with the desktop so content behind shows.
+            // WM_PAINT: validate the update but leave the surface empty so the
+            // DWM acrylic backdrop is visible.
             let mut paint: PaintStruct = std::mem::zeroed();
-            let hdc = BeginPaint(hwnd, &mut paint);
-            let mut rect: RectI = std::mem::zeroed();
-            GetClientRect(hwnd, &mut rect);
-            let brush = CreateSolidBrush(BACKDROP_COLOR.load(Ordering::SeqCst));
-            if brush != 0 {
-                FillRect(hdc, &rect, brush);
-                DeleteObject(brush);
-            }
+            let _hdc = BeginPaint(hwnd, &mut paint);
             EndPaint(hwnd, &paint);
             return 0;
         }
@@ -680,7 +674,6 @@ pub fn update_lyrics_backdrop(
             if hwnd == 0 {
                 return;
             }
-            SetLayeredWindowAttributes(hwnd, 0, 255, 0x0000_0002);
             BACKDROP.store(hwnd, Ordering::SeqCst);
         }
     }
