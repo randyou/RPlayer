@@ -554,7 +554,7 @@ fn mark(response: &Response, typ: WidgetType, label: &str, selected: Option<bool
 pub fn divider(ui: &mut Ui) {
     let width = ui.available_width();
     let (rect, _) = ui.allocate_exact_size(Vec2::new(width, 1.0), Sense::hover());
-    ui.painter().rect_filled(rect, 0, theme::c().border_soft);
+    ui.painter().rect_filled(rect, 0, theme::divider());
 }
 
 /// Primary button with a hand-painted vector icon before the label.

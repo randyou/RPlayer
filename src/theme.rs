@@ -311,6 +311,11 @@ pub fn c() -> &'static Palette {
 /// Translucent accent colour. `egui` meshes are composited from
 /// premultiplied colours, so compute the premultiplied RGB ourselves instead
 /// of handing raw RGB with a low alpha to the painter.
+pub fn divider() -> Color32 {
+    let palette = c();
+    palette.bg.lerp_to_gamma(palette.border_soft, 0.10)
+}
+
 pub fn accent_alpha(alpha: f32) -> Color32 {
     let alpha = alpha.clamp(0.0, 1.0);
     let a = (alpha * 255.0).round() as u32;
@@ -432,7 +437,10 @@ fn visuals_for(palette: &Palette) -> Visuals {
     widgets.noninteractive = WidgetVisuals {
         bg_fill: palette.panel,
         weak_bg_fill: palette.panel,
-        bg_stroke: Stroke::new(1.0_f32, palette.border_soft),
+        bg_stroke: Stroke::new(
+            1.0_f32,
+            palette.bg.lerp_to_gamma(palette.border_soft, 0.10),
+        ),
         corner_radius: radius,
         fg_stroke: Stroke::new(1.0_f32, palette.text),
         expansion: 0.0,
