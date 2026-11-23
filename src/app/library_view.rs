@@ -465,8 +465,11 @@ impl RPlayerApp {
     fn table_header(&mut self, ui: &mut Ui, columns: Columns) {
         let width = ui.available_width();
         let (rect, _) = ui.allocate_exact_size(Vec2::new(width, HEADER_HEIGHT), Sense::hover());
-        ui.painter()
-            .rect_filled(rect, CornerRadius::same(9), theme::c().card);
+        ui.painter().rect_filled(
+            rect,
+            CornerRadius { nw: 9, ne: 9, sw: 0, se: 0 },
+            theme::c().card,
+        );
 
         ui.painter().text(
             Pos2::new(columns.index_rect(rect).left() + 5.0, rect.center().y),
@@ -588,7 +591,7 @@ impl RPlayerApp {
                     });
 
                     let painter = ui.painter();
-                    let pill = rect.shrink2(Vec2::new(0.0, 1.0));
+                    let pill = rect;
                     if current {
                         painter.rect_filled(pill, CornerRadius::same(9), theme::accent_alpha(0.08));
                         painter.rect_filled(

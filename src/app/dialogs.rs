@@ -383,7 +383,7 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                                 .color(theme::c().text),
                         );
                         ui.label(
-                            RichText::new("0.10.10 · 本地音乐播放器")
+                            RichText::new("0.10.11 · 本地音乐播放器")
                                 .size(11.0)
                                 .color(theme::c().muted),
                         );
