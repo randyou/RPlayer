@@ -133,6 +133,13 @@ impl RPlayerApp {
                 bottom: 12,
             }))
             .show(ctx, |ui| {
+                let dt = ctx.input(|input| input.stable_dt).min(0.1);
+                self.view_fade = (self.view_fade + dt * 6.0).min(1.0);
+                if self.view_fade < 1.0 {
+                    ctx.request_repaint();
+                }
+                let fade = 1.0 - (1.0 - self.view_fade).powi(3);
+                ui.multiply_opacity(fade);
                 self.central_header(ui, ids, total_seconds);
                 ui.add_space(10.0);
                 if matches!(self.view, View::Library | View::Albums | View::Artists) {

@@ -562,11 +562,20 @@ pub fn primary_button_icon(ui: &mut Ui, icon: Icon, text: &str) -> Response {
     } else {
         theme::c().accent
     };
+    let press = ui.ctx().animate_bool_with_time(
+        ui.id().with(("press", text)),
+        response.is_pointer_button_down_on(),
+        0.08,
+    );
+    let paint_rect = Rect::from_center_size(
+        rect.center(),
+        rect.size() * (1.0 - 0.025 * press),
+    );
     ui.painter()
-        .rect_filled(rect, CornerRadius::same(10), fill);
+        .rect_filled(paint_rect, CornerRadius::same(10), fill);
     paint_icon_label(
         ui,
-        rect,
+        paint_rect,
         icon,
         text,
         theme::c().on_accent,
@@ -582,20 +591,29 @@ pub fn primary_button_icon(ui: &mut Ui, icon: Icon, text: &str) -> Response {
 pub fn secondary_button_icon(ui: &mut Ui, icon: Icon, text: &str) -> Response {
     let (rect, response) = ui.allocate_exact_size(Vec2::new(92.0, 38.0), Sense::click());
     let hovered = response.hovered();
+    let press = ui.ctx().animate_bool_with_time(
+        ui.id().with(("press", text)),
+        response.is_pointer_button_down_on(),
+        0.08,
+    );
+    let paint_rect = Rect::from_center_size(
+        rect.center(),
+        rect.size() * (1.0 - 0.025 * press),
+    );
     ui.painter().rect_filled(
-        rect,
+        paint_rect,
         CornerRadius::same(10),
         if hovered { theme::c().hover } else { theme::c().card },
     );
     ui.painter().rect_stroke(
-        rect,
+        paint_rect,
         CornerRadius::same(10),
         Stroke::new(1.0_f32, theme::c().border),
         egui::StrokeKind::Inside,
     );
     paint_icon_label(
         ui,
-        rect,
+        paint_rect,
         icon,
         text,
         theme::c().text,
@@ -617,11 +635,20 @@ pub fn primary_button_full_icon(ui: &mut Ui, icon: Icon, text: &str) -> Response
     } else {
         theme::c().accent
     };
+    let press = ui.ctx().animate_bool_with_time(
+        ui.id().with(("press", text)),
+        response.is_pointer_button_down_on(),
+        0.08,
+    );
+    let paint_rect = Rect::from_center_size(
+        rect.center(),
+        rect.size() * (1.0 - 0.025 * press),
+    );
     ui.painter()
-        .rect_filled(rect, CornerRadius::same(10), fill);
+        .rect_filled(paint_rect, CornerRadius::same(10), fill);
     paint_icon_label(
         ui,
-        rect,
+        paint_rect,
         icon,
         text,
         theme::c().on_accent,

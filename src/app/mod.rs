@@ -193,6 +193,8 @@ pub struct RPlayerApp {
     audio: Option<AudioEngine>,
     eq: Arc<EqShared>,
     view: View,
+    /// 0..1 fade-in progress after a view switch.
+    view_fade: f32,
     search: String,
     sort: SortState,
     selected: Option<u64>,
@@ -331,6 +333,7 @@ impl RPlayerApp {
             audio,
             eq,
             view: View::Library,
+            view_fade: 1.0,
             search: String::new(),
             sort: SortState::default(),
             selected: None,
