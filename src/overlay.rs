@@ -143,36 +143,38 @@ pub fn show_lyrics(
                 let capsule = ui.max_rect();
                 let dark = theme::c().dark;
                 let key_mode = snapshot.lyrics_opacity <= 0.001;
-                let hover = key_mode
-                    && crate::platform::cursor_in_window("RPlayer 桌面歌词");
-                let window_mode = if key_mode {
-                    if hover { 1 } else { 0 }
-                } else {
-                    2
-                };
-                set_lyrics_window_mode(window_mode);
+                let hover = crate::platform::cursor_in_window("RPlayer 桌面歌词");
                 let panel_alpha = if key_mode {
-                    if hover { 1.0 } else { 0.0 }
+                    if hover { 0.16 } else { 0.0 }
                 } else {
                     snapshot.lyrics_opacity.clamp(0.0, 1.0)
                 };
                 let text_alpha = snapshot.lyrics_text_opacity.clamp(0.0, 1.0);
-                // When the whole layered window is at 16% for the hover hint,
-                // repeat text passes so the lyrics remain legible.
-                let text_passes = if key_mode && hover { 6 } else { 1 };
-                if key_mode && !hover {
-                    // Must match `set_window_color_key` (COLORREF 0x00030201).
-                    ui.painter().rect_filled(
-                        capsule.expand(16.0),
-                        CornerRadius::ZERO,
-                        Color32::from_rgb(1, 2, 3),
-                    );
-                } else {
-                    ui.painter().rect_filled(
-                        capsule,
-                        CornerRadius::ZERO,
-                        with_alpha(theme::c().panel, panel_alpha),
-                    );
+                // The lyric window itself is always color-key transparent; a
+                // separate native backdrop provides frosted-glass opacity and
+                // never affects text alpha.
+                set_lyrics_window_mode(0);
+                let outer = ctx
+                    .input(|input| input.viewport().outer_rect)
+                    .unwrap_or(capsule);
+                let panel_color = theme::c().panel;
+                crate::platform::update_lyrics_backdrop(
+                    "RPlayer 桌面歌词",
+                    (
+                        outer.min.x as i32,
+                        outer.min.y as i32,
+                        outer.width() as i32,
+                        outer.height() as i32,
+                    ),
+                    panel_alpha,
+                    (panel_color.r(), panel_color.g(), panel_color.b()),
+                );
+                ui.painter().rect_filled(
+                    capsule.expand(16.0),
+                    CornerRadius::ZERO,
+                    Color32::from_rgb(1, 2, 3),
+                );
+                if panel_alpha > 0.001 {
                     ui.painter().rect_stroke(
                         capsule.shrink(1.0),
                         CornerRadius::ZERO,
@@ -190,6 +192,7 @@ pub fn show_lyrics(
                         egui::StrokeKind::Inside,
                     );
                 }
+                let text_passes = 1;
 
                 let shadow = if dark {
                     theme::black_alpha(0.85)

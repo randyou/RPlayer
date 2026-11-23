@@ -509,6 +509,225 @@ pub fn cursor_in_window(title: &str) -> bool {
         && point.y < rect.bottom
 }
 
+/// Frosted-glass backdrop behind the lyric text window. Keeping it in a
+/// separate native window means panel opacity never affects text opacity.
+#[cfg(target_os = "windows")]
+pub fn update_lyrics_backdrop(
+    title: &str,
+    rect: (i32, i32, i32, i32),
+    alpha: f32,
+    rgb: (u8, u8, u8),
+) {
+    use std::sync::atomic::{AtomicIsize, Ordering};
+
+    #[link(name = "user32")]
+    extern "system" {
+        fn FindWindowW(class_name: *const u16, window_name: *const u16) -> isize;
+        fn GetModuleHandleW(name: *const u16) -> isize;
+        fn RegisterClassW(class: *const BackdropClass) -> u16;
+        fn CreateWindowExW(
+            ex_style: u32,
+            class_name: *const u16,
+            window_name: *const u16,
+            style: u32,
+            x: i32,
+            y: i32,
+            w: i32,
+            h: i32,
+            parent: isize,
+            menu: isize,
+            instance: isize,
+            param: *mut std::ffi::c_void,
+        ) -> isize;
+        fn DefWindowProcW(hwnd: isize, msg: u32, wp: usize, lp: isize) -> isize;
+        fn SetWindowPos(
+            hwnd: isize,
+            after: isize,
+            x: i32,
+            y: i32,
+            cx: i32,
+            cy: i32,
+            flags: u32,
+        ) -> i32;
+        fn ShowWindow(hwnd: isize, cmd: i32) -> i32;
+        fn SetLayeredWindowAttributes(
+            hwnd: isize,
+            color_key: u32,
+            alpha: u8,
+            flags: u32,
+        ) -> i32;
+        fn BeginPaint(hwnd: isize, paint: *mut PaintStruct) -> isize;
+        fn EndPaint(hwnd: isize, paint: *const PaintStruct) -> i32;
+        fn FillRect(hdc: isize, rect: *const RectI, brush: isize) -> i32;
+        fn GetClientRect(hwnd: isize, rect: *mut RectI) -> i32;
+        fn InvalidateRect(hwnd: isize, rect: *const RectI, erase: i32) -> i32;
+    }
+
+    #[link(name = "gdi32")]
+    extern "system" {
+        fn CreateSolidBrush(color: u32) -> isize;
+        fn DeleteObject(object: isize) -> i32;
+    }
+
+    #[repr(C)]
+    struct RectI {
+        left: i32,
+        top: i32,
+        right: i32,
+        bottom: i32,
+    }
+    #[repr(C)]
+    struct PaintStruct {
+        hdc: isize,
+        f_erase: i32,
+        rc_paint: RectI,
+        f_restore: i32,
+        f_inc_update: i32,
+        reserved: [u8; 32],
+    }
+
+    #[repr(C)]
+    struct BackdropClass {
+        style: u32,
+        wnd_proc: Option<unsafe extern "system" fn(isize, u32, usize, isize) -> isize>,
+        cls_extra: i32,
+        wnd_extra: i32,
+        instance: isize,
+        icon: isize,
+        cursor: isize,
+        background: isize,
+        menu_name: *const u16,
+        class_name: *const u16,
+    }
+    #[repr(C)]
+    struct AccentPolicy {
+        state: i32,
+        flags: i32,
+        gradient_color: u32,
+        animation_id: i32,
+    }
+    #[repr(C)]
+    struct CompositionData {
+        attribute: i32,
+        data: *mut std::ffi::c_void,
+        size: usize,
+    }
+
+    static BACKDROP_COLOR: std::sync::atomic::AtomicU32 =
+        std::sync::atomic::AtomicU32::new(0x00F2_F2F2);
+
+    unsafe extern "system" fn proc(
+        hwnd: isize,
+        msg: u32,
+        wp: usize,
+        lp: isize,
+    ) -> isize {
+        if msg == 0x000F {
+            // WM_PAINT: fill with the current panel tint. Layered alpha then
+            // blends the solid tint with the desktop so content behind shows.
+            let mut paint: PaintStruct = std::mem::zeroed();
+            let hdc = BeginPaint(hwnd, &mut paint);
+            let mut rect: RectI = std::mem::zeroed();
+            GetClientRect(hwnd, &mut rect);
+            let brush = CreateSolidBrush(BACKDROP_COLOR.load(Ordering::SeqCst));
+            if brush != 0 {
+                FillRect(hdc, &rect, brush);
+                DeleteObject(brush);
+            }
+            EndPaint(hwnd, &paint);
+            return 0;
+        }
+        DefWindowProcW(hwnd, msg, wp, lp)
+    }
+
+    static BACKDROP: AtomicIsize = AtomicIsize::new(0);
+    static REGISTERED: AtomicIsize = AtomicIsize::new(0);
+
+    let class_name = "RPlayerLyricBackdrop\0".encode_utf16().collect::<Vec<_>>();
+    let mut hwnd = BACKDROP.load(Ordering::SeqCst);
+    if hwnd == 0 {
+        unsafe {
+            let instance = GetModuleHandleW(std::ptr::null());
+            if REGISTERED.swap(1, Ordering::SeqCst) == 0 {
+                let class = BackdropClass {
+                    style: 0,
+                    wnd_proc: Some(proc),
+                    cls_extra: 0,
+                    wnd_extra: 0,
+                    instance,
+                    icon: 0,
+                    cursor: 0,
+                    background: CreateSolidBrush(0x00F2_F2F2),
+                    menu_name: std::ptr::null(),
+                    class_name: class_name.as_ptr(),
+                };
+                RegisterClassW(&class);
+            }
+            hwnd = CreateWindowExW(
+                0x0008_0000 | 0x0000_0020 | 0x0000_0080 | 0x0000_0008, // LAYERED|TRANSPARENT|TOOLWINDOW|NOACTIVATE
+                class_name.as_ptr(),
+                std::ptr::null(),
+                0x8000_0000, // WS_POPUP
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                instance,
+                std::ptr::null_mut(),
+            );
+            if hwnd == 0 {
+                return;
+            }
+            SetLayeredWindowAttributes(hwnd, 0, 255, 0x0000_0002);
+            BACKDROP.store(hwnd, Ordering::SeqCst);
+        }
+    }
+    if hwnd == 0 {
+        return;
+    }
+    let wide: Vec<u16> = title.encode_utf16().chain(std::iter::once(0)).collect();
+    let owner = unsafe { FindWindowW(std::ptr::null(), wide.as_ptr()) };
+    if owner == 0 {
+        return;
+    }
+    if alpha <= 0.001 {
+        unsafe {
+            ShowWindow(hwnd, 0);
+        }
+        return;
+    }
+    unsafe {
+        SetWindowPos(
+            hwnd,
+            owner,
+            rect.0,
+            rect.1,
+            rect.2,
+            rect.3,
+            0x0010 | 0x0040, // NOACTIVATE | SHOWWINDOW
+        );
+        ShowWindow(hwnd, 4); // SW_SHOWNOACTIVATE
+        let a = (alpha.clamp(0.0, 1.0) * 255.0) as u8;
+        BACKDROP_COLOR.store(
+            ((rgb.2 as u32) << 16) | ((rgb.1 as u32) << 8) | rgb.0 as u32,
+            Ordering::SeqCst,
+        );
+        SetLayeredWindowAttributes(hwnd, 0, a, 0x0000_0002);
+        InvalidateRect(hwnd, std::ptr::null(), 1);
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn update_lyrics_backdrop(
+    _title: &str,
+    _rect: (i32, i32, i32, i32),
+    _alpha: f32,
+    _rgb: (u8, u8, u8),
+) {
+}
+
 #[cfg(not(target_os = "windows"))]
 pub fn cursor_in_window(_title: &str) -> bool {
     false

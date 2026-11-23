@@ -1613,7 +1613,13 @@ impl RPlayerApp {
         } else if self.lyrics_viewport_active {
             self.lyrics_viewport_active = false;
                     self.lyrics_key_mode = false;
-            ctx.send_viewport_cmd_to(overlay::lyrics_viewport(), ViewportCommand::Close);
+            crate::platform::update_lyrics_backdrop(
+                        "RPlayer 桌面歌词",
+                        (0, 0, 0, 0),
+                        0.0,
+                        (0, 0, 0),
+                    );
+                    ctx.send_viewport_cmd_to(overlay::lyrics_viewport(), ViewportCommand::Close);
         }
 
         if self.mini_open {
@@ -1818,7 +1824,13 @@ impl RPlayerApp {
             self.lyrics_viewport_active = false;
                     self.lyrics_key_mode = false;
             self.lyrics_region = false;
-            ctx.send_viewport_cmd_to(overlay::lyrics_viewport(), ViewportCommand::Close);
+            crate::platform::update_lyrics_backdrop(
+                        "RPlayer 桌面歌词",
+                        (0, 0, 0, 0),
+                        0.0,
+                        (0, 0, 0),
+                    );
+                    ctx.send_viewport_cmd_to(overlay::lyrics_viewport(), ViewportCommand::Close);
         }
         self.persist();
     }
