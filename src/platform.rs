@@ -2,6 +2,44 @@
 
 pub mod media;
 pub mod smtc_client;
+
+/// Creates the Start Menu shortcut carrying `System.AppUserModel.ID` on first
+/// run. Windows media controls use that shortcut to resolve the app's display
+/// name instead of "Unknown app".
+#[cfg(target_os = "windows")]
+pub fn ensure_aumid_shortcut() {
+    use std::os::windows::process::CommandExt;
+    use std::process::Command;
+
+    let Ok(exe) = std::env::current_exe() else {
+        return;
+    };
+    let script = exe.with_file_name("register-aumid.ps1");
+    if !script.is_file() {
+        return;
+    }
+    let Ok(appdata) = std::env::var("APPDATA") else {
+        return;
+    };
+    let shortcut = std::path::PathBuf::from(appdata)
+        .join("Microsoft\\Windows\\Start Menu\\Programs\\RPlayer.lnk");
+    if shortcut.is_file() {
+        return;
+    }
+    let mut command = Command::new("pwsh");
+    command
+        .args([
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            script.to_string_lossy().as_ref(),
+            "-Target",
+            exe.to_string_lossy().as_ref(),
+        ])
+        .creation_flags(0x0800_0000);
+    let _ = command.spawn();
+}
 #[cfg(target_os = "windows")]
 pub mod tray;
 

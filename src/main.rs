@@ -47,6 +47,9 @@ fn main() -> eframe::Result<()> {
         ..Default::default()
     };
 
+    #[cfg(target_os = "windows")]
+    platform::ensure_aumid_shortcut();
+
     eframe::run_native(
         "RPlayer",
         options,
