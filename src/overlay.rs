@@ -108,6 +108,7 @@ pub fn show_lyrics(
             return;
         }
 
+        crate::platform::set_window_color_key("RPlayer 桌面歌词", true);
         let snapshot = state.lock().map(|state| state.clone()).unwrap_or_default();
         let mut close = false;
         egui::CentralPanel::default()
@@ -125,12 +126,30 @@ pub fn show_lyrics(
                 };
                 let text_alpha = snapshot.lyrics_text_opacity.clamp(0.0, 1.0);
                 let text_passes = 1;
+                // Key-color fill makes the text window itself transparent while
+                // the independent UpdateLayeredWindow panel sits behind it.
+                ui.painter().rect_filled(
+                    capsule.expand(16.0),
+                    CornerRadius::ZERO,
+                    Color32::from_rgb(1, 2, 3),
+                );
+                let outer = ctx
+                    .input(|input| input.viewport().outer_rect)
+                    .unwrap_or(capsule);
+                let panel_color = theme::c().panel;
+                crate::platform::update_lyrics_panel(
+                    "RPlayer 桌面歌词",
+                    (
+                        outer.min.x as i32,
+                        outer.min.y as i32,
+                        outer.width() as i32,
+                        outer.height() as i32,
+                    ),
+                    panel_alpha,
+                    (panel_color.r(), panel_color.g(), panel_color.b()),
+                    18.0,
+                );
                 if panel_alpha > 0.001 {
-                    ui.painter().rect_filled(
-                        capsule,
-                        CornerRadius::same(18),
-                        with_alpha(theme::c().panel, panel_alpha),
-                    );
                     ui.painter().rect_stroke(
                         capsule.shrink(1.0),
                         CornerRadius::same(18),

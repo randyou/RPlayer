@@ -529,3 +529,185 @@ pub fn set_window_alpha(_title: &str, _opacity: f32) -> bool {
 
 #[cfg(not(target_os = "windows"))]
 pub fn apply_titlebar(_dark: bool) {}
+
+/// Independent per-pixel-alpha panel window behind the lyric text window.
+/// `UpdateLayeredWindow` does not depend on the GL/WGPU swapchain alpha, so
+/// panel opacity and text opacity are fully independent.
+#[cfg(target_os = "windows")]
+pub fn update_lyrics_panel(
+    title: &str,
+    rect: (i32, i32, i32, i32),
+    alpha: f32,
+    rgb: (u8, u8, u8),
+    radius: f32,
+) {
+    use std::sync::atomic::{AtomicIsize, Ordering};
+
+    #[link(name = "user32")]
+    extern "system" {
+        fn FindWindowW(class_name: *const u16, window_name: *const u16) -> isize;
+        fn GetModuleHandleW(name: *const u16) -> isize;
+        fn RegisterClassW(class: *const PanelClass) -> u16;
+        fn CreateWindowExW(
+            ex_style: u32, class_name: *const u16, window_name: *const u16,
+            style: u32, x: i32, y: i32, w: i32, h: i32,
+            parent: isize, menu: isize, instance: isize,
+            param: *mut std::ffi::c_void,
+        ) -> isize;
+        fn DefWindowProcW(hwnd: isize, msg: u32, wp: usize, lp: isize) -> isize;
+        fn SetWindowPos(hwnd: isize, after: isize, x: i32, y: i32, cx: i32, cy: i32, flags: u32) -> i32;
+        fn ShowWindow(hwnd: isize, cmd: i32) -> i32;
+        fn GetDC(hwnd: isize) -> isize;
+        fn ReleaseDC(hwnd: isize, dc: isize) -> i32;
+        fn UpdateLayeredWindow(
+            hwnd: isize, screen: isize, dst: *const PointI, size: *const SizeI,
+            src: isize, src_pos: *const PointI, color_key: u32,
+            blend: *const Blend, flags: u32,
+        ) -> i32;
+    }
+
+    #[link(name = "gdi32")]
+    extern "system" {
+        fn CreateCompatibleDC(dc: isize) -> isize;
+        fn DeleteDC(dc: isize) -> i32;
+        fn CreateDIBSection(
+            dc: isize, info: *const BitmapInfo, usage: u32,
+            bits: *mut *mut std::ffi::c_void, section: isize, offset: u32,
+        ) -> isize;
+        fn SelectObject(dc: isize, object: isize) -> isize;
+        fn DeleteObject(object: isize) -> i32;
+    }
+
+    #[repr(C)]
+    struct PanelClass {
+        style: u32,
+        wnd_proc: Option<unsafe extern "system" fn(isize, u32, usize, isize) -> isize>,
+        cls_extra: i32, wnd_extra: i32, instance: isize,
+        icon: isize, cursor: isize, background: isize,
+        menu_name: *const u16, class_name: *const u16,
+    }
+    #[repr(C)]
+    struct PointI { x: i32, y: i32 }
+    #[repr(C)]
+    struct SizeI { cx: i32, cy: i32 }
+    #[repr(C)]
+    struct Blend { blend_op: u8, blend_flags: u8, alpha: u8, format: u8 }
+    #[repr(C)]
+    struct BitmapInfoHeader {
+        size: u32, width: i32, height: i32, planes: u16, bit_count: u16,
+        compression: u32, size_image: u32, x_pels: i32, y_pels: i32,
+        clr_used: u32, clr_important: u32,
+    }
+    #[repr(C)]
+    struct BitmapInfo { header: BitmapInfoHeader, colors: [u32; 3] }
+
+    unsafe extern "system" fn proc(
+        hwnd: isize, msg: u32, wp: usize, lp: isize,
+    ) -> isize {
+        DefWindowProcW(hwnd, msg, wp, lp)
+    }
+
+    static PANEL: AtomicIsize = AtomicIsize::new(0);
+    static REGISTERED: AtomicIsize = AtomicIsize::new(0);
+    let class_name: Vec<u16> = "RPlayerLyricPanel\0".encode_utf16().collect();
+    let mut hwnd = PANEL.load(Ordering::SeqCst);
+    if hwnd == 0 {
+        unsafe {
+            let instance = GetModuleHandleW(std::ptr::null());
+            if REGISTERED.swap(1, Ordering::SeqCst) == 0 {
+                let class = PanelClass {
+                    style: 0, wnd_proc: Some(proc), cls_extra: 0, wnd_extra: 0,
+                    instance, icon: 0, cursor: 0, background: 0,
+                    menu_name: std::ptr::null(), class_name: class_name.as_ptr(),
+                };
+                RegisterClassW(&class);
+            }
+            hwnd = CreateWindowExW(
+                0x0008_0000 | 0x0000_0020 | 0x0000_0080 | 0x0000_0008,
+                class_name.as_ptr(), std::ptr::null(), 0x8000_0000,
+                0, 0, 0, 0, 0, 0, instance, std::ptr::null_mut(),
+            );
+            if hwnd == 0 { return; }
+            PANEL.store(hwnd, Ordering::SeqCst);
+        }
+    }
+    let _ = std::fs::write(
+        std::env::temp_dir().join("rplayer-panel.log"),
+        format!("alpha={alpha} rect={rect:?}\n"),
+    );
+    if alpha <= 0.001 {
+        unsafe { ShowWindow(hwnd, 0); }
+        return;
+    }
+    let wide: Vec<u16> = title.encode_utf16().chain(std::iter::once(0)).collect();
+    let owner = unsafe { FindWindowW(std::ptr::null(), wide.as_ptr()) };
+    if owner == 0 { return; }
+    let w = rect.2.max(1);
+    let h = rect.3.max(1);
+    let a = (alpha.clamp(0.0, 1.0) * 255.0) as u32;
+    let info = BitmapInfo {
+        header: BitmapInfoHeader {
+            size: std::mem::size_of::<BitmapInfoHeader>() as u32,
+            width: w, height: -h, planes: 1, bit_count: 32,
+            compression: 0, size_image: 0, x_pels: 0, y_pels: 0,
+            clr_used: 0, clr_important: 0,
+        },
+        colors: [0; 3],
+    };
+    let screen = unsafe { GetDC(0) };
+    let mem = unsafe { CreateCompatibleDC(screen) };
+    let mut bits: *mut std::ffi::c_void = std::ptr::null_mut();
+    let bitmap = unsafe {
+        CreateDIBSection(mem, &info, 0, &mut bits, 0, 0)
+    };
+    if bitmap == 0 || bits.is_null() {
+        unsafe { DeleteDC(mem); ReleaseDC(0, screen); }
+        return;
+    }
+    let old = unsafe { SelectObject(mem, bitmap) };
+    let pixels = unsafe { std::slice::from_raw_parts_mut(bits as *mut u32, (w * h) as usize) };
+    let r = rgb.0 as u32;
+    let g = rgb.1 as u32;
+    let b = rgb.2 as u32;
+    let radius = radius.max(0.0);
+    for y in 0..h {
+        for x in 0..w {
+            let fx = x as f32;
+            let fy = y as f32;
+            let inside = if fx < radius && fy < radius {
+                let dx = radius - fx; let dy = radius - fy;
+                dx * dx + dy * dy <= radius * radius
+            } else if fx >= w as f32 - radius && fy < radius {
+                let dx = fx - (w as f32 - radius); let dy = radius - fy;
+                dx * dx + dy * dy <= radius * radius
+            } else if fx < radius && fy >= h as f32 - radius {
+                let dx = radius - fx; let dy = fy - (h as f32 - radius);
+                dx * dx + dy * dy <= radius * radius
+            } else if fx >= w as f32 - radius && fy >= h as f32 - radius {
+                let dx = fx - (w as f32 - radius); let dy = fy - (h as f32 - radius);
+                dx * dx + dy * dy <= radius * radius
+            } else { true };
+            let aa = if inside { a } else { 0 };
+            pixels[(y * w + x) as usize] = (aa << 24)
+                | (((r * aa) / 255) << 16)
+                | (((g * aa) / 255) << 8)
+                | ((b * aa) / 255);
+        }
+    }
+    let dst = PointI { x: rect.0, y: rect.1 };
+    let size = SizeI { cx: w, cy: h };
+    let src_pos = PointI { x: 0, y: 0 };
+    let blend = Blend { blend_op: 0, blend_flags: 0, alpha: 255, format: 1 };
+    unsafe {
+        SetWindowPos(hwnd, owner, rect.0, rect.1, w, h, 0x0010 | 0x0040);
+        ShowWindow(hwnd, 4);
+        UpdateLayeredWindow(hwnd, screen, &dst, &size, mem, &src_pos, 0, &blend, 2);
+        SelectObject(mem, old);
+        DeleteObject(bitmap);
+        DeleteDC(mem);
+        ReleaseDC(0, screen);
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn update_lyrics_panel(_title: &str, _rect: (i32, i32, i32, i32), _alpha: f32, _rgb: (u8, u8, u8), _radius: f32) {}

@@ -1,6 +1,6 @@
 [package]
 name = "rplayer"
-version = "0.7.1"
+version = "0.8.0"
 edition = "2021"
 rust-version = "1.85"
 description = "RPlayer - a fast, local-first desktop music player"
@@ -14,7 +14,7 @@ egui = "0.31.1"
 eframe = { version = "0.31.1", default-features = false, features = [
     "accesskit",
     "default_fonts",
-    "wgpu",
+    "glow",
     "wayland",
     "x11",
 ] }
@@ -53,6 +53,3 @@ debug = false
 lto = "off"
 codegen-units = 16
 strip = true
-
-[patch.crates-io]
-egui-wgpu = { path = "vendor/egui-wgpu" }
