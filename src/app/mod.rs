@@ -4,6 +4,7 @@ mod browse;
 mod command_palette;
 mod dialogs;
 mod equalizer;
+mod health;
 mod library_view;
 mod now_playing;
 mod now_rail;
@@ -145,6 +146,9 @@ pub struct RPlayerApp {
     album_focus: Option<String>,
     artist_focus: Option<String>,
     smart_builder: Option<smart::SmartDraft>,
+    health_report: Option<crate::health::HealthReport>,
+    health_rx: Option<Receiver<crate::health::HealthReport>>,
+    health_checking: bool,
     audio: Option<AudioEngine>,
     eq: Arc<EqShared>,
     view: View,
@@ -273,6 +277,9 @@ impl RPlayerApp {
             album_focus: None,
             artist_focus: None,
             smart_builder: None,
+            health_report: None,
+            health_rx: None,
+            health_checking: false,
             audio,
             eq,
             view: View::Library,
@@ -2440,6 +2447,7 @@ impl eframe::App for RPlayerApp {
         self.poll_audio(ctx);
         self.poll_stats();
         self.poll_thumbnails(ctx);
+        self.poll_health();
         self.poll_lyrics_fetch();
         self.poll_cover_fetch(ctx);
         self.poll_media_keys(ctx);
@@ -2482,6 +2490,7 @@ impl eframe::App for RPlayerApp {
             self.equalizer_window(ctx);
             self.settings_window(ctx);
             self.smart_builder_window(ctx);
+            self.health_window(ctx);
             self.render_dialog(ctx);
             self.render_toast(ctx);
             self.render_drop_overlay(ctx);
@@ -2505,6 +2514,7 @@ impl eframe::App for RPlayerApp {
         self.equalizer_window(ctx);
         self.settings_window(ctx);
         self.smart_builder_window(ctx);
+        self.health_window(ctx);
         self.render_dialog(ctx);
         self.render_toast(ctx);
         self.render_drop_overlay(ctx);

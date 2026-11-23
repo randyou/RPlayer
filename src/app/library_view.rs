@@ -903,6 +903,12 @@ impl RPlayerApp {
             {
                 self.start_scan();
             }
+            if widgets::secondary_button(ui, if self.health_checking { "检查中…" } else { "检查曲库" })
+                .clicked()
+                && !self.health_checking
+            {
+                self.start_health_check();
+            }
             if self.scanning {
                 ui.label(
                     RichText::new(format!("正在扫描 {}/{}", self.scan_done, self.scan_total))
