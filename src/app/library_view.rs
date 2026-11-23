@@ -907,6 +907,12 @@ impl RPlayerApp {
                         }
 
                         ui.separator();
+                        if ui.button("编辑歌词…").clicked() {
+                            self.current = Some(id);
+                            self.load_lyrics_for(&track, id);
+                            super::lyrics_edit::open(self);
+                            ui.close_menu();
+                        }
                         if ui.button("重新匹配歌词…").clicked() {
                             self.open_lyrics_match(id);
                             ui.close_menu();

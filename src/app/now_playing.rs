@@ -339,6 +339,9 @@ impl RPlayerApp {
             {
                 if let Some(id) = self.current { self.open_lyrics_match(id); }
             }
+            if widgets::icon_button(ui, Icon::Edit, 22.0, "编辑歌词文字与时间").clicked() {
+                super::lyrics_edit::open(self);
+            }
             if self.lyrics_fetching == Some(track.id) {
                 ui.label(
                     RichText::new("正在下载…")
