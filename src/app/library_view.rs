@@ -179,6 +179,7 @@ impl RPlayerApp {
                     .corner_radius(CornerRadius::same(14))
                     .inner_margin(Margin::symmetric(0, 0))
                     .show(ui, |ui| {
+                        ui.spacing_mut().item_spacing.y = 0.0;
                         let columns = Columns::for_width(ui.available_width());
                         self.table_header(ui, columns);
 
@@ -592,8 +593,13 @@ impl RPlayerApp {
 
                     let painter = ui.painter();
                     let pill = rect;
+                    let row_radius = if index == 0 {
+                        CornerRadius { nw: 0, ne: 0, sw: 9, se: 9 }
+                    } else {
+                        CornerRadius::same(9)
+                    };
                     if current {
-                        painter.rect_filled(pill, CornerRadius::same(9), theme::accent_alpha(0.08));
+                        painter.rect_filled(pill, row_radius, theme::accent_alpha(0.08));
                         painter.rect_filled(
                             Rect::from_min_size(
                                 Pos2::new(pill.left() + 1.0, pill.center().y - 9.0),
@@ -603,11 +609,11 @@ impl RPlayerApp {
                             theme::c().accent,
                         );
                     } else if checked {
-                        painter.rect_filled(pill, CornerRadius::same(9), theme::accent_alpha(0.05));
+                        painter.rect_filled(pill, row_radius, theme::accent_alpha(0.05));
                     } else if selected {
-                        painter.rect_filled(pill, CornerRadius::same(9), theme::c().hover);
+                        painter.rect_filled(pill, row_radius, theme::c().hover);
                     } else if hovered {
-                        painter.rect_filled(pill, CornerRadius::same(9), theme::c().card);
+                        painter.rect_filled(pill, row_radius, theme::c().card);
                     }
 
                     let index_rect = columns.index_rect(rect);
