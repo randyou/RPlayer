@@ -3,7 +3,7 @@
 
 use egui::{
     Align2, Button, Color32, CornerRadius, CursorIcon, FontId, Frame, Margin, Pos2, Rect, Response,
-    RichText, Sense, Stroke, TextEdit, Ui, Vec2,
+    RichText, Sense, Stroke, TextEdit, Ui, Vec2, WidgetInfo, WidgetType,
 };
 
 use crate::theme;
@@ -22,9 +22,11 @@ pub fn icon_button(ui: &mut Ui, icon: Icon, size: f32, tooltip: &str) -> Respons
         icon,
         if hovered { theme::c().text } else { theme::c().muted },
     );
-    response
+    let response = response
         .on_hover_cursor(CursorIcon::PointingHand)
-        .on_hover_text(tooltip)
+        .on_hover_text(tooltip);
+    mark(&response, WidgetType::Button, tooltip, None);
+    response
 }
 
 pub fn icon_button_tinted(
@@ -48,9 +50,11 @@ pub fn icon_button_tinted(
         tint
     };
     icons::paint(ui.painter(), rect.shrink(size * 0.27), icon, color);
-    response
+    let response = response
         .on_hover_cursor(CursorIcon::PointingHand)
-        .on_hover_text(tooltip)
+        .on_hover_text(tooltip);
+    mark(&response, WidgetType::Button, tooltip, Some(active));
+    response
 }
 
 pub fn circle_button(
@@ -84,7 +88,7 @@ pub fn play_button(ui: &mut Ui, playing: bool, enabled: bool) -> Response {
     let center = rect.center();
     let radius = size * 0.5;
 
-    if enabled {
+    let response = if enabled {
         // Soft halo behind the primary action.
         ui.painter()
             .circle_filled(center, radius + 5.0, theme::accent_alpha(0.10));
@@ -118,7 +122,14 @@ pub fn play_button(ui: &mut Ui, playing: bool, enabled: bool) -> Response {
             theme::c().faint,
         );
         response
-    }
+    };
+    mark(
+        &response,
+        WidgetType::Button,
+        if playing { "暂停" } else { "播放" },
+        None,
+    );
+    response
 }
 
 pub fn nav_item(
@@ -175,7 +186,9 @@ pub fn nav_item(
         );
     }
 
-    response.on_hover_cursor(CursorIcon::PointingHand)
+    let response = response.on_hover_cursor(CursorIcon::PointingHand);
+    mark(&response, WidgetType::Button, label, Some(selected));
+    response
 }
 
 pub fn playlist_item(ui: &mut Ui, name: &str, selected: bool) -> Response {
@@ -208,7 +221,9 @@ pub fn playlist_item(ui: &mut Ui, name: &str, selected: bool) -> Response {
         FontId::proportional(13.0),
         if selected { theme::c().text } else { theme::c().muted },
     );
-    response.on_hover_cursor(CursorIcon::PointingHand)
+    let response = response.on_hover_cursor(CursorIcon::PointingHand);
+    mark(&response, WidgetType::Button, name, Some(selected));
+    response
 }
 
 pub fn section_label(ui: &mut Ui, text: &str) {
@@ -236,7 +251,9 @@ pub fn search_box(ui: &mut Ui, query: &mut String, hint: &str) -> Response {
                 response = Some(ui.add(edit));
             });
         });
-    response.expect("search box always adds a text edit")
+    let response = response.expect("search box always adds a text edit");
+    response.widget_info(|| WidgetInfo::labeled(WidgetType::TextEdit, true, hint));
+    response
 }
 
 pub fn seek_bar(ui: &mut Ui, position: f64, duration: f64) -> Option<f64> {
@@ -273,6 +290,16 @@ pub fn seek_bar(ui: &mut Ui, position: f64, duration: f64) -> Option<f64> {
     if response.hovered() {
         ui.ctx().set_cursor_icon(CursorIcon::PointingHand);
     }
+    mark(
+        &response,
+        WidgetType::Slider,
+        &format!(
+            "播放进度 {} / {}",
+            crate::model::format_duration(position),
+            crate::model::format_duration(duration)
+        ),
+        None,
+    );
 
     let pointer = response.interact_pointer_pos()?;
     if response.clicked() || response.dragged() {
@@ -341,7 +368,9 @@ pub fn primary_button_full(ui: &mut Ui, text: &str) -> Response {
         FontId::proportional(14.0),
         theme::c().on_accent,
     );
-    response.on_hover_cursor(CursorIcon::PointingHand)
+    let response = response.on_hover_cursor(CursorIcon::PointingHand);
+    mark(&response, WidgetType::Button, text, None);
+    response
 }
 
 pub fn secondary_button(ui: &mut Ui, text: &str) -> Response {
@@ -399,7 +428,13 @@ pub fn rating_stars(ui: &mut Ui, rating: u8, star_size: f32) -> Option<u8> {
         })
     });
     let result = clicked.flatten();
-    response.on_hover_cursor(CursorIcon::PointingHand);
+    let response = response.on_hover_cursor(CursorIcon::PointingHand);
+    mark(
+        &response,
+        WidgetType::Slider,
+        &format!("评分：{rating} / 5"),
+        None,
+    );
     result
 }
 
@@ -424,7 +459,9 @@ pub fn chip(ui: &mut Ui, text: &str, selected: bool) -> Response {
     ))
     .corner_radius(CornerRadius::same(99))
     .min_size(Vec2::new(64.0, 30.0));
-    ui.add(button).on_hover_cursor(CursorIcon::PointingHand)
+    let response = ui.add(button).on_hover_cursor(CursorIcon::PointingHand);
+    mark(&response, WidgetType::Button, text, Some(selected));
+    response
 }
 
 pub fn empty_illustration(ui: &mut Ui, size: f32) {
@@ -463,7 +500,16 @@ pub fn toggle_switch(ui: &mut Ui, on: &mut bool) -> Response {
         8.5,
         theme::c().panel,
     );
-    response.on_hover_cursor(CursorIcon::PointingHand)
+    let response = response.on_hover_cursor(CursorIcon::PointingHand);
+    mark(&response, WidgetType::Checkbox, "开关", Some(*on));
+    response
+}
+
+fn mark(response: &Response, typ: WidgetType, label: &str, selected: Option<bool>) {
+    response.widget_info(|| match selected {
+        Some(selected) => WidgetInfo::selected(typ, true, selected, label),
+        None => WidgetInfo::labeled(typ, true, label),
+    });
 }
 
 pub fn divider(ui: &mut Ui) {

@@ -4,7 +4,7 @@
 use eframe::egui;
 use egui::{
     Align, Align2, CornerRadius, FontId, Frame, Label, Layout, Margin, Pos2, Rect, RichText,
-    ScrollArea, Sense, Stroke, Ui, Vec2,
+    ScrollArea, Sense, Stroke, Ui, Vec2, WidgetInfo, WidgetType,
 };
 
 use super::{Dialog, RPlayerApp, View};
@@ -554,6 +554,15 @@ impl RPlayerApp {
                     let selected = self.selected == Some(id);
                     let checked = self.checked.contains(&id);
                     let hovered = response.hovered();
+                    let row_label = format!("{} — {}", track.title, track.artist);
+                    response.widget_info(move || {
+                        WidgetInfo::selected(
+                            WidgetType::Button,
+                            true,
+                            current || checked,
+                            row_label.clone(),
+                        )
+                    });
 
                     let painter = ui.painter();
                     let pill = rect.shrink2(Vec2::new(0.0, 1.0));

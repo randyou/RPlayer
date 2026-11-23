@@ -12,6 +12,7 @@ anyhow = "1.0"
 dirs = "5.0"
 egui = "0.31.1"
 eframe = { version = "0.31.1", default-features = false, features = [
+    "accesskit",
     "default_fonts",
     "glow",
     "wayland",
