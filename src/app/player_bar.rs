@@ -25,7 +25,7 @@ impl RPlayerApp {
             .show(ctx, |ui| {
                 let available = ui.available_width();
                 let left = (available * 0.30).clamp(230.0, 380.0);
-                let right = 206.0;
+                let right = 252.0;
                 let center = (available - left - right - 28.0).max(300.0);
 
                 ui.horizontal(|ui| {
@@ -52,38 +52,52 @@ impl RPlayerApp {
             });
     }
 
-    fn player_info(&self, ui: &mut Ui) {
+    fn player_info(&mut self, ui: &mut Ui) {
         let cover_size = 56.0;
+        let (cover_rect, cover_response) =
+            ui.allocate_exact_size(Vec2::splat(cover_size), Sense::click());
         if let Some(texture) = self.cover_for_current() {
-            ui.add(
-                egui::Image::new(egui::load::SizedTexture::new(
-                    texture.id(),
-                    Vec2::splat(cover_size),
-                ))
-                .corner_radius(CornerRadius::same(9)),
-            );
+            ui.painter().add(egui::Shape::image(
+                texture.id(),
+                cover_rect,
+                Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
+                Color32::WHITE,
+            ));
         } else {
-            let (rect, _) = ui.allocate_exact_size(Vec2::splat(cover_size), Sense::hover());
             let painter = ui.painter();
-            painter.rect_filled(rect, CornerRadius::same(9), theme::c().card);
+            painter.rect_filled(cover_rect, CornerRadius::same(9), theme::c().card);
             painter.rect_stroke(
-                rect,
+                cover_rect,
                 CornerRadius::same(9),
                 Stroke::new(1.0_f32, theme::c().border_soft),
                 egui::StrokeKind::Inside,
             );
-            icons::paint(painter, rect.shrink(17.0), Icon::Music, theme::c().faint);
+            icons::paint(
+                painter,
+                cover_rect.shrink(17.0),
+                Icon::Music,
+                theme::c().faint,
+            );
+        }
+        if cover_response
+            .on_hover_cursor(egui::CursorIcon::PointingHand)
+            .on_hover_text("打开正在播放")
+            .clicked()
+            && self.current.is_some()
+        {
+            self.expanded = true;
+            self.queue_open = false;
         }
 
         ui.add_space(12.0);
-        let track = self.current.and_then(|id| self.library.track(id));
-        ui.allocate_ui_with_layout(
+        let track = self.current.and_then(|id| self.library.track(id)).cloned();
+        let info = ui.allocate_ui_with_layout(
             Vec2::new((ui.available_width()).max(80.0), 56.0),
             Layout::top_down(Align::LEFT),
             |ui| {
                 ui.set_max_width(ui.available_width());
                 ui.spacing_mut().item_spacing.y = 2.0;
-                match track {
+                match &track {
                     Some(track) => {
                         ui.add(
                             Label::new(
@@ -114,6 +128,16 @@ impl RPlayerApp {
                 }
             },
         );
+        if info
+            .response
+            .interact(Sense::click())
+            .on_hover_cursor(egui::CursorIcon::PointingHand)
+            .clicked()
+            && self.current.is_some()
+        {
+            self.expanded = true;
+            self.queue_open = false;
+        }
     }
 
     fn player_controls(&mut self, ui: &mut Ui, ctx: &egui::Context) {
@@ -201,17 +225,51 @@ impl RPlayerApp {
     fn player_extras(&mut self, ui: &mut Ui) {
         ui.spacing_mut().item_spacing.x = 6.0;
 
+        let rail_ready = Self::rail_available(ui.ctx()) && self.current.is_some();
+        if widgets::icon_button_tinted(
+            ui,
+            Icon::PanelRight,
+            34.0,
+            theme::c().muted,
+            rail_ready && self.now_rail_open,
+            "显示 / 收起正在播放侧栏",
+        )
+        .clicked()
+        {
+            if self.current.is_some() && Self::rail_available(ui.ctx()) {
+                self.now_rail_open = !self.now_rail_open;
+                if self.now_rail_open {
+                    self.rail_queue = false;
+                    self.queue_open = false;
+                }
+            } else {
+                self.toast("窗口再宽一些就能显示播放侧栏", super::ToastKind::Info);
+            }
+        }
+
+        let queue_active = self.queue_open
+            || (rail_ready && self.now_rail_open && self.rail_queue);
         if widgets::icon_button_tinted(
             ui,
             Icon::Queue,
             34.0,
             theme::c().muted,
-            self.queue_open,
+            queue_active,
             "播放队列",
         )
         .clicked()
         {
-            self.queue_open = !self.queue_open;
+            if rail_ready {
+                if self.now_rail_open && self.rail_queue {
+                    self.rail_queue = false;
+                } else {
+                    self.now_rail_open = true;
+                    self.rail_queue = true;
+                    self.queue_open = false;
+                }
+            } else {
+                self.queue_open = !self.queue_open;
+            }
         }
 
         if let Some(volume) = widgets::volume_bar(ui, self.volume) {

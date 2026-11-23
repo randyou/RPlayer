@@ -181,7 +181,7 @@ pub(crate) fn select_from_json(body: &str, duration: f64) -> Option<FetchResult>
     best.map(|(_, result)| result)
 }
 
-fn encode(value: &str) -> String {
+pub(crate) fn encode(value: &str) -> String {
     let mut output = String::new();
     for byte in value.as_bytes() {
         match byte {

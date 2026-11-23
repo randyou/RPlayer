@@ -22,6 +22,10 @@ pub struct AudioEngine {
     eq: std::sync::Arc<EqShared>,
     paused: bool,
     reported_finished: bool,
+    /// When a decoder is opened at an offset, `Sink::get_pos` still counts
+    /// from zero; this offset keeps the UI position honest.
+    position_offset: f64,
+    current_path: Option<std::path::PathBuf>,
 }
 
 impl AudioEngine {
@@ -36,17 +40,49 @@ impl AudioEngine {
             eq,
             paused: false,
             reported_finished: false,
+            position_offset: 0.0,
+            current_path: None,
         })
     }
 
     /// Replaces the current stream with `path`. Format support comes from
     /// Symphonia, so mp3/flac/wav/ogg/m4a/aac all share this path.
     pub fn play_path(&mut self, path: &Path) -> Result<()> {
+        self.play_path_at(path, 0.0)
+    }
+
+    /// Opens a decoder and optionally seeks before playback starts. Seeking
+    /// the decoder is more reliable than seeking a freshly-created sink.
+    pub fn play_path_at(&mut self, path: &Path, start: f64) -> Result<()> {
         let file = File::open(path).with_context(|| format!("open {}", path.display()))?;
         let reader = BufReader::new(file);
-        let decoder = Decoder::new(reader).with_context(|| format!("decode {}", path.display()))?;
+        let mut decoder =
+            Decoder::new(reader).with_context(|| format!("decode {}", path.display()))?;
+        let mut start_offset = 0.0;
+        if start > 0.0 {
+            if decoder
+                .try_seek(Duration::from_secs_f64(start))
+                .is_ok()
+            {
+                start_offset = start;
+            } else {
+                // Some Symphonia streams (notably certain FLAC files) do not
+                // expose a seek index. Decode-and-discard is slower but keeps
+                // session restore and seeking functional.
+                let rate = f64::from(decoder.sample_rate());
+                let channels = f64::from(decoder.channels().max(1));
+                let skip = (start * rate * channels).max(0.0) as u64;
+                for _ in 0..skip {
+                    if decoder.next().is_none() {
+                        break;
+                    }
+                }
+                start_offset = start;
+            }
+        }
 
         self.stop();
+        self.current_path = Some(path.to_path_buf());
         let sink = Sink::try_new(&self.handle).context("create audio sink")?;
         sink.set_volume(self.volume);
         let converted = decoder.convert_samples::<f32>();
@@ -55,6 +91,7 @@ impl AudioEngine {
         self.sink = Some(sink);
         self.paused = false;
         self.reported_finished = false;
+        self.position_offset = start_offset;
         Ok(())
     }
 
@@ -64,6 +101,7 @@ impl AudioEngine {
         }
         self.paused = false;
         self.reported_finished = false;
+        self.position_offset = 0.0;
     }
 
     pub fn toggle_pause(&mut self) {
@@ -122,14 +160,33 @@ impl AudioEngine {
     pub fn position(&self) -> f64 {
         self.sink
             .as_ref()
-            .map(|sink| sink.get_pos().as_secs_f64())
+            .map(|sink| self.position_offset + sink.get_pos().as_secs_f64())
             .unwrap_or(0.0)
     }
 
-    pub fn seek(&self, seconds: f64) {
-        if let Some(sink) = &self.sink {
-            let seconds = seconds.max(0.0);
-            let _ = sink.try_seek(Duration::from_secs_f64(seconds));
+    pub fn seek(&mut self, seconds: f64) {
+        let seconds = seconds.max(0.0);
+        let seek_ok = self
+            .sink
+            .as_ref()
+            .map(|sink| {
+                sink.try_seek(Duration::from_secs_f64(seconds))
+                    .is_ok()
+            })
+            .unwrap_or(false);
+        if seek_ok {
+            // Sink's own position now tracks the requested point.
+            self.position_offset = 0.0;
+            return;
+        }
+        // Reopen the decoder at the requested offset when the source cannot
+        // seek in place. Keeps the old pause state.
+        let Some(path) = self.current_path.clone() else {
+            return;
+        };
+        let paused = self.paused;
+        if self.play_path_at(&path, seconds).is_ok() && paused {
+            self.set_paused(true);
         }
     }
 

@@ -47,6 +47,8 @@ pub enum Icon {
     Expand,
     Settings,
     Download,
+    PanelRight,
+    Refresh,
 }
 
 struct Canvas {
@@ -382,6 +384,30 @@ pub fn paint(painter: &Painter, rect: Rect, icon: Icon, color: Color32) {
             c.line((0.50, 0.18), (0.50, 0.61));
             c.polyline(&[(0.32, 0.46), (0.50, 0.63), (0.68, 0.46)]);
             c.polyline(&[(0.20, 0.72), (0.20, 0.82), (0.80, 0.82), (0.80, 0.72)]);
+        }
+        Icon::Refresh => {
+            c.polyline(&[
+                (0.74, 0.30),
+                (0.54, 0.22),
+                (0.30, 0.28),
+                (0.20, 0.48),
+                (0.27, 0.69),
+                (0.48, 0.78),
+                (0.70, 0.72),
+                (0.82, 0.56),
+            ]);
+            c.polyline(&[(0.72, 0.16), (0.72, 0.33), (0.55, 0.33)]);
+        }
+        Icon::PanelRight => {
+            let frame = Rect::from_min_max(c.p(0.12, 0.18), c.p(0.88, 0.82));
+            c.painter.rect_stroke(
+                frame,
+                side * 0.10,
+                Stroke::new(c.stroke, c.color),
+                egui::StrokeKind::Inside,
+            );
+            c.line((0.62, 0.18), (0.62, 0.82));
+            c.bar(0.62, 0.88, 0.18, 0.82, 0.02);
         }
     }
 }

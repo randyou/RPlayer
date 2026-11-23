@@ -4,7 +4,9 @@ mod dialogs;
 mod equalizer;
 mod library_view;
 mod now_playing;
+mod now_rail;
 mod player_bar;
+mod session;
 mod settings;
 mod sidebar;
 
@@ -21,6 +23,7 @@ use egui::{
 };
 
 use crate::audio::AudioEngine;
+use crate::cover::{self, CoverSource};
 use crate::eq::EqShared;
 use crate::lyrics_fetch::{self, FetchError, FetchResult};
 use crate::model::{self, Library, SortField, SortState, Track};
@@ -107,6 +110,12 @@ struct LyricsFetchEvent {
     result: Result<FetchResult, FetchError>,
 }
 
+struct CoverFetchEvent {
+    track_id: u64,
+    manual: bool,
+    result: Result<crate::cover_fetch::FetchResult, crate::cover_fetch::FetchError>,
+}
+
 pub(super) struct Toast {
     text: String,
     kind: ToastKind,
@@ -132,6 +141,13 @@ pub struct RPlayerApp {
     cover: Option<TextureHandle>,
     cover_for: Option<u64>,
     cover_image: Option<Arc<egui::ColorImage>>,
+    cover_source: Option<CoverSource>,
+    cover_tint: Option<Color32>,
+    cover_tx: Sender<CoverFetchEvent>,
+    cover_rx: Receiver<CoverFetchEvent>,
+    cover_fetching: Option<u64>,
+    cover_started: Option<std::time::Instant>,
+    cover_attempted: HashSet<String>,
     overlay_state: Arc<Mutex<OverlayState>>,
     overlay_commands: Arc<Mutex<Vec<OverlayCommand>>>,
     mini_cache: Arc<Mutex<overlay::MiniCache>>,
@@ -144,6 +160,7 @@ pub struct RPlayerApp {
     mini_viewport_active: bool,
     lyrics: Option<crate::lyrics::Lyrics>,
     lyrics_for: Option<u64>,
+    lyrics_source: Option<String>,
     expanded: bool,
     batch_mode: bool,
     checked: HashSet<u64>,
@@ -167,6 +184,14 @@ pub struct RPlayerApp {
     desktop_lyrics_open: bool,
     mini_open: bool,
     settings_open: bool,
+    now_rail_open: bool,
+    rail_queue: bool,
+    pending_resume: Option<f64>,
+    last_session_save: std::time::Instant,
+    queue_drag: Option<usize>,
+    watch: Option<crate::watch::FolderWatcher>,
+    watch_folders: Vec<PathBuf>,
+    watch_pending: bool,
     lyrics_tx: Sender<LyricsFetchEvent>,
     lyrics_rx: Receiver<LyricsFetchEvent>,
     lyrics_fetching: Option<u64>,
@@ -193,6 +218,7 @@ impl RPlayerApp {
         let volume = library.volume.clamp(0.0, 1.0);
         let desktop_lyrics_open = library.desktop_lyrics;
         let (lyrics_tx, lyrics_rx) = mpsc::channel();
+        let (cover_tx, cover_rx) = mpsc::channel();
         let eq = EqShared::new(library.eq.clone());
         let (audio, audio_error) = match AudioEngine::new(volume, eq.clone()) {
             Ok(engine) => (Some(engine), None),
@@ -218,6 +244,13 @@ impl RPlayerApp {
             cover: None,
             cover_for: None,
             cover_image: None,
+            cover_source: None,
+            cover_tint: None,
+            cover_tx,
+            cover_rx,
+            cover_fetching: None,
+            cover_started: None,
+            cover_attempted: HashSet::new(),
             overlay_state: Arc::new(Mutex::new(OverlayState::default())),
             overlay_commands: Arc::new(Mutex::new(Vec::new())),
             mini_cache: Arc::new(Mutex::new(overlay::MiniCache::default())),
@@ -230,6 +263,7 @@ impl RPlayerApp {
             mini_viewport_active: false,
             lyrics: None,
             lyrics_for: None,
+            lyrics_source: None,
             expanded: false,
             batch_mode: false,
             checked: HashSet::new(),
@@ -253,6 +287,14 @@ impl RPlayerApp {
             desktop_lyrics_open,
             mini_open: false,
             settings_open: false,
+            now_rail_open: true,
+            rail_queue: false,
+            pending_resume: None,
+            last_session_save: std::time::Instant::now(),
+            queue_drag: None,
+            watch: None,
+            watch_folders: Vec::new(),
+            watch_pending: false,
             lyrics_tx,
             lyrics_rx,
             lyrics_fetching: None,
@@ -263,6 +305,10 @@ impl RPlayerApp {
         if let Some(err) = audio_error {
             app.toast(format!("音频输出不可用：{err}"), ToastKind::Error);
         }
+        if let Some(session) = crate::session::load() {
+            app.restore_session(session);
+        }
+        app.sync_watch();
         if !app.library.folders.is_empty() && app.library.tracks.is_empty() {
             app.start_scan();
         }
@@ -272,6 +318,34 @@ impl RPlayerApp {
     // ---------------------------------------------------------------------
     // Scan pipeline
     // ---------------------------------------------------------------------
+
+    fn sync_watch(&mut self) {
+        if self.watch_folders == self.library.folders {
+            return;
+        }
+        self.watch_folders = self.library.folders.clone();
+        self.watch = if self.watch_folders.is_empty() {
+            None
+        } else {
+            Some(crate::watch::start(self.watch_folders.clone()))
+        };
+    }
+
+    fn poll_watch(&mut self) {
+        let changed = self
+            .watch
+            .as_ref()
+            .is_some_and(crate::watch::FolderWatcher::poll_changed);
+        if !changed {
+            return;
+        }
+        if self.scanning {
+            self.watch_pending = true;
+            return;
+        }
+        self.toast("音乐目录有更新，正在刷新…", ToastKind::Info);
+        self.start_scan();
+    }
 
     fn start_scan(&mut self) {
         if self.library.folders.is_empty() {
@@ -362,6 +436,8 @@ impl RPlayerApp {
             self.cover = None;
             self.cover_for = None;
             self.cover_image = None;
+            self.cover_source = None;
+            self.cover_tint = None;
         }
 
         let library = &self.library;
@@ -384,6 +460,10 @@ impl RPlayerApp {
             message.push_str(&format!("，{errors} 个文件无法读取"));
         }
         self.toast(message, ToastKind::Success);
+        if self.watch_pending {
+            self.watch_pending = false;
+            self.start_scan();
+        }
     }
 
     fn add_folder(&mut self, folder: PathBuf) {
@@ -450,6 +530,8 @@ impl RPlayerApp {
             self.cover = None;
             self.cover_for = None;
             self.cover_image = None;
+            self.cover_source = None;
+            self.cover_tint = None;
         }
         if self
             .selected
@@ -556,6 +638,10 @@ impl RPlayerApp {
     }
 
     fn start_current(&mut self, ctx: &egui::Context) -> bool {
+        self.start_current_at(ctx, None)
+    }
+
+    fn start_current_at(&mut self, ctx: &egui::Context, start: Option<f64>) -> bool {
         let Some(id) = self.queue.get(self.queue_index).copied() else {
             return false;
         };
@@ -567,12 +653,25 @@ impl RPlayerApp {
             return false;
         };
 
-        match audio.play_path(&track.path) {
+        let play_result = match start {
+            Some(position) => audio.play_path_at(&track.path, position),
+            None => audio.play_path(&track.path),
+        };
+        match play_result {
             Ok(()) => {
                 self.current = Some(id);
                 self.library.mark_played(id);
-                self.lyrics = crate::lyrics::load(&track.path)
-                    .or_else(|| crate::lyrics::load_cached(id));
+                let local_lyrics = crate::lyrics::load(&track.path);
+                if let Some(lyrics) = local_lyrics {
+                    self.lyrics = Some(lyrics);
+                    self.lyrics_source = Some("本地".to_string());
+                } else if let Some(lyrics) = crate::lyrics::load_cached(id) {
+                    self.lyrics = Some(lyrics);
+                    self.lyrics_source = Some("缓存".to_string());
+                } else {
+                    self.lyrics = None;
+                    self.lyrics_source = None;
+                }
                 self.lyrics_for = Some(id);
                 self.load_cover(ctx, id);
                 self.persist();
@@ -644,6 +743,40 @@ impl RPlayerApp {
         } else {
             None
         }
+    }
+
+    fn reorder_queue(&mut self, from: usize, to: usize) {
+        if from == to || from >= self.queue.len() {
+            return;
+        }
+        let item = self.queue.remove(from);
+        let target = to.min(self.queue.len());
+        self.queue.insert(target, item);
+        if let Some(current) = self.current {
+            if let Some(index) = self.queue.iter().position(|id| *id == current) {
+                self.queue_index = index;
+            }
+        }
+        self.last_session_save = std::time::Instant::now() - std::time::Duration::from_secs(6);
+    }
+
+    fn clear_queue(&mut self) {
+        if let Some(audio) = &mut self.audio {
+            audio.stop();
+        }
+        self.queue.clear();
+        self.queue_index = 0;
+        self.current = None;
+        self.cover = None;
+        self.cover_for = None;
+        self.cover_image = None;
+        self.cover_source = None;
+        self.cover_tint = None;
+        self.lyrics = None;
+        self.lyrics_for = None;
+        self.lyrics_source = None;
+        self.expanded = false;
+        self.queue_open = false;
     }
 
     fn previous_track(&mut self, ctx: &egui::Context) {
@@ -720,29 +853,153 @@ impl RPlayerApp {
         self.cover_for = Some(id);
         self.cover = None;
         self.cover_image = None;
+        self.cover_source = None;
+        self.cover_tint = None;
 
-        let Some(track) = self.library.track(id) else {
+        let Some(track) = self.library.track(id).cloned() else {
             return;
         };
-        let Some(bytes) = model::read_cover(&track.path) else {
+        if let Some(local) = cover::load_local(&track) {
+            self.apply_cover_bytes(ctx, id, &local.bytes, local.source);
             return;
-        };
-        let Ok(image) = image::load_from_memory(&bytes) else {
+        }
+        if self.library.auto_cover {
+            self.request_cover(ctx, id, false);
+        }
+    }
+
+    fn apply_cover_bytes(
+        &mut self,
+        ctx: &egui::Context,
+        id: u64,
+        bytes: &[u8],
+        source: CoverSource,
+    ) {
+        let Ok(image) = image::load_from_memory(bytes) else {
             return;
         };
         let rgba = image.thumbnail(512, 512).to_rgba8();
         let size = [rgba.width() as usize, rgba.height() as usize];
         let color_image = egui::ColorImage::from_rgba_unmultiplied(size, rgba.as_raw());
+        self.cover_tint = Some(average_color(&rgba));
         self.cover_image = Some(Arc::new(color_image.clone()));
         self.cover = Some(ctx.load_texture(
             format!("rplayer-cover-{id}"),
             color_image,
             TextureOptions::LINEAR,
         ));
+        self.cover_source = Some(source);
     }
 
     fn cover_for_current(&self) -> Option<&TextureHandle> {
         self.cover.as_ref()
+    }
+
+    fn request_cover(&mut self, ctx: &egui::Context, id: u64, manual: bool) {
+        if self.cover_fetching == Some(id) {
+            return;
+        }
+        let Some(track) = self.library.track(id).cloned() else {
+            return;
+        };
+        let key = cover::cache_key(&track);
+        if !manual {
+            if self.cover_attempted.contains(&key) || cover::has_recent_miss(&track) {
+                return;
+            }
+        }
+        self.cover_attempted.insert(key);
+        self.cover_fetching = Some(id);
+        self.cover_started = Some(std::time::Instant::now());
+        if manual {
+            self.toast("正在 MusicBrainz 搜索封面…", ToastKind::Info);
+        }
+
+        let sender = self.cover_tx.clone();
+        let ctx = ctx.clone();
+        std::thread::spawn(move || {
+            let result = crate::cover_fetch::fetch(&track);
+            let _ = sender.send(CoverFetchEvent {
+                track_id: id,
+                manual,
+                result,
+            });
+            ctx.request_repaint();
+        });
+    }
+
+    fn poll_cover_fetch(&mut self, ctx: &egui::Context) {
+        if self
+            .cover_started
+            .is_some_and(|started| started.elapsed().as_secs() > 40)
+            && self.cover_fetching.is_some()
+        {
+            self.cover_fetching = None;
+            self.cover_started = None;
+        }
+        loop {
+            let event = match self.cover_rx.try_recv() {
+                Ok(event) => event,
+                Err(TryRecvError::Empty | TryRecvError::Disconnected) => break,
+            };
+            if self.cover_fetching == Some(event.track_id) {
+                self.cover_fetching = None;
+                self.cover_started = None;
+            }
+            match event.result {
+                Ok(result) => {
+                    if let Some(track) = self.library.track(event.track_id).cloned() {
+                        let _ = cover::store_cache(&track, &result.bytes);
+                    }
+                    if self.current == Some(event.track_id) {
+                        self.apply_cover_bytes(
+                            ctx,
+                            event.track_id,
+                            &result.bytes,
+                            CoverSource::Online,
+                        );
+                        if event.manual {
+                            self.toast(
+                                format!(
+                                    "已匹配封面（{}）：{}",
+                                    result.source, result.matched_title
+                                ),
+                                ToastKind::Success,
+                            );
+                        }
+                    }
+                }
+                Err(error) => {
+                    if let Some(track) = self.library.track(event.track_id) {
+                        if matches!(error, crate::cover_fetch::FetchError::NotFound) {
+                            cover::mark_miss(track);
+                        }
+                    }
+                    if event.manual {
+                        self.toast(format!("封面匹配失败：{error}"), ToastKind::Error);
+                    }
+                }
+            }
+        }
+    }
+
+    fn refresh_cover(&mut self, ctx: &egui::Context) {
+        let Some(id) = self.current else {
+            return;
+        };
+        let Some(track) = self.library.track(id).cloned() else {
+            return;
+        };
+        let key = cover::cache_key(&track);
+        let _ = std::fs::remove_file(storage::cover_cache_path(&key));
+        let _ = std::fs::remove_file(storage::cover_miss_path(&key));
+        self.cover_attempted.remove(&key);
+        self.cover_for = None;
+        self.cover = None;
+        self.cover_image = None;
+        self.cover_source = None;
+        self.cover_tint = None;
+        self.request_cover(ctx, id, true);
     }
 
     // ---------------------------------------------------------------------
@@ -802,6 +1059,7 @@ impl RPlayerApp {
                     if self.current == Some(event.track_id) {
                         self.lyrics = Some(lyrics);
                         self.lyrics_for = Some(event.track_id);
+                        self.lyrics_source = Some(result.source.to_string());
                         self.toast(
                             format!(
                                 "已从 {} 下载{}",
@@ -1564,7 +1822,11 @@ impl RPlayerApp {
         let playing = self.is_playing();
         let delay = if playing {
             33
-        } else if self.scanning || self.toast.is_some() || self.lyrics_fetching.is_some() {
+        } else if self.scanning
+            || self.toast.is_some()
+            || self.lyrics_fetching.is_some()
+            || self.cover_fetching.is_some()
+        {
             120
         } else {
             500
@@ -1688,6 +1950,7 @@ impl RPlayerApp {
     fn handle_close(&mut self, ctx: &egui::Context) {
         if !self.closing_saved && ctx.input(|i| i.viewport().close_requested()) {
             self.persist();
+            self.save_session();
             self.closing_saved = true;
         }
     }
@@ -1707,10 +1970,15 @@ impl eframe::App for RPlayerApp {
 
         self.handle_overlay_commands(ctx);
         self.poll_scan();
+        self.sync_watch();
+        self.poll_watch();
+        self.restore_pending_playback(ctx);
         self.poll_audio(ctx);
         self.poll_lyrics_fetch();
+        self.poll_cover_fetch(ctx);
         self.handle_shortcuts(ctx);
         self.handle_close(ctx);
+        self.tick_session();
         self.sync_overlay();
 
         let dropped: Vec<PathBuf> = ctx.input(|i| {
@@ -1750,10 +2018,16 @@ impl eframe::App for RPlayerApp {
             return;
         }
 
+        let rail_visible = self.now_rail_open
+            && self.current.is_some()
+            && Self::rail_available(ctx);
         self.player_bar(ctx);
         self.sidebar_panel(ctx);
+        self.now_rail_panel(ctx);
         self.central_panel(ctx, &ids, total_seconds);
-        self.queue_window(ctx);
+        if !rail_visible {
+            self.queue_window(ctx);
+        }
         self.equalizer_window(ctx);
         self.settings_window(ctx);
         self.render_dialog(ctx);
@@ -1803,6 +2077,37 @@ fn compare_tracks(a: &Track, b: &Track, sort: SortState) -> std::cmp::Ordering {
     } else {
         ordering.reverse()
     }
+}
+
+fn average_color(image: &image::RgbaImage) -> Color32 {
+    let mut red = 0u64;
+    let mut green = 0u64;
+    let mut blue = 0u64;
+    let mut weight = 0u64;
+    for pixel in image.pixels() {
+        let alpha = u64::from(pixel[3]);
+        if alpha < 16 {
+            continue;
+        }
+        // Bias toward the album's saturated colour rather than its black
+        // borders/shadows, otherwise the ambient wash turns muddy.
+        let max = u16::from(pixel[0].max(pixel[1]).max(pixel[2])).max(1);
+        let min = u16::from(pixel[0].min(pixel[1]).min(pixel[2]));
+        let saturation = u64::from((max - min) * 100 / max);
+        let pixel_weight = alpha * (20 + saturation * 2);
+        red += u64::from(pixel[0]) * pixel_weight;
+        green += u64::from(pixel[1]) * pixel_weight;
+        blue += u64::from(pixel[2]) * pixel_weight;
+        weight += pixel_weight;
+    }
+    if weight == 0 {
+        return theme::c().accent_dark;
+    }
+    Color32::from_rgb(
+        (red / weight) as u8,
+        (green / weight) as u8,
+        (blue / weight) as u8,
+    )
 }
 
 fn track_matches(track: &Track, terms: &[String]) -> bool {

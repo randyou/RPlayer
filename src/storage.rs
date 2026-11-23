@@ -10,7 +10,7 @@ use crate::model::Library;
 
 pub const APP_DIR_NAME: &str = "RPlayer";
 pub const LIBRARY_FILE: &str = "library.json";
-pub const SCHEMA_VERSION: u32 = 4;
+pub const SCHEMA_VERSION: u32 = 5;
 
 /// Per-user data directory:
 /// - Windows: `%APPDATA%\RPlayer`
@@ -32,6 +32,20 @@ pub fn lyrics_cache_path(track_id: u64) -> PathBuf {
     data_dir()
         .join("lyrics")
         .join(format!("{track_id:016x}.lrc"))
+}
+
+pub fn cover_cache_dir() -> PathBuf {
+    data_dir().join("covers")
+}
+
+/// Downloaded album art. The cache key is an album-level hash.
+pub fn cover_cache_path(key: &str) -> PathBuf {
+    cover_cache_dir().join(format!("{key}.img"))
+}
+
+/// Negative cache marker for albums MusicBrainz could not match.
+pub fn cover_miss_path(key: &str) -> PathBuf {
+    cover_cache_dir().join(format!("{key}.miss"))
 }
 
 /// On-disk wrapper with a schema version so future migrations are possible.
@@ -59,6 +73,9 @@ pub fn load_library() -> Library {
                     library.light_theme = true;
                     library.desktop_lyrics_opacity = 0.85;
                     library.auto_lyrics = true;
+                }
+                if file.schema < 5 {
+                    library.auto_cover = true;
                 }
                 library
             }

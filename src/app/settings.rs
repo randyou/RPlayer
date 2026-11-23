@@ -20,15 +20,18 @@ impl RPlayerApp {
         let mut requested_theme = None;
         let mut opacity = self.library.desktop_lyrics_opacity;
         let mut auto_lyrics = self.library.auto_lyrics;
+        let mut auto_cover = self.library.auto_cover;
+        let mut clear_covers = false;
         let mut lyrics_open = self.desktop_lyrics_open;
         let mut download = false;
+        let cover_cache = crate::cover::cache_size();
 
         egui::Window::new("rplayer-settings")
             .title_bar(false)
             .resizable(false)
             .collapsible(false)
             .anchor(Align2::CENTER_CENTER, Vec2::ZERO)
-            .fixed_size(Vec2::new(470.0, 520.0))
+            .fixed_size(Vec2::new(470.0, 590.0))
             .frame(
                 Frame::NONE
                     .fill(theme::c().panel)
@@ -66,7 +69,7 @@ impl RPlayerApp {
                                 .color(theme::c().text),
                         );
                         ui.label(
-                            RichText::new("外观、桌面歌词与在线歌词")
+                            RichText::new("外观、桌面歌词与在线内容")
                                 .size(10.5)
                                 .color(theme::c().faint),
                         );
@@ -157,13 +160,53 @@ impl RPlayerApp {
                     });
 
                 ui.add_space(16.0);
-                section(ui, "在线歌词");
+                section(ui, "在线内容");
                 Frame::NONE
                     .fill(theme::c().card)
                     .stroke(Stroke::new(1.0_f32, theme::c().border_soft))
                     .corner_radius(CornerRadius::same(12))
                     .inner_margin(egui::Margin::symmetric(12, 10))
                     .show(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            ui.label(
+                                RichText::new("自动匹配缺失封面")
+                                    .size(12.0)
+                                    .color(theme::c().text),
+                            );
+                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                                widgets::toggle_switch(ui, &mut auto_cover);
+                            });
+                        });
+                        ui.add_space(4.0);
+                        ui.horizontal(|ui| {
+                            ui.label(
+                                RichText::new("MusicBrainz + Cover Art Archive")
+                                    .size(10.0)
+                                    .color(theme::c().faint),
+                            );
+                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                                if ui
+                                    .add(
+                                        egui::Label::new(
+                                            RichText::new(format!(
+                                                "清除缓存 {:.1} MB",
+                                                cover_cache as f64 / 1_048_576.0
+                                            ))
+                                            .size(10.0)
+                                            .color(theme::c().muted),
+                                        )
+                                        .sense(Sense::click()),
+                                    )
+                                    .on_hover_cursor(egui::CursorIcon::PointingHand)
+                                    .clicked()
+                                {
+                                    clear_covers = true;
+                                }
+                            });
+                        });
+                        ui.add_space(9.0);
+                        widgets::divider(ui);
+                        ui.add_space(8.0);
                         ui.horizontal(|ui| {
                             ui.label(
                                 RichText::new("自动下载缺失歌词")
@@ -228,7 +271,7 @@ impl RPlayerApp {
                 ui.add_space(18.0);
                 ui.horizontal(|ui| {
                     ui.label(
-                        RichText::new("RPlayer v0.4.0")
+                        RichText::new("RPlayer v0.5.0")
                             .size(10.0)
                             .color(theme::c().faint),
                     );
@@ -252,6 +295,28 @@ impl RPlayerApp {
         if auto_lyrics != self.library.auto_lyrics {
             self.library.auto_lyrics = auto_lyrics;
             self.persist();
+        }
+        if auto_cover != self.library.auto_cover {
+            self.library.auto_cover = auto_cover;
+            self.persist();
+            if auto_cover && self.cover.is_none() {
+                if let Some(id) = self.current {
+                    self.request_cover(ctx, id, false);
+                }
+            }
+        }
+        if clear_covers {
+            let _ = crate::cover::clear_cache();
+            self.cover_attempted.clear();
+            self.cover_for = None;
+            self.cover = None;
+            self.cover_image = None;
+            self.cover_source = None;
+            self.cover_tint = None;
+            if let Some(id) = self.current {
+                self.load_cover(ctx, id);
+            }
+            self.toast("封面缓存已清空", super::ToastKind::Info);
         }
         if lyrics_open != self.desktop_lyrics_open {
             self.toggle_desktop_lyrics(ctx);

@@ -4,6 +4,8 @@
 
 mod app;
 mod audio;
+mod cover;
+mod cover_fetch;
 mod eq;
 mod lyrics;
 mod lyrics_fetch;
@@ -11,9 +13,11 @@ mod model;
 mod overlay;
 mod platform;
 mod scanner;
+mod session;
 mod storage;
 mod theme;
 mod ui;
+mod watch;
 
 use std::sync::Arc;
 

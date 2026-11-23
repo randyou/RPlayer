@@ -133,6 +133,8 @@ pub struct Library {
     pub desktop_lyrics_opacity: f32,
     /// Fetch missing lyrics from LRCLIB automatically when a track starts.
     pub auto_lyrics: bool,
+    /// Match missing covers through MusicBrainz/Cover Art Archive.
+    pub auto_cover: bool,
     /// Ten-band equalizer settings.
     pub eq: crate::eq::EqSettings,
 }
@@ -140,7 +142,7 @@ pub struct Library {
 impl Default for Library {
     fn default() -> Self {
         Self {
-            version: 4,
+            version: 5,
             folders: Vec::new(),
             tracks: Vec::new(),
             playlists: Vec::new(),
@@ -151,6 +153,7 @@ impl Default for Library {
             desktop_lyrics: false,
             desktop_lyrics_opacity: 0.85,
             auto_lyrics: true,
+            auto_cover: true,
             eq: crate::eq::EqSettings::default(),
         }
     }

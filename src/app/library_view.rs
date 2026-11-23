@@ -185,6 +185,9 @@ impl RPlayerApp {
                 }
 
                 ui.add_space(6.0);
+                let compact = self.current.is_some()
+                    && self.now_rail_open
+                    && Self::rail_available(ui.ctx());
                 Frame::NONE
                     .fill(theme::c().card)
                     .stroke(Stroke::new(1.0_f32, theme::c().border_soft))
@@ -192,7 +195,7 @@ impl RPlayerApp {
                     .inner_margin(Margin::symmetric(4, 3))
                     .show(ui, |ui| {
                         ui.allocate_ui_with_layout(
-                            Vec2::new(157.0, 30.0),
+                            Vec2::new(if compact { 128.0 } else { 188.0 }, 30.0),
                             Layout::left_to_right(Align::Center),
                             |ui| {
                             ui.spacing_mut().item_spacing.x = 1.0;
@@ -227,29 +230,31 @@ impl RPlayerApp {
                             {
                                 self.toggle_eq();
                             }
-                            if widgets::icon_button_tinted(
-                                ui,
-                                Icon::Lyrics,
-                                30.0,
-                                theme::c().muted,
-                                self.desktop_lyrics_open,
-                                "桌面歌词",
-                            )
-                            .clicked()
-                            {
-                                self.toggle_desktop_lyrics(ui.ctx());
-                            }
-                            if widgets::icon_button_tinted(
-                                ui,
-                                Icon::MiniPlayer,
-                                30.0,
-                                theme::c().muted,
-                                self.mini_open,
-                                "迷你播放器",
-                            )
-                            .clicked()
-                            {
-                                self.toggle_mini(ui.ctx());
+                            if !compact {
+                                if widgets::icon_button_tinted(
+                                    ui,
+                                    Icon::Lyrics,
+                                    30.0,
+                                    theme::c().muted,
+                                    self.desktop_lyrics_open,
+                                    "桌面歌词",
+                                )
+                                .clicked()
+                                {
+                                    self.toggle_desktop_lyrics(ui.ctx());
+                                }
+                                if widgets::icon_button_tinted(
+                                    ui,
+                                    Icon::MiniPlayer,
+                                    30.0,
+                                    theme::c().muted,
+                                    self.mini_open,
+                                    "迷你播放器",
+                                )
+                                .clicked()
+                                {
+                                    self.toggle_mini(ui.ctx());
+                                }
                             }
                             if widgets::icon_button_tinted(
                                 ui,
@@ -262,6 +267,25 @@ impl RPlayerApp {
                             .clicked()
                             {
                                 self.settings_open = !self.settings_open;
+                            }
+                            if widgets::icon_button_tinted(
+                                ui,
+                                Icon::PanelRight,
+                                30.0,
+                                theme::c().muted,
+                                self.now_rail_open && self.current.is_some(),
+                                "显示 / 收起正在播放侧栏",
+                            )
+                            .clicked()
+                            {
+                                if self.current.is_some() {
+                                    self.now_rail_open = !self.now_rail_open;
+                                    if self.now_rail_open {
+                                        self.rail_queue = false;
+                                    }
+                                } else {
+                                    self.toast("先播放一首歌曲", super::ToastKind::Info);
+                                }
                             }
                         });
                     });

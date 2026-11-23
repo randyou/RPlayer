@@ -40,7 +40,7 @@ impl RPlayerApp {
         egui::CentralPanel::default()
             .frame(Frame::NONE)
             .show(ctx, |ui| {
-                ambient_background(ui);
+                ambient_background(ui, self.cover_tint);
 
                 ui.horizontal(|ui| {
                     if widgets::icon_button(ui, Icon::ChevronDown, 34.0, "收起正在播放").clicked() {
@@ -195,6 +195,16 @@ impl RPlayerApp {
                                     Stroke::new(1.0_f32, theme::c().border),
                                     egui::StrokeKind::Inside,
                                 );
+                                painter.circle_filled(
+                                    rect.center(),
+                                    rect.width() * 0.34,
+                                    theme::accent_alpha(0.05),
+                                );
+                                painter.circle_stroke(
+                                    rect.center(),
+                                    rect.width() * 0.27,
+                                    Stroke::new(1.0_f32, theme::accent_alpha(0.12)),
+                                );
                                 icons::paint(
                                     painter,
                                     Rect::from_center_size(rect.center(), Vec2::splat(70.0)),
@@ -242,7 +252,38 @@ impl RPlayerApp {
                                 )
                                 .truncate(),
                             );
-                            ui.add_space(26.0);
+                            ui.add_space(8.0);
+                            ui.horizontal(|ui| {
+                                if let Some(source) = self.cover_source {
+                                    page_badge(ui, &format!("封面·{}", source.short()));
+                                }
+                                if self.cover_fetching == self.current {
+                                    page_badge(ui, "匹配中");
+                                } else if self.cover.is_none() && self.library.auto_cover {
+                                    page_badge(ui, "未匹配");
+                                }
+                                if widgets::icon_button(
+                                    ui,
+                                    Icon::Refresh,
+                                    24.0,
+                                    "重新匹配封面",
+                                )
+                                .clicked()
+                                {
+                                    self.refresh_cover(ui.ctx());
+                                }
+                                if widgets::icon_button(
+                                    ui,
+                                    Icon::Download,
+                                    24.0,
+                                    "下载歌词",
+                                )
+                                .clicked()
+                                {
+                                    self.download_current_lyrics(ui.ctx());
+                                }
+                            });
+                            ui.add_space(12.0);
 
                             self.lyrics_panel(ui, &track, content_height);
                         },
@@ -260,6 +301,13 @@ impl RPlayerApp {
                     .strong()
                     .color(theme::c().faint),
             );
+            if let Some(source) = &self.lyrics_source {
+                ui.label(
+                    RichText::new(source)
+                        .size(9.0)
+                        .color(theme::c().faint),
+                );
+            }
             if widgets::icon_button(
                 ui,
                 Icon::Download,
@@ -280,30 +328,37 @@ impl RPlayerApp {
         });
         ui.add_space(10.0);
 
-        let lyrics = self
-            .lyrics
-            .as_ref()
-            .filter(|_| self.lyrics_for == Some(track.id));
-
-        let Some(lyrics) = lyrics else {
-            lyrics_placeholder(ui);
-            return;
+        let current = self.current_position();
+        let (lines, active) = {
+            let Some(lyrics) = self
+                .lyrics
+                .as_ref()
+                .filter(|_| self.lyrics_for == Some(track.id))
+            else {
+                self.lyrics_placeholder(ui, track);
+                return;
+            };
+            if lyrics.is_empty() {
+                self.lyrics_placeholder(ui, track);
+                return;
+            }
+            let lines: Vec<(String, f64)> = lyrics
+                .lines
+                .iter()
+                .map(|line| (line.text.clone(), line.time))
+                .collect();
+            (lines, lyrics.active_index(current))
         };
-        if lyrics.is_empty() {
-            lyrics_placeholder(ui);
-            return;
-        }
 
-        let active = lyrics.active_index(self.current_position());
         let start = active.map(|active| active.saturating_sub(4)).unwrap_or(0);
         let visible = 9;
-        let line_height = 30.0;
+        let line_height = 34.0;
         let top_gap = ((content_height - 160.0 - visible as f32 * line_height) * 0.5).max(0.0);
         ui.add_space(top_gap.min(24.0));
 
         let mut shown = 0;
-        for (index, line) in lyrics.lines.iter().enumerate().skip(start).take(visible) {
-            if line.text.trim().is_empty() {
+        for (index, (text, time)) in lines.iter().enumerate().skip(start).take(visible) {
+            if text.trim().is_empty() {
                 ui.add_space(10.0);
                 continue;
             }
@@ -313,26 +368,114 @@ impl RPlayerApp {
             } else if active.is_none() && index == start {
                 theme::c().text
             } else if active.is_some_and(|active| index.abs_diff(active) == 1) {
-                theme::c().text
+                theme::c().muted
             } else {
                 theme::c().faint
             };
-            let size = if is_active { 19.0 } else { 14.0 };
-            ui.add(
+            let size = if is_active { 22.0 } else { 14.0 };
+            let response = ui.add(
                 Label::new(
-                    RichText::new(&line.text)
+                    RichText::new(text)
                         .size(size)
                         .strong()
                         .color(color),
                 )
-                .truncate(),
+                .truncate()
+                .sense(Sense::click()),
             );
+            if response
+                .on_hover_cursor(egui::CursorIcon::PointingHand)
+                .clicked()
+            {
+                self.seek_to(*time);
+            }
             ui.add_space(if is_active { 10.0 } else { 7.0 });
             shown += 1;
         }
         if shown == 0 {
-            lyrics_placeholder(ui);
+            self.lyrics_placeholder(ui, track);
         }
+    }
+
+    fn lyrics_placeholder(&mut self, ui: &mut Ui, track: &model::Track) {
+        ui.add_space(22.0);
+        ui.vertical_centered(|ui| {
+            Frame::NONE
+                .fill(theme::c().card)
+                .stroke(Stroke::new(1.0_f32, theme::c().border_soft))
+                .corner_radius(CornerRadius::same(16))
+                .inner_margin(Margin::same(22))
+                .show(ui, |ui| {
+                    ui.set_width(390.0);
+                    icons::paint(
+                        ui.painter(),
+                        Rect::from_center_size(
+                            ui.cursor().center() + Vec2::new(0.0, 20.0),
+                            Vec2::splat(26.0),
+                        ),
+                        Icon::Lyrics,
+                        theme::c().faint,
+                    );
+                    ui.add_space(38.0);
+                    ui.label(
+                        RichText::new("还没有歌词")
+                            .size(20.0)
+                            .strong()
+                            .color(theme::c().text),
+                    );
+                    ui.add_space(5.0);
+                    ui.label(
+                        RichText::new(
+                            "同名 .lrc、内嵌歌词会自动加载；也可以从 LRCLIB 联网匹配。",
+                        )
+                        .size(11.0)
+                        .color(theme::c().muted),
+                    );
+                    ui.add_space(14.0);
+                    ui.horizontal(|ui| {
+                        let busy = self.lyrics_fetching == Some(track.id);
+                        if ui
+                            .add(
+                                egui::Button::new(
+                                    RichText::new(if busy {
+                                        "正在搜索…"
+                                    } else {
+                                        "从 LRCLIB 搜索歌词"
+                                    })
+                                    .size(11.5)
+                                    .color(theme::c().accent),
+                                )
+                                .fill(theme::accent_alpha(0.10))
+                                .stroke(Stroke::new(
+                                    1.0_f32,
+                                    theme::accent_alpha(0.28),
+                                ))
+                                .corner_radius(9)
+                                .min_size(Vec2::new(0.0, 32.0)),
+                            )
+                            .clicked()
+                        {
+                            self.request_lyrics(ui.ctx(), track.id, true);
+                        }
+                        if ui
+                            .add(
+                                egui::Button::new(
+                                    RichText::new("下载当前歌词")
+                                        .size(11.0)
+                                        .color(theme::c().muted),
+                                )
+                                .fill(theme::c().panel)
+                                .stroke(Stroke::new(1.0_f32, theme::c().border))
+                                .corner_radius(9)
+                                .min_size(Vec2::new(0.0, 32.0)),
+                            )
+                            .clicked()
+                        {
+                            self.download_current_lyrics(ui.ctx());
+                        }
+                    });
+                });
+        });
     }
 
     fn now_controls(&mut self, ui: &mut Ui, ctx: &egui::Context) {
@@ -629,11 +772,11 @@ impl RPlayerApp {
     }
 }
 
-fn ambient_background(ui: &Ui) {
+fn ambient_background(ui: &Ui, tint: Option<Color32>) {
     let rect = ui.max_rect();
     ui.painter()
         .rect_filled(rect, CornerRadius::ZERO, theme::c().bg);
-    let (top, bottom) = if theme::c().dark {
+    let (mut top, mut bottom) = if theme::c().dark {
         (
             Color32::from_rgb(12, 20, 17),
             Color32::from_rgb(7, 10, 9),
@@ -644,25 +787,36 @@ fn ambient_background(ui: &Ui) {
             Color32::from_rgb(234, 240, 232),
         )
     };
-
-    // Vertical gradient, painted as opaque bands (avoids alpha compositing
-    // surprises and looks cleaner than a flat fill).
-    let bands = 36;
-    for index in 0..bands {
-        let t = index as f32 / (bands - 1) as f32;
-        let band = Rect::from_min_max(
-            Pos2::new(rect.left(), rect.top() + rect.height() * t),
-            Pos2::new(
-                rect.right(),
-                rect.top() + rect.height() * (t + 1.0 / bands as f32),
-            ),
-        );
-        ui.painter()
-            .rect_filled(band, CornerRadius::ZERO, blend(top, bottom, t));
+    if let Some(tint) = tint {
+        // Derive a quiet version of the album palette instead of a generic
+        // mint wash.
+        top = blend(top, tint, 0.24);
+        bottom = blend(bottom, tint, 0.14);
     }
+
+    // Smooth four-vertex gradient; 36 hand-painted bands used to leave
+    // visible horizontal seams on large windows.
+    let mut mesh = egui::Mesh::default();
+    mesh.colored_vertex(rect.left_top(), top);
+    mesh.colored_vertex(rect.right_top(), top);
+    mesh.colored_vertex(rect.left_bottom(), bottom);
+    mesh.colored_vertex(rect.right_bottom(), bottom);
+    mesh.add_triangle(0, 1, 2);
+    mesh.add_triangle(1, 3, 2);
+    ui.painter().add(egui::Shape::mesh(mesh));
 
     // Soft ambient glow behind the artwork. With premultiplied accent
     // colours this stays a whisper of mint instead of a solid disk.
+    if let Some(tint) = tint {
+        ui.painter().circle_filled(
+            Pos2::new(
+                rect.left() + rect.width() * 0.28,
+                rect.top() + rect.height() * 0.42,
+            ),
+            rect.width() * 0.42,
+            with_alpha(tint, if theme::c().dark { 0.20 } else { 0.14 }),
+        );
+    }
     let center = Pos2::new(
         rect.left() + rect.width() * 0.26,
         rect.top() + rect.height() * 0.54,
@@ -683,6 +837,27 @@ fn ambient_background(ui: &Ui) {
 }
 
 
+fn page_badge(ui: &mut Ui, text: &str) {
+    Frame::NONE
+        .fill(theme::accent_alpha(0.10))
+        .stroke(Stroke::new(1.0_f32, theme::accent_alpha(0.25)))
+        .corner_radius(CornerRadius::same(99))
+        .inner_margin(Margin::symmetric(7, 2))
+        .show(ui, |ui| {
+            ui.label(RichText::new(text).size(9.0).color(theme::c().accent));
+        });
+}
+
+fn with_alpha(color: Color32, alpha: f32) -> Color32 {
+    let alpha = (alpha.clamp(0.0, 1.0) * 255.0) as u8;
+    Color32::from_rgba_premultiplied(
+        (u16::from(color.r()) * u16::from(alpha) / 255) as u8,
+        (u16::from(color.g()) * u16::from(alpha) / 255) as u8,
+        (u16::from(color.b()) * u16::from(alpha) / 255) as u8,
+        alpha,
+    )
+}
+
 fn blend(a: Color32, b: Color32, t: f32) -> Color32 {
     let t = t.clamp(0.0, 1.0);
     Color32::from_rgb(
@@ -690,22 +865,6 @@ fn blend(a: Color32, b: Color32, t: f32) -> Color32 {
         (a.g() as f32 * (1.0 - t) + b.g() as f32 * t) as u8,
         (a.b() as f32 * (1.0 - t) + b.b() as f32 * t) as u8,
     )
-}
-
-fn lyrics_placeholder(ui: &mut Ui) {
-    ui.add_space(28.0);
-    ui.label(
-        RichText::new("暂无歌词")
-            .size(22.0)
-            .strong()
-            .color(theme::c().text),
-    );
-    ui.add_space(8.0);
-    ui.label(
-        RichText::new("将同名 .lrc 文件放在歌曲目录，RPlayer 会自动加载。")
-            .size(11.5)
-            .color(theme::c().muted),
-    );
 }
 
 fn painter_eq(painter: &egui::Painter, center: Pos2, time: f32, playing: bool) {

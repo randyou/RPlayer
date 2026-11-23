@@ -100,14 +100,44 @@ impl RPlayerApp {
 
         if widgets::nav_item(
             ui,
-            Icon::Queue,
-            "播放队列",
-            Some(self.queue.len()),
-            self.queue_open,
+            Icon::Music,
+            "正在播放",
+            None,
+            self.expanded,
         )
         .clicked()
         {
-            self.queue_open = !self.queue_open;
+            if self.current.is_some() {
+                self.queue_open = false;
+                self.expanded = true;
+            } else {
+                self.toast("先播放一首歌曲", super::ToastKind::Info);
+            }
+        }
+
+        let rail_ready = Self::rail_available(ui.ctx()) && self.current.is_some();
+        let queue_active = self.queue_open
+            || (rail_ready && self.now_rail_open && self.rail_queue);
+        if widgets::nav_item(
+            ui,
+            Icon::Queue,
+            "播放队列",
+            Some(self.queue.len()),
+            queue_active,
+        )
+        .clicked()
+        {
+            if rail_ready {
+                if self.now_rail_open && self.rail_queue {
+                    self.rail_queue = false;
+                } else {
+                    self.now_rail_open = true;
+                    self.rail_queue = true;
+                    self.queue_open = false;
+                }
+            } else {
+                self.queue_open = !self.queue_open;
+            }
         }
 
         // Playlists
@@ -274,7 +304,7 @@ impl RPlayerApp {
 
         ui.add_space(8.0);
         ui.horizontal(|ui| {
-            ui.label(RichText::new("v0.4.0").size(10.0).color(theme::c().faint));
+            ui.label(RichText::new("v0.5.0").size(10.0).color(theme::c().faint));
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                 let about = ui
                     .add(
