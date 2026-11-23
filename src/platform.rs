@@ -2,6 +2,8 @@
 
 pub mod media;
 pub mod smtc_client;
+#[cfg(target_os = "windows")]
+pub mod tray;
 
 /// First visible top-level window owned by this process. Used by the SMTC
 /// helper, which needs the main HWND to attach the system media card.

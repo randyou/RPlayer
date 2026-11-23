@@ -14,6 +14,7 @@ mod settings;
 mod smart;
 mod stats;
 mod sidebar;
+mod tray;
 
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
@@ -152,6 +153,9 @@ pub struct RPlayerApp {
     health_report: Option<crate::health::HealthReport>,
     health_rx: Option<Receiver<crate::health::HealthReport>>,
     health_checking: bool,
+    #[cfg(target_os = "windows")]
+    tray: Option<crate::platform::tray::Tray>,
+    allow_exit: bool,
     audio: Option<AudioEngine>,
     eq: Arc<EqShared>,
     view: View,
@@ -286,6 +290,9 @@ impl RPlayerApp {
             health_report: None,
             health_rx: None,
             health_checking: false,
+            #[cfg(target_os = "windows")]
+            tray: None,
+            allow_exit: false,
             audio,
             eq,
             view: View::Library,
@@ -369,6 +376,10 @@ impl RPlayerApp {
             prefs_dirty: false,
         };
 
+        #[cfg(target_os = "windows")]
+        {
+            app.tray = crate::platform::tray::Tray::create();
+        }
         if let Some(err) = audio_error {
             app.toast(format!("音频输出不可用：{err}"), ToastKind::Error);
         }
@@ -2451,6 +2462,17 @@ impl RPlayerApp {
     }
 
     fn handle_close(&mut self, ctx: &egui::Context) {
+        if !self.closing_saved
+            && !self.allow_exit
+            && ctx.input(|i| i.viewport().close_requested())
+        {
+            #[cfg(target_os = "windows")]
+            if self.tray.is_some() {
+                ctx.send_viewport_cmd(ViewportCommand::CancelClose);
+                ctx.send_viewport_cmd(ViewportCommand::Visible(false));
+                return;
+            }
+        }
         if !self.closing_saved && ctx.input(|i| i.viewport().close_requested()) {
             self.credit_current_track(false);
             self.persist();
@@ -2487,6 +2509,7 @@ impl eframe::App for RPlayerApp {
         self.poll_media_keys(ctx);
         self.sync_smtc();
         self.handle_shortcuts(ctx);
+        self.poll_tray(ctx);
         self.handle_close(ctx);
         if !self.smtc_attempted {
             self.smtc_attempted = true;
