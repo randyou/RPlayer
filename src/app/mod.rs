@@ -1627,6 +1627,7 @@ impl RPlayerApp {
             );
             self.lyrics_placed = true;
             self.lyrics_viewport_active = true;
+            crate::platform::enable_lyrics_native_drag("RPlayer 桌面歌词");
             if !self.lyrics_region {
                 // DWM adds a dark 1px frame around borderless overlays on
                 // Windows 11; remove it (and the rounded corner preference).
