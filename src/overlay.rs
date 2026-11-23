@@ -121,32 +121,14 @@ pub fn show_lyrics(
                     snapshot.lyrics_opacity.clamp(0.0, 1.0)
                 };
                 let text_alpha = snapshot.lyrics_text_opacity.clamp(0.0, 1.0);
-                let pointer_inside = ctx.input(|input| {
-                    let (Some(position), Some(outer)) =
-                        (input.pointer.latest_pos(), input.viewport().outer_rect)
-                    else {
-                        return false;
-                    };
-                    // Egui gives the pointer in screen coordinates for
-                    // deferred viewports; the capsule is window-local.
-                    capsule.contains(position - outer.min.to_vec2())
-                });
-                let hover_boost = pointer_inside && key_mode;
                 if key_mode {
                     // Must match `set_window_color_key` (COLORREF 0x00030201).
+                    // Expand slightly so antialiased edge pixels don't leave a
+                    // black 1px frame.
                     ui.painter().rect_filled(
-                        capsule,
+                        capsule.expand(16.0),
                         CornerRadius::ZERO,
                         Color32::from_rgb(1, 2, 3),
-                    );
-                    ui.painter().rect_stroke(
-                        capsule.shrink(1.0),
-                        CornerRadius::ZERO,
-                        Stroke::new(
-                            1.0_f32,
-                            theme::white_alpha(if pointer_inside { 0.24 } else { 0.10 }),
-                        ),
-                        egui::StrokeKind::Inside,
                     );
                 } else {
                     ui.painter().rect_filled(
@@ -154,23 +136,23 @@ pub fn show_lyrics(
                         CornerRadius::ZERO,
                         with_alpha(theme::c().panel, panel_alpha),
                     );
-                }
-                ui.painter().rect_stroke(
-                    capsule.shrink(1.0),
-                    CornerRadius::ZERO,
-                    Stroke::new(
-                        1.0_f32,
-                        with_alpha(
-                            if dark {
-                                theme::white_alpha(0.10)
-                            } else {
-                                theme::black_alpha(0.08)
-                            },
-                            panel_alpha,
+                    ui.painter().rect_stroke(
+                        capsule.shrink(1.0),
+                        CornerRadius::ZERO,
+                        Stroke::new(
+                            1.0_f32,
+                            with_alpha(
+                                if dark {
+                                    theme::white_alpha(0.10)
+                                } else {
+                                    theme::black_alpha(0.08)
+                                },
+                                panel_alpha,
+                            ),
                         ),
-                    ),
-                    egui::StrokeKind::Inside,
-                );
+                        egui::StrokeKind::Inside,
+                    );
+                }
 
                 let shadow = if dark {
                     theme::black_alpha(0.85)
@@ -270,22 +252,25 @@ pub fn show_lyrics(
                 );
                 let close_response = ui.interact(close_rect, Id::new("lyrics-close"), Sense::click());
                 let close_hovered = close_response.hovered();
-                if close_hovered {
+                if close_hovered && panel_alpha > 0.0 {
                     ui.painter().circle_filled(
                         close_rect.center(),
                         12.0,
-                        theme::white_alpha(0.10),
+                        with_alpha(theme::white_alpha(0.10), panel_alpha),
                     );
                 }
                 icons::paint(
                     ui.painter(),
                     close_rect.shrink(6.0),
                     Icon::Close,
-                    if close_hovered {
-                        theme::c().text
-                    } else {
-                        theme::c().muted
-                    },
+                    with_alpha(
+                        if close_hovered {
+                            theme::c().text
+                        } else {
+                            theme::c().muted
+                        },
+                        panel_alpha,
+                    ),
                 );
                 if close_response.clicked() {
                     close = true;
@@ -408,20 +393,12 @@ pub fn show_lyrics(
                     Id::new("lyrics-opacity-button"),
                     Sense::click(),
                 );
-                let gear_alpha = if button.hovered() {
-                    1.0
-                } else if key_mode {
-                    0.45
-                } else if hover_boost {
-                    0.65
-                } else {
-                    panel_alpha
-                };
-                if button.hovered() || controls_open {
+                let gear_alpha = panel_alpha;
+                if (button.hovered() || controls_open) && gear_alpha > 0.0 {
                     ui.painter().rect_filled(
                         button_rect,
                         CornerRadius::same(7),
-                        with_alpha(theme::c().hover, gear_alpha.min(1.0)),
+                        with_alpha(theme::c().hover, gear_alpha),
                     );
                 }
                 icons::paint(

@@ -1596,10 +1596,10 @@ impl RPlayerApp {
             self.lyrics_placed = true;
             self.lyrics_viewport_active = true;
             if !self.lyrics_region {
-                self.lyrics_region = crate::platform::apply_round_window(
-                    "RPlayer 桌面歌词",
-                    26,
-                );
+                // DWM adds a dark 1px frame around borderless overlays on
+                // Windows 11; remove it (and the rounded corner preference).
+                crate::platform::set_window_borderless("RPlayer 桌面歌词");
+                self.lyrics_region = true;
             }
             // The GL surface has no usable per-pixel alpha. At exactly 0% we
             // switch the window to color-key transparency so the panel is

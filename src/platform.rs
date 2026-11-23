@@ -336,6 +336,21 @@ pub fn set_window_color_key(title: &str, enabled: bool) -> bool {
             cy: i32,
             flags: u32,
         ) -> i32;
+        fn GetClientRect(hwnd: isize, rect: *mut RectI) -> i32;
+        fn SetWindowRgn(hwnd: isize, region: isize, redraw: i32) -> i32;
+    }
+
+    #[link(name = "gdi32")]
+    extern "system" {
+        fn CreateRectRgn(left: i32, top: i32, right: i32, bottom: i32) -> isize;
+    }
+
+    #[repr(C)]
+    struct RectI {
+        left: i32,
+        top: i32,
+        right: i32,
+        bottom: i32,
     }
 
     const GWL_EXSTYLE: i32 = -20;
@@ -364,6 +379,29 @@ pub fn set_window_color_key(title: &str, enabled: bool) -> bool {
         } else {
             SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA) != 0
         };
+        if enabled {
+            let mut rect = RectI {
+                left: 0,
+                top: 0,
+                right: 0,
+                bottom: 0,
+            };
+            if GetClientRect(hwnd, &mut rect) != 0 {
+                // Drop the outermost pixel so DWM's dark frame cannot show
+                // through the color-key surface.
+                let region = CreateRectRgn(
+                    1,
+                    1,
+                    (rect.right - 1).max(2),
+                    (rect.bottom - 1).max(2),
+                );
+                if region != 0 {
+                    SetWindowRgn(hwnd, region, 1);
+                }
+            }
+        } else {
+            SetWindowRgn(hwnd, 0, 1);
+        }
         SetWindowPos(
             hwnd,
             0,
@@ -376,6 +414,59 @@ pub fn set_window_color_key(title: &str, enabled: bool) -> bool {
         result
     }
 }
+
+/// Disables the Windows 11 DWM border (and rounded corners) on an overlay.
+#[cfg(target_os = "windows")]
+pub fn set_window_borderless(title: &str) {
+    #[link(name = "user32")]
+    extern "system" {
+        fn FindWindowW(class_name: *const u16, window_name: *const u16) -> isize;
+    }
+    #[link(name = "dwmapi")]
+    extern "system" {
+        fn DwmSetWindowAttribute(
+            hwnd: isize,
+            attribute: u32,
+            value: *const std::ffi::c_void,
+            size: u32,
+        ) -> i32;
+    }
+
+    let wide: Vec<u16> = title.encode_utf16().chain(std::iter::once(0)).collect();
+    let hwnd = unsafe { FindWindowW(std::ptr::null(), wide.as_ptr()) };
+    if hwnd == 0 {
+        return;
+    }
+    // DWMWA_BORDER_COLOR = 34, DWMWA_COLOR_NONE = 0xFFFFFFFE
+    let no_border: u32 = 0xFFFF_FFFE;
+    unsafe {
+        DwmSetWindowAttribute(
+            hwnd,
+            34,
+            &no_border as *const u32 as *const std::ffi::c_void,
+            4,
+        );
+        // DWMWA_WINDOW_CORNER_PREFERENCE = 33, DWMWCP_DONOTROUND = 1
+        let square: u32 = 1;
+        DwmSetWindowAttribute(
+            hwnd,
+            33,
+            &square as *const u32 as *const std::ffi::c_void,
+            4,
+        );
+        // DWMWA_NCRENDERING_POLICY = 2, DWMNCRP_DISABLED = 1
+        let no_frame: u32 = 1;
+        DwmSetWindowAttribute(
+            hwnd,
+            2,
+            &no_frame as *const u32 as *const std::ffi::c_void,
+            4,
+        );
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn set_window_borderless(_title: &str) {}
 
 #[cfg(not(target_os = "windows"))]
 pub fn set_window_color_key(_title: &str, _enabled: bool) -> bool {
