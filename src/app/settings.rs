@@ -33,12 +33,26 @@ impl RPlayerApp {
         let mut download = false;
         let cover_cache = crate::cover::cache_size();
 
+        if ctx.input(|input| input.key_pressed(egui::Key::Escape)) {
+            self.settings_open = false;
+            return;
+        }
+
+        // Keep the header (and its close button) inside the visible area even
+        // on high-DPI / short windows, then scroll the long preference body.
+        let available = ctx.screen_rect().size();
+        let settings_size = Vec2::new(
+            (available.x - 24.0).clamp(320.0, 470.0),
+            (available.y - 48.0).clamp(240.0, 640.0),
+        );
+        let content_height = (settings_size.y - 118.0).max(180.0);
+
         egui::Window::new("rplayer-settings")
             .title_bar(false)
             .resizable(false)
             .collapsible(false)
             .anchor(Align2::CENTER_CENTER, Vec2::ZERO)
-            .fixed_size(Vec2::new(470.0, 640.0))
+            .fixed_size(settings_size)
             .frame(
                 Frame::NONE
                     .fill(theme::c().panel)
@@ -88,7 +102,11 @@ impl RPlayerApp {
                     });
                 });
 
-                ui.add_space(18.0);
+                ui.add_space(12.0);
+                egui::ScrollArea::vertical()
+                    .max_height(content_height)
+                    .auto_shrink([false, false])
+                    .show(ui, |ui| {
                 section(ui, "外观");
                 Frame::NONE
                     .fill(theme::c().card)
@@ -343,6 +361,13 @@ impl RPlayerApp {
                         );
                     });
                 });
+                ui.add_space(10.0);
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    if widgets::secondary_button(ui, "完成").clicked() {
+                        close = true;
+                    }
+                });
+                    });
             });
 
         if let Some(preset) = requested_theme {

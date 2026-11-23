@@ -4,12 +4,12 @@
 
 | 字段 | 内容 |
 | --- | --- |
-| 状态 | Open |
+| 状态 | Fixed |
 | 严重度 | High |
 | 发现时间 | 2026-11-24 01:42 (Asia/Shanghai) |
 | 版本 | v0.6.0（`1be4a42`） |
 | 平台 | Windows 11 |
-| 截图 | [bug-settings-close.png](bug-settings-close.png) |
+| 截图 | 原始 [bug-settings-close.png](bug-settings-close.png) · 修复后 [bug-settings-close-fixed.png](bug-settings-close-fixed.png) |
 
 ### 复现步骤
 
@@ -33,29 +33,32 @@
 - `Esc` 可关闭设置。
 - 内容过高时内部滚动，而不是把头部推出屏幕。
 
-### 可能原因
+### 原因
 
-`src/app/settings.rs` 使用：
+`src/app/settings.rs` 原使用固定尺寸：
 
 ```rust
 .anchor(Align2::CENTER_CENTER, Vec2::ZERO)
 .fixed_size(Vec2::new(470.0, 640.0))
 ```
 
-外层还有 `inner_margin(22)`，实际占用高度约 `640 + 44 = 684`。在 Windows 125% 缩放下，约 807px 高的窗口对应约 646 个 egui 逻辑点，居中锚定会导致窗口顶部为负值，头部（含关闭按钮）被裁剪到屏幕外。
+加上外层 `inner_margin(22)` 后实际占用高度约 684 逻辑点。在高 DPI / 较矮窗口下，居中锚定会把窗口顶部推到负坐标，头部（含关闭按钮）被裁剪到屏幕外；设置窗口也没有滚动区或 `Esc` 兜底。
 
-当前设置窗口没有 `ScrollArea`，也没有 `Esc` 或点击遮罩关闭的兜底路径。
+### 修复
 
-### 临时绕过
+- 设置窗口高度改为按 `ctx.screen_rect()` 自适应：
+  - 高度限制为 240–640 逻辑点；
+  - 宽度限制为 320–470。
+- 内容放入垂直 `ScrollArea`，头部和关闭按钮固定在滚动区外。
+- 增加底部「完成」按钮。
+- 增加 `Esc` 关闭设置。
+- 修复后实机验证：
+  - 设置头部与右上角关闭按钮可见；
+  - 点击关闭按钮可退出；
+  - 重新打开后按 `Esc` 可退出。
+
+### 原临时绕过
 
 - 用主窗口标题栏关闭整个 RPlayer（开启托盘时进程会继续驻留）。
 - 临时降低 Windows 显示缩放，或增大应用窗口高度后重新打开设置。
 - 应用内没有可靠的关闭设置方式。
-
-### 建议修复
-
-1. 给设置内容加 `ScrollArea::vertical()`，限制最大高度。
-2. 窗口位置做可见区域夹取（clamp），避免顶部为负。
-3. 增加 `Esc` 关闭。
-4. 在底部或顶部固定一个始终可见的关闭按钮。
-5. 高 DPI / 小窗口下做回归测试（100%、125%、150%）。
