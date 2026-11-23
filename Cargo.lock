@@ -3109,6 +3109,7 @@ dependencies = [
  "serde_json",
  "walkdir",
  "winapi",
+ "windows 0.58.0",
  "winresource",
 ]
 

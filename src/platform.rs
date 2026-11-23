@@ -2,6 +2,7 @@
 
 pub mod media;
 pub mod smtc_client;
+mod dcomp_panel;
 
 /// Creates the Start Menu shortcut carrying `System.AppUserModel.ID` on first
 /// run. Windows media controls use that shortcut to resolve the app's display
@@ -535,6 +536,20 @@ pub fn apply_titlebar(_dark: bool) {}
 /// panel opacity and text opacity are fully independent.
 #[cfg(target_os = "windows")]
 pub fn update_lyrics_panel(
+    title: &str,
+    rect: (i32, i32, i32, i32),
+    alpha: f32,
+    rgb: (u8, u8, u8),
+    radius: f32,
+) {
+    if dcomp_panel::update(title, rect, alpha, rgb) {
+        return;
+    }
+    update_lyrics_panel_impl(title, rect, alpha, rgb, radius);
+}
+
+#[cfg(target_os = "windows")]
+fn update_lyrics_panel_impl(
     title: &str,
     rect: (i32, i32, i32, i32),
     alpha: f32,

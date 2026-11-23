@@ -1,0 +1,254 @@
+//! DirectComposition lyric panel.
+//!
+//! The lyric text window is an eframe color-key window; this module owns a
+//! separate composition window behind it. The panel is drawn by D3D11 into an
+//! `IDCompositionSurface` with premultiplied alpha, so panel opacity is real
+//! and independent from text opacity.
+
+#![cfg(target_os = "windows")]
+
+use std::sync::{Mutex, OnceLock};
+
+use windows::core::{Interface, PCWSTR};
+use windows::Win32::Foundation::{HWND, POINT, RECT};
+use windows::Win32::Graphics::Direct3D::D3D_DRIVER_TYPE_HARDWARE;
+use windows::Win32::Graphics::Direct3D11::{
+    D3D11CreateDevice, ID3D11Device, ID3D11DeviceContext, ID3D11RenderTargetView,
+    D3D11_CREATE_DEVICE_BGRA_SUPPORT, D3D11_SDK_VERSION,
+};
+use windows::Win32::Graphics::DirectComposition::{
+    DCompositionCreateDevice, IDCompositionDevice, IDCompositionSurface, IDCompositionTarget,
+    IDCompositionVisual,
+};
+use windows::Win32::Graphics::Dxgi::Common::{
+    DXGI_ALPHA_MODE_PREMULTIPLIED, DXGI_FORMAT_B8G8R8A8_UNORM,
+};
+use windows::Win32::Graphics::Dwm::{DwmEnableBlurBehindWindow, DWM_BLURBEHIND, DWM_BB_ENABLE};
+use windows::Win32::Graphics::Dxgi::{IDXGIDevice, IDXGISurface};
+use windows::Win32::System::LibraryLoader::GetModuleHandleW;
+use windows::Win32::UI::WindowsAndMessaging::{
+    CreateWindowExW, FindWindowW, SetWindowPos, ShowWindow, SWP_NOACTIVATE, SWP_SHOWWINDOW,
+    SW_SHOWNOACTIVATE, WS_EX_NOACTIVATE, WS_EX_NOREDIRECTIONBITMAP, WS_EX_TOOLWINDOW,
+    WS_EX_TRANSPARENT, WS_POPUP,
+};
+
+struct Panel {
+    // Only touched on the winit UI thread.
+    hwnd: HWND,
+    d3d: ID3D11Device,
+    context: ID3D11DeviceContext,
+    dcomp: IDCompositionDevice,
+    _target: IDCompositionTarget,
+    visual: IDCompositionVisual,
+    surface: IDCompositionSurface,
+    width: u32,
+    height: u32,
+}
+
+unsafe impl Send for Panel {}
+
+static PANEL: OnceLock<Mutex<Option<Panel>>> = OnceLock::new();
+
+fn panel() -> &'static Mutex<Option<Panel>> {
+    PANEL.get_or_init(|| Mutex::new(None))
+}
+
+fn wide(value: &str) -> Vec<u16> {
+    value.encode_utf16().chain(std::iter::once(0)).collect()
+}
+
+fn create_window() -> Option<HWND> {
+    let class = wide("STATIC");
+    let title = wide("RPlayerLyricDcomp");
+    let module = unsafe { GetModuleHandleW(PCWSTR::null()).ok()? };
+    unsafe {
+        CreateWindowExW(
+            WS_EX_NOREDIRECTIONBITMAP
+                | WS_EX_TOOLWINDOW
+                | WS_EX_NOACTIVATE
+                | WS_EX_TRANSPARENT,
+            PCWSTR(class.as_ptr()),
+            PCWSTR(title.as_ptr()),
+            WS_POPUP,
+            0,
+            0,
+            1,
+            1,
+            None,
+            None,
+            windows::Win32::Foundation::HINSTANCE(module.0),
+            None,
+        )
+        .ok()
+    }
+}
+
+fn create_panel(hwnd: HWND) -> windows::core::Result<Panel> {
+    unsafe {
+        let mut device: Option<ID3D11Device> = None;
+        let mut context: Option<ID3D11DeviceContext> = None;
+        D3D11CreateDevice(
+            None,
+            D3D_DRIVER_TYPE_HARDWARE,
+            None,
+            D3D11_CREATE_DEVICE_BGRA_SUPPORT,
+            None,
+            D3D11_SDK_VERSION,
+            Some(&mut device),
+            None,
+            Some(&mut context),
+        )?;
+        let d3d = device.ok_or_else(|| windows::core::Error::from(windows::Win32::Foundation::E_FAIL))?;
+        let context = context
+            .ok_or_else(|| windows::core::Error::from(windows::Win32::Foundation::E_FAIL))?;
+        let dxgi: IDXGIDevice = d3d.cast()?;
+        let dcomp: IDCompositionDevice = DCompositionCreateDevice(&dxgi)?;
+        let mut blur = DWM_BLURBEHIND::default();
+        blur.dwFlags = DWM_BB_ENABLE;
+        blur.fEnable = true.into();
+        let _ = DwmEnableBlurBehindWindow(hwnd, &blur);
+        let target = dcomp.CreateTargetForHwnd(hwnd, false)?;
+        let visual = dcomp.CreateVisual()?;
+        target.SetRoot(&visual)?;
+        let surface = dcomp.CreateSurface(
+            1,
+            1,
+            DXGI_FORMAT_B8G8R8A8_UNORM,
+            DXGI_ALPHA_MODE_PREMULTIPLIED,
+        )?;
+        visual.SetContent(&surface)?;
+        let clip = dcomp.CreateRectangleClip()?;
+        clip.SetLeft2(0.0)?;
+        clip.SetTop2(0.0)?;
+        clip.SetRight2(1.0)?;
+        clip.SetBottom2(1.0)?;
+        let radius = 18.0;
+        clip.SetTopLeftRadiusX2(radius)?;
+        clip.SetTopLeftRadiusY2(radius)?;
+        clip.SetTopRightRadiusX2(radius)?;
+        clip.SetTopRightRadiusY2(radius)?;
+        clip.SetBottomLeftRadiusX2(radius)?;
+        clip.SetBottomLeftRadiusY2(radius)?;
+        clip.SetBottomRightRadiusX2(radius)?;
+        clip.SetBottomRightRadiusY2(radius)?;
+        visual.SetClip(&clip)?;
+        dcomp.Commit()?;
+        Ok(Panel {
+            hwnd,
+            d3d,
+            context,
+            dcomp,
+            _target: target,
+            visual,
+            surface,
+            width: 1,
+            height: 1,
+        })
+    }
+}
+
+fn draw(panel: &mut Panel, width: u32, height: u32, alpha: f32, rgb: (u8, u8, u8)) -> windows::core::Result<()> {
+    unsafe {
+        if width != panel.width || height != panel.height {
+            let surface = panel.dcomp.CreateSurface(
+                width,
+                height,
+                DXGI_FORMAT_B8G8R8A8_UNORM,
+                DXGI_ALPHA_MODE_PREMULTIPLIED,
+            )?;
+            panel.visual.SetContent(&surface)?;
+            panel.surface = surface;
+            let clip = panel.dcomp.CreateRectangleClip()?;
+            clip.SetLeft2(0.0)?;
+            clip.SetTop2(0.0)?;
+            clip.SetRight2(width as f32)?;
+            clip.SetBottom2(height as f32)?;
+            clip.SetTopLeftRadiusX2(18.0)?;
+            clip.SetTopLeftRadiusY2(18.0)?;
+            clip.SetTopRightRadiusX2(18.0)?;
+            clip.SetTopRightRadiusY2(18.0)?;
+            clip.SetBottomLeftRadiusX2(18.0)?;
+            clip.SetBottomLeftRadiusY2(18.0)?;
+            clip.SetBottomRightRadiusX2(18.0)?;
+            clip.SetBottomRightRadiusY2(18.0)?;
+            panel.visual.SetClip(&clip)?;
+            panel.width = width;
+            panel.height = height;
+        }
+        let mut offset = POINT::default();
+        let surface: IDXGISurface = panel.surface.BeginDraw(None, &mut offset)?;
+        let texture: windows::Win32::Graphics::Direct3D11::ID3D11Texture2D = surface.cast()?;
+        let mut rtv: Option<ID3D11RenderTargetView> = None;
+        panel.d3d.CreateRenderTargetView(&texture, None, Some(&mut rtv))?;
+        let rtv = rtv.ok_or_else(|| windows::core::Error::from(windows::Win32::Foundation::E_FAIL))?;
+        let a = alpha.clamp(0.0, 1.0);
+        let color = [
+            (rgb.0 as f32 / 255.0) * a,
+            (rgb.1 as f32 / 255.0) * a,
+            (rgb.2 as f32 / 255.0) * a,
+            a,
+        ];
+        panel.context.ClearRenderTargetView(&rtv, &color);
+        panel.surface.EndDraw()?;
+        panel.dcomp.Commit()?;
+        let _ = RECT::default();
+    }
+    Ok(())
+}
+
+/// Returns true when the panel is handled by DirectComposition.
+pub fn update(title: &str, rect: (i32, i32, i32, i32), alpha: f32, rgb: (u8, u8, u8)) -> bool {
+    if alpha <= 0.001 {
+        if let Ok(mut guard) = panel().lock() {
+            if let Some(panel) = guard.as_mut() {
+                unsafe {
+                    let _ = ShowWindow(panel.hwnd, windows::Win32::UI::WindowsAndMessaging::SW_HIDE);
+                }
+            }
+        }
+        return true;
+    }
+    let mut guard = match panel().lock() {
+        Ok(guard) => guard,
+        Err(_) => return false,
+    };
+    if guard.is_none() {
+        let Some(hwnd) = create_window() else {
+            return false;
+        };
+        match create_panel(hwnd) {
+            Ok(created) => *guard = Some(created),
+            Err(_) => {
+                unsafe {
+                    let _ = windows::Win32::UI::WindowsAndMessaging::DestroyWindow(hwnd);
+                }
+                return false;
+            }
+        }
+    }
+    let Some(panel) = guard.as_mut() else {
+        return false;
+    };
+    let owner_wide = wide(title);
+    let owner = unsafe { FindWindowW(PCWSTR::null(), PCWSTR(owner_wide.as_ptr())).ok() };
+    let Some(owner) = owner else {
+        return false;
+    };
+    unsafe {
+        if SetWindowPos(
+            panel.hwnd,
+            owner,
+            rect.0,
+            rect.1,
+            rect.2.max(1),
+            rect.3.max(1),
+            SWP_NOACTIVATE | SWP_SHOWWINDOW,
+        )
+        .is_err()
+        {
+            return false;
+        }
+        let _ = ShowWindow(panel.hwnd, SW_SHOWNOACTIVATE);
+    }
+    draw(panel, rect.2.max(1) as u32, rect.3.max(1) as u32, alpha, rgb).is_ok()
+}
