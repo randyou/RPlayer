@@ -91,6 +91,7 @@ mod tests {
             track_number: None,
             duration,
             added_at: 0,
+            modified: 0,
         }
     }
 

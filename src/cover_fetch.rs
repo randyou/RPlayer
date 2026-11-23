@@ -244,6 +244,7 @@ mod tests {
             track_number: None,
             duration: 269.0,
             added_at: 0,
+            modified: 0,
         }
     }
 

@@ -547,6 +547,7 @@ mod tests {
             track_number: None,
             duration: 10.0,
             added_at: 1,
+            modified: 0,
         };
         lib.tracks.push(track);
         let pid = lib.create_playlist("Road trip");
