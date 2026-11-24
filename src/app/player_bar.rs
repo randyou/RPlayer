@@ -16,10 +16,10 @@ impl RPlayerApp {
     pub(super) fn player_bar(&mut self, ctx: &egui::Context) {
         egui::TopBottomPanel::bottom("rplayer-player-bar")
             .exact_height(104.0)
+            .show_separator_line(false)
             .frame(
                 Frame::NONE
                     .fill(theme::c().sidebar)
-                    .stroke(Stroke::new(1.0_f32, theme::divider()))
                     .inner_margin(Margin::symmetric(20, 10)),
             )
             .show(ctx, |ui| {
