@@ -251,6 +251,14 @@ v0.6 的曲库深度规划、专辑/艺术家视图、评分与统计、智能�
 
 ## 版本记录
 
+### v0.12.1
+
+- 新增 CUE Sheet 解析基础：FILE、TRACK、TITLE、PERFORMER、INDEX 01。
+- 支持 UTF-8、UTF-16 BOM、GBK 编码读取。
+- 计算每轨开始时间与下一轨结束时间。
+- 新增 2 个 CUE 单元测试。
+- 生产构建 `cargo test --release`：33 passed。
+
 ### v0.12.0
 
 - 新增重复歌曲查找：同歌名、同艺术家、时长差 ≤2 秒。
