@@ -139,6 +139,7 @@ impl RPlayerApp {
     pub(super) fn toggle_command_palette(&mut self) {
         self.command_open = !self.command_open;
         if self.command_open {
+            self.command_anim_start = std::time::Instant::now();
             self.command_query.clear();
             self.command_index = 0;
             self.command_focus = true;
@@ -179,6 +180,16 @@ impl RPlayerApp {
             self.command_index = (self.command_index + 1) % filtered.len();
         }
 
+        let appear = if crate::ui::motion::reduced() {
+            1.0
+        } else {
+            (self.command_anim_start.elapsed().as_secs_f32()
+                / crate::ui::motion::FAST)
+                .clamp(0.0, 1.0)
+        };
+        if appear < 1.0 {
+            ctx.request_repaint();
+        }
         let mut execute = None;
         egui::Window::new("rplayer-command-palette")
             .title_bar(false)
@@ -188,18 +199,19 @@ impl RPlayerApp {
             .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
             .frame(
                 Frame::NONE
-                    .fill(theme::c().panel)
-                    .stroke(Stroke::new(1.0_f32, theme::c().border))
+                    .fill(theme::with_alpha(theme::c().panel, appear))
+                    .stroke(Stroke::new(1.0_f32, theme::with_alpha(theme::c().border, appear)))
                     .corner_radius(egui::CornerRadius::same(16))
                     .inner_margin(Margin::same(16))
                     .shadow(egui::epaint::Shadow {
                         offset: [0, 16],
                         blur: 36,
                         spread: 0,
-                        color: theme::c().shadow,
+                        color: theme::with_alpha(theme::c().shadow, appear),
                     }),
             )
             .show(ctx, |ui| {
+                ui.multiply_opacity(appear);
                 ui.horizontal(|ui| {
                     ui.label(
                         RichText::new("命令")

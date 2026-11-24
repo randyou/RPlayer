@@ -316,6 +316,15 @@ pub fn divider() -> Color32 {
     palette.bg.lerp_to_gamma(palette.border_soft, 0.10)
 }
 
+pub fn with_alpha(color: Color32, alpha: f32) -> Color32 {
+    Color32::from_rgba_unmultiplied(
+        color.r(),
+        color.g(),
+        color.b(),
+        (f32::from(color.a()) * alpha.clamp(0.0, 1.0)) as u8,
+    )
+}
+
 pub fn accent_alpha(alpha: f32) -> Color32 {
     let alpha = alpha.clamp(0.0, 1.0);
     let a = (alpha * 255.0).round() as u32;
