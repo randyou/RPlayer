@@ -483,7 +483,7 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                                 .color(theme::c().text),
                         );
                         ui.label(
-                            RichText::new("0.11.4 · 本地音乐播放器")
+                            RichText::new("0.11.5 · 本地音乐播放器")
                                 .size(11.0)
                                 .color(theme::c().muted),
                         );
@@ -670,7 +670,7 @@ fn tag_field(ui: &mut Ui, label: &str, value: &mut String) {
             egui::StrokeKind::Inside,
         );
         let edit_rect = rect.shrink2(Vec2::new(8.0, 6.0));
-        ui.put(
+        let response = ui.put(
             edit_rect,
             TextEdit::singleline(value)
                 .frame(false)
@@ -678,6 +678,14 @@ fn tag_field(ui: &mut Ui, label: &str, value: &mut String) {
                 .desired_width(edit_rect.width())
                 .clip_text(true),
         );
+        if response.has_focus() {
+            ui.painter().rect_stroke(
+                rect.shrink(1.0),
+                CornerRadius::same(8),
+                Stroke::new(2.0_f32, theme::accent_alpha(0.75)),
+                egui::StrokeKind::Inside,
+            );
+        }
     });
     ui.add_space(3.0);
 }
@@ -696,7 +704,7 @@ fn name_field(ui: &mut Ui, name: &mut String, hint: &str) -> egui::Response {
             egui::StrokeKind::Inside,
         );
         let edit_rect = rect.shrink2(Vec2::new(10.0, 6.0));
-        ui.put(
+        let response = ui.put(
             edit_rect,
             TextEdit::singleline(name)
                 .hint_text(RichText::new(hint).size(12.5).color(theme::c().faint))
@@ -706,7 +714,16 @@ fn name_field(ui: &mut Ui, name: &mut String, hint: &str) -> egui::Response {
                 .desired_width(edit_rect.width())
                 .clip_text(true)
                 .margin(Margin::symmetric(2, 2)),
-        )
+        );
+        if response.has_focus() {
+            ui.painter().rect_stroke(
+                rect.shrink(1.0),
+                CornerRadius::same(10),
+                Stroke::new(2.0_f32, theme::accent_alpha(0.75)),
+                egui::StrokeKind::Inside,
+            );
+        }
+        response
     })
     .inner
 }
