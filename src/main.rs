@@ -4,6 +4,7 @@
 
 mod app;
 mod audio;
+mod backup;
 mod cover;
 mod cover_fetch;
 mod cue;

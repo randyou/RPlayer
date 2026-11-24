@@ -41,6 +41,10 @@ impl RPlayerApp {
         let mut clear_covers = false;
         let mut lyrics_open = self.desktop_lyrics_open;
         let mut download = false;
+        let mut backup_requested = false;
+        let mut restore_requested = false;
+        let mut backup_media = false;
+        let mut settings_only = false;
         let cover_cache = crate::cover::cache_size();
 
         if ctx.input(|input| input.key_pressed(egui::Key::Escape)) {
@@ -465,6 +469,52 @@ impl RPlayerApp {
                         });
                     });
 
+                ui.add_space(16.0);
+                section(ui, "数据");
+                Frame::NONE
+                    .fill(theme::c().card)
+                    .stroke(Stroke::new(1.0_f32, theme::c().border_soft))
+                    .corner_radius(CornerRadius::same(12))
+                    .inner_margin(egui::Margin::symmetric(12, 10))
+                    .show(ui, |ui| {
+                        ui.label(
+                            RichText::new("备份与恢复")
+                                .size(12.0)
+                                .color(theme::c().text),
+                        );
+                        ui.add_space(3.0);
+                        ui.label(
+                            RichText::new(
+                                "备份设置、曲库索引、播放统计和会话；封面歌词缓存可选。恢复前会自动再备份一份。",
+                            )
+                            .size(10.5)
+                            .color(theme::c().faint),
+                        );
+                        ui.add_space(9.0);
+                        ui.horizontal(|ui| {
+                            if widgets::secondary_button(ui, "备份数据…").clicked() {
+                                backup_requested = true;
+                            }
+                            ui.add_space(4.0);
+                            if widgets::secondary_button(ui, "恢复数据…").clicked() {
+                                restore_requested = true;
+                            }
+                        });
+                        ui.add_space(5.0);
+                        ui.checkbox(
+                            &mut backup_media,
+                            RichText::new("备份时包含封面和歌词缓存")
+                                .size(10.5)
+                                .color(theme::c().muted),
+                        );
+                        ui.checkbox(
+                            &mut settings_only,
+                            RichText::new("恢复时只恢复设置与播放列表")
+                                .size(10.5)
+                                .color(theme::c().muted),
+                        );
+                    });
+
                 ui.add_space(18.0);
                 ui.horizontal(|ui| {
                     ui.label(
@@ -591,9 +641,129 @@ impl RPlayerApp {
         if download {
             self.download_current_lyrics(ctx);
         }
+        if backup_requested {
+            self.backup_data(backup_media);
+        }
+        if restore_requested {
+            self.restore_data(ctx, settings_only);
+        }
         if close {
             self.settings_open = false;
         }
+    }
+
+    fn backup_data(&mut self, include_media: bool) {
+        let Some(parent) = rfd::FileDialog::new()
+            .set_title("选择备份保存位置")
+            .pick_folder()
+        else {
+            return;
+        };
+        match crate::backup::create(&crate::storage::data_dir(), &parent, include_media) {
+            Ok(path) => self.toast(
+                format!(
+                    "备份完成：{}",
+                    path.file_name()
+                        .map(|name| name.to_string_lossy().to_string())
+                        .unwrap_or_else(|| path.display().to_string())
+                ),
+                super::ToastKind::Success,
+            ),
+            Err(error) => self.toast(
+                format!("备份失败：{error:#}"),
+                super::ToastKind::Error,
+            ),
+        }
+    }
+
+    fn restore_data(&mut self, ctx: &egui::Context, settings_only: bool) {
+        let Some(folder) = rfd::FileDialog::new()
+            .set_title("选择 RPlayer 备份文件夹")
+            .pick_folder()
+        else {
+            return;
+        };
+        let info = match crate::backup::inspect(&folder) {
+            Ok(info) => info,
+            Err(error) => {
+                self.toast(
+                    format!("无法恢复：{error:#}"),
+                    super::ToastKind::Error,
+                );
+                return;
+            }
+        };
+        let description = if settings_only {
+            "将用备份中的设置、播放列表和收藏覆盖当前设置，曲库与播放统计保持不变。\n\n恢复前会自动备份当前数据。".to_string()
+        } else {
+            format!(
+                "将恢复 {} 首曲目、播放统计和设置，当前数据会被覆盖。\n\n恢复前会自动备份当前数据。",
+                info.tracks
+            )
+        };
+        let confirmed = rfd::MessageDialog::new()
+            .set_title("恢复数据")
+            .set_description(description)
+            .set_buttons(rfd::MessageButtons::YesNo)
+            .set_level(rfd::MessageLevel::Warning)
+            .show()
+            == rfd::MessageDialogResult::Yes;
+        if !confirmed {
+            return;
+        }
+        match crate::backup::restore(&crate::storage::data_dir(), &folder, settings_only) {
+            Ok(report) => {
+                self.reload_after_restore(ctx, settings_only);
+                self.toast(
+                    if report.settings_only {
+                        "设置与播放列表已恢复".to_string()
+                    } else {
+                        format!("已恢复 {} 个数据文件", report.files)
+                    },
+                    super::ToastKind::Success,
+                );
+            }
+            Err(error) => self.toast(
+                format!("恢复失败：{error:#}"),
+                super::ToastKind::Error,
+            ),
+        }
+    }
+
+    fn reload_after_restore(&mut self, ctx: &egui::Context, settings_only: bool) {
+        if !settings_only {
+            if let Some(audio) = &mut self.audio {
+                audio.stop();
+            }
+            self.current = None;
+            self.queue.clear();
+            self.queue_index = 0;
+            self.selected = None;
+            self.checked.clear();
+            self.lyrics = None;
+            self.lyrics_for = None;
+            self.lyrics_editor = None;
+            self.cover = None;
+            self.cover_image = None;
+            self.cover_for = None;
+            self.cover_source = None;
+            self.cover_tint = None;
+            self.play_credited = false;
+        }
+        self.library = crate::storage::load_library();
+        self.volume = self.library.volume.clamp(0.0, 1.0);
+        if let Some(audio) = &mut self.audio {
+            audio.set_volume(self.volume);
+            audio.set_replaygain_mode(&self.library.replaygain);
+        }
+        self.eq.update(self.library.eq.clone());
+        self.stats = crate::stats::PlaybackStats::load();
+        self.stats_dirty = false;
+        crate::ui::motion::set_reduced(self.library.reduced_motion);
+        if let Some(preset) = ThemePreset::from_id(&self.library.theme_preset) {
+            self.set_theme_preset(ctx, preset);
+        }
+        self.prefs_dirty = false;
     }
 }
 

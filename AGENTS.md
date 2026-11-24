@@ -33,6 +33,7 @@ src/app/             app state, views, panels, dialogs
   settings.rs        settings window
 src/audio.rs         rodio playback, gapless queue, EQ chain
 src/playback.rs      CUE segment <-> whole-file position mapping
+src/backup.rs        folder backups, validation and restore/rollback
 src/model.rs         Library/Track/Playlist data types
 src/cue.rs           CUE Sheet parsing and virtual track creation
 src/duplicates.rs    duplicate group detection
@@ -100,7 +101,7 @@ src/ui/motion.rs     motion tokens and reduced-motion switch
 
 ## Verification
 
-- Unit tests: `cargo test --release` (currently 46+).
+- Unit tests: `cargo test --release` (currently 51+).
 - Windows UI automation: `agent-desktop snapshot --window-id <id>`, then click
   by `ref_id`; prefer AccessKit names over pixel coordinates.
 - Screenshots must be checked after UI changes; avoid leaving test images in
