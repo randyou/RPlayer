@@ -1,0 +1,232 @@
+{
+  "schema": "rplayer.design.flows/1",
+  "flows": [
+    {
+      "id": "FLOW.PLAY_TRACK",
+      "name": "播放一首歌",
+      "steps": [
+        "click row",
+        "row becomes current",
+        "player bar loads",
+        "cover crossfade",
+        "equalizer starts"
+      ],
+      "surfaces": [
+        "VIEW.LIBRARY",
+        "CHROME.PLAYER_BAR"
+      ],
+      "motion": [
+        "row.playing",
+        "cover.crossfade"
+      ]
+    },
+    {
+      "id": "FLOW.COMMAND",
+      "name": "键盘跳到任意页面",
+      "steps": [
+        "Ctrl+K",
+        "type",
+        "↑↓",
+        "Enter",
+        "route changes"
+      ],
+      "surfaces": [
+        "PANEL.COMMAND"
+      ],
+      "motion": [
+        "command.open",
+        "list.move",
+        "page.enter"
+      ]
+    },
+    {
+      "id": "FLOW.CONTEXT",
+      "name": "右键处理一首歌",
+      "steps": [
+        "right-click row",
+        "menu opens",
+        "submenu hover",
+        "action",
+        "toast"
+      ],
+      "surfaces": [
+        "MENU.TRACK",
+        "FEEDBACK.TOAST"
+      ],
+      "motion": [
+        "menu.open",
+        "submenu.open",
+        "toast.enter"
+      ]
+    },
+    {
+      "id": "FLOW.BATCH",
+      "name": "批量加到歌单",
+      "steps": [
+        "Ctrl+A",
+        "batch bar",
+        "add to playlist",
+        "choose list",
+        "toast"
+      ],
+      "surfaces": [
+        "STATE.BATCH_BAR",
+        "DIALOG.NEW_PLAYLIST"
+      ],
+      "motion": [
+        "batch.enter",
+        "toast.enter"
+      ]
+    },
+    {
+      "id": "FLOW.MINI",
+      "name": "切到迷你播放器",
+      "steps": [
+        "Ctrl+M",
+        "main hides",
+        "mini opens at saved position",
+        "drag to snap",
+        "expand"
+      ],
+      "surfaces": [
+        "OVERLAY.MINI_CLASSIC",
+        "OVERLAY.MINI_COMPACT"
+      ],
+      "motion": [
+        "mini.enter"
+      ]
+    },
+    {
+      "id": "FLOW.LYRICS",
+      "name": "桌面歌词",
+      "steps": [
+        "Ctrl+L",
+        "capsule appears",
+        "hover controls",
+        "click line seeks",
+        "double-click locks"
+      ],
+      "surfaces": [
+        "OVERLAY.LYRICS_DEFAULT",
+        "OVERLAY.LYRICS_HOVER",
+        "OVERLAY.LYRICS_LOCKED"
+      ],
+      "motion": [
+        "lyrics.panel",
+        "lyrics.controls",
+        "lyrics.line"
+      ]
+    },
+    {
+      "id": "FLOW.SETTINGS",
+      "name": "改设置",
+      "steps": [
+        "Ctrl+,",
+        "choose group",
+        "toggle",
+        "applies immediately",
+        "Esc closes"
+      ],
+      "surfaces": [
+        "SETTINGS.APPEARANCE",
+        "SETTINGS.DESKTOP_LYRICS"
+      ],
+      "motion": [
+        "modal.open",
+        "theme.switch"
+      ]
+    },
+    {
+      "id": "FLOW.TRAY",
+      "name": "从托盘控制",
+      "steps": [
+        "right-click tray",
+        "see now playing",
+        "play/pause",
+        "settings",
+        "menu closes"
+      ],
+      "surfaces": [
+        "TRAY.MENU"
+      ],
+      "motion": [
+        "tray.open"
+      ]
+    },
+    {
+      "id": "FLOW.SEARCH",
+      "name": "搜索",
+      "steps": [
+        "Ctrl+F",
+        "type",
+        "results filter",
+        "empty state",
+        "clear"
+      ],
+      "surfaces": [
+        "VIEW.LIBRARY",
+        "STATE.BATCH_BAR"
+      ],
+      "motion": [
+        "table.enter"
+      ]
+    },
+    {
+      "id": "FLOW.SCAN",
+      "name": "新增音乐",
+      "steps": [
+        "add folder",
+        "native picker",
+        "scan progress",
+        "library updates",
+        "error toast if unreadable"
+      ],
+      "surfaces": [
+        "DIALOG.FOLDERS",
+        "NATIVE.FOLDER_PICKER",
+        "FEEDBACK.TOAST"
+      ],
+      "motion": [
+        "progress.fill"
+      ]
+    },
+    {
+      "id": "FLOW.BACKUP",
+      "name": "备份 / 恢复",
+      "steps": [
+        "settings data",
+        "backup",
+        "native picker",
+        "complete toast",
+        "restore confirm"
+      ],
+      "surfaces": [
+        "SETTINGS.DATA",
+        "NATIVE.BACKUP_FOLDER",
+        "NATIVE.RESTORE_CONFIRM"
+      ],
+      "motion": [
+        "progress.fill",
+        "toast.enter"
+      ]
+    },
+    {
+      "id": "FLOW.QUEUE",
+      "name": "拖进队列",
+      "steps": [
+        "drag rows",
+        "queue target highlights",
+        "drop",
+        "toast count"
+      ],
+      "surfaces": [
+        "CHROME.SIDEBAR",
+        "PANEL.QUEUE"
+      ],
+      "motion": [
+        "batch.enter",
+        "toast.enter"
+      ]
+    }
+  ]
+}

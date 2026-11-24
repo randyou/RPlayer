@@ -1,0 +1,506 @@
+{
+  "schema": "rplayer.design.motion/1",
+  "tokens": {
+    "duration": {
+      "instant": 0,
+      "press": 90,
+      "fast": 140,
+      "base": 280,
+      "scene": 520
+    },
+    "easing": {
+      "out": "cubic-bezier(0.22, 1, 0.36, 1)",
+      "in-out": "cubic-bezier(0.65, 0, 0.35, 1)",
+      "in": "cubic-bezier(0.55, 0, 1, 0.45)"
+    },
+    "rules": [
+      "Animate transform and opacity only; never width, height, top, left, or box-shadow.",
+      "One-shot motion only. The playing equalizer is the only looping animation and freezes under reduced motion.",
+      "No entrance animation longer than 520ms; no stagger above 6 items.",
+      "prefers-reduced-motion or the in-app switch sets every duration to 0 and removes transforms; opacity changes may remain at 0ms.",
+      "Hover motion must not move the hit target. Press scale is at most 0.99."
+    ]
+  },
+  "patterns": [
+    {
+      "id": "row.hover",
+      "trigger": "pointer enters track row",
+      "property": "background-color, border-color",
+      "fromTo": "transparent → --surface-hover",
+      "duration": "fast",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "none"
+    },
+    {
+      "id": "row.select",
+      "trigger": "row becomes selected",
+      "property": "background-color, inset accent bar",
+      "fromTo": "0 → 1",
+      "duration": "fast",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "row.playing",
+      "trigger": "row becomes current track",
+      "property": "equalizer opacity, title color",
+      "fromTo": "0.4 → 1",
+      "duration": "base",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "equalizer static"
+    },
+    {
+      "id": "button.press",
+      "trigger": "pointer/key down on button",
+      "property": "transform, background-color",
+      "fromTo": "scale 1 → 0.99",
+      "duration": "press",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "nav.select",
+      "trigger": "sidebar destination selected",
+      "property": "background-color, accent bar",
+      "fromTo": "0 → 1",
+      "duration": "fast",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "table.enter",
+      "trigger": "view becomes visible",
+      "property": "opacity, translateY",
+      "fromTo": "0, 8px → 1, 0",
+      "duration": "base",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "no transform"
+    },
+    {
+      "id": "page.enter",
+      "trigger": "detail page becomes visible",
+      "property": "opacity, translateY",
+      "fromTo": "0, 10px → 1, 0",
+      "duration": "base",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "no transform"
+    },
+    {
+      "id": "menu.open",
+      "trigger": "context menu opens",
+      "property": "opacity, scale, translateY",
+      "fromTo": "0, .98, -4px → 1, 1, 0",
+      "duration": "fast",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "menu.item",
+      "trigger": "menu item hover/focus",
+      "property": "background-color",
+      "fromTo": "transparent → --surface-hover",
+      "duration": "press",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "submenu.open",
+      "trigger": "submenu opens after hover",
+      "property": "opacity, translateX",
+      "fromTo": "0, -4px → 1, 0",
+      "duration": "fast",
+      "easing": "out",
+      "delayMs": 120,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "modal.open",
+      "trigger": "dialog opens",
+      "property": "scrim opacity; panel opacity/scale",
+      "fromTo": "0; 0, .98 → 1; 1, 1",
+      "duration": "base",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "modal.close",
+      "trigger": "dialog closes",
+      "property": "opacity, scale",
+      "fromTo": "1, 1 → 0, .99",
+      "duration": "fast",
+      "easing": "in",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "drawer.open",
+      "trigger": "queue drawer opens",
+      "property": "translateX",
+      "fromTo": "100% → 0",
+      "duration": "base",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "drawer.close",
+      "trigger": "queue drawer closes",
+      "property": "translateX",
+      "fromTo": "0 → 100%",
+      "duration": "fast",
+      "easing": "in",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "command.open",
+      "trigger": "command palette opens",
+      "property": "scrim opacity; panel opacity/translateY",
+      "fromTo": "0; 0, -6px → 1, 0",
+      "duration": "fast",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "command.close",
+      "trigger": "command palette closes",
+      "property": "opacity",
+      "fromTo": "1 → 0",
+      "duration": "press",
+      "easing": "in",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "list.move",
+      "trigger": "command selection moves",
+      "property": "background-color, inset bar",
+      "fromTo": "0 → 1",
+      "duration": "press",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "toast.enter",
+      "trigger": "toast appears",
+      "property": "opacity, translateY",
+      "fromTo": "0, 8px → 1, 0",
+      "duration": "fast",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "toast.exit",
+      "trigger": "toast dismisses",
+      "property": "opacity",
+      "fromTo": "1 → 0",
+      "duration": "fast",
+      "easing": "in",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "theme.switch",
+      "trigger": "theme changes",
+      "property": "color, background-color, border-color",
+      "fromTo": "old → new tokens",
+      "duration": "base",
+      "easing": "in-out",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "cover.crossfade",
+      "trigger": "track changes",
+      "property": "opacity",
+      "fromTo": "0 → 1",
+      "duration": "scene",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "lyrics.line",
+      "trigger": "active lyric line changes",
+      "property": "opacity, translateY, color",
+      "fromTo": "0.7, 6px → 1, 0",
+      "duration": "base",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "no transform"
+    },
+    {
+      "id": "lyrics.panel",
+      "trigger": "lyrics panel toggles",
+      "property": "opacity",
+      "fromTo": "0 → 1",
+      "duration": "fast",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "lyrics.controls",
+      "trigger": "hover/focus reveals controls",
+      "property": "opacity, translateY",
+      "fromTo": "0, 4px → 1, 0",
+      "duration": "fast",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "mini.enter",
+      "trigger": "mini player window opens",
+      "property": "opacity, scale",
+      "fromTo": "0, .98 → 1, 1",
+      "duration": "base",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "tray.open",
+      "trigger": "tray menu opens",
+      "property": "native OS timing",
+      "fromTo": "n/a",
+      "duration": "instant",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "native"
+    },
+    {
+      "id": "progress.fill",
+      "trigger": "scan/backup progress",
+      "property": "transform scaleX",
+      "fromTo": "0 → 1",
+      "duration": "fast",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "slider.drag",
+      "trigger": "slider thumb follows pointer",
+      "property": "transform translateX",
+      "fromTo": "continuous",
+      "duration": "instant",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "eq.open",
+      "trigger": "equalizer opens",
+      "property": "opacity, scale",
+      "fromTo": "0, .98 → 1, 1",
+      "duration": "base",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "list.update",
+      "trigger": "candidate rows update",
+      "property": "opacity",
+      "fromTo": "0.4 → 1",
+      "duration": "fast",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "scene.enter",
+      "trigger": "immersive now playing opens",
+      "property": "opacity, scale of artwork",
+      "fromTo": "0, .97 → 1, 1",
+      "duration": "scene",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "chrome.hover",
+      "trigger": "window control hover",
+      "property": "background-color",
+      "fromTo": "transparent → --surface-hover",
+      "duration": "fast",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "nav.hover",
+      "trigger": "sidebar item hover",
+      "property": "background-color",
+      "fromTo": "transparent → --surface-hover",
+      "duration": "fast",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "card.hover",
+      "trigger": "album/artist card hover",
+      "property": "transform, border-color",
+      "fromTo": "translateY 0 → -2px",
+      "duration": "fast",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "none"
+    },
+    {
+      "id": "grid.enter",
+      "trigger": "album/artist grid enters",
+      "property": "opacity, translateY",
+      "fromTo": "0, 8px → 1, 0",
+      "duration": "base",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "no transform"
+    },
+    {
+      "id": "bar.enter",
+      "trigger": "player bar first paints",
+      "property": "opacity, translateY",
+      "fromTo": "0, 8px → 1, 0",
+      "duration": "base",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "no transform"
+    },
+    {
+      "id": "rail.enter",
+      "trigger": "now rail first paints",
+      "property": "opacity, translateX",
+      "fromTo": "0, 8px → 1, 0",
+      "duration": "base",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "no transform"
+    },
+    {
+      "id": "batch.enter",
+      "trigger": "batch bar appears",
+      "property": "opacity, translateY",
+      "fromTo": "0, 10px → 1, 0",
+      "duration": "fast",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "seek.drag",
+      "trigger": "seek slider drag",
+      "property": "transform translateX",
+      "fromTo": "continuous",
+      "duration": "instant",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "setting.toggle",
+      "trigger": "settings switch flips",
+      "property": "background-color, transform",
+      "fromTo": "0 → 1; knob x",
+      "duration": "fast",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "lyrics.lock",
+      "trigger": "lyrics lock toggles",
+      "property": "opacity of controls",
+      "fromTo": "1 → 0",
+      "duration": "fast",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "mini.compact",
+      "trigger": "mini style switches",
+      "property": "opacity, width",
+      "fromTo": "0.6 → 1",
+      "duration": "base",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "editor.open",
+      "trigger": "lyrics editor opens",
+      "property": "opacity, scale",
+      "fromTo": "0, .98 → 1, 1",
+      "duration": "base",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "health.open",
+      "trigger": "health panel opens",
+      "property": "opacity, scale",
+      "fromTo": "0, .98 → 1, 1",
+      "duration": "base",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "smart.open",
+      "trigger": "smart builder opens",
+      "property": "opacity, scale",
+      "fromTo": "0, .98 → 1, 1",
+      "duration": "base",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "rule.add",
+      "trigger": "smart rule row added",
+      "property": "opacity, translateY",
+      "fromTo": "0, -4px → 1, 0",
+      "duration": "fast",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "rule.update",
+      "trigger": "smart match count updates",
+      "property": "opacity",
+      "fromTo": "0.4 → 1",
+      "duration": "fast",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    },
+    {
+      "id": "row.focus",
+      "trigger": "keyboard focus lands on row",
+      "property": "outline-color",
+      "fromTo": "transparent → --accent",
+      "duration": "press",
+      "easing": "out",
+      "delayMs": 0,
+      "reducedMotion": "instant"
+    }
+  ]
+}

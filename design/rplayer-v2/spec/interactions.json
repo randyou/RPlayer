@@ -1,0 +1,233 @@
+{
+  "schema": "rplayer.design.interactions/1",
+  "patterns": [
+    {
+      "id": "row.single-click",
+      "trigger": "click track row",
+      "result": "select row; player loads track without leaving view",
+      "keyboard": "Enter/Space on focused row",
+      "aria": "row aria-selected",
+      "motion": [
+        "row.select"
+      ]
+    },
+    {
+      "id": "row.double-click",
+      "trigger": "double-click track row",
+      "result": "play immediately",
+      "keyboard": "Enter",
+      "aria": "same",
+      "motion": [
+        "row.playing"
+      ]
+    },
+    {
+      "id": "row.context-menu",
+      "trigger": "right-click or Shift+F10",
+      "result": "open track menu at pointer/focused row",
+      "keyboard": "Shift+F10, Menu key",
+      "aria": "menu role, focus first item",
+      "motion": [
+        "menu.open"
+      ]
+    },
+    {
+      "id": "row.drag",
+      "trigger": "drag track row",
+      "result": "drop on playlist or queue target; toast confirms count",
+      "keyboard": "not available; menu provides Add to",
+      "aria": "drag source has label",
+      "motion": [
+        "batch.enter"
+      ]
+    },
+    {
+      "id": "transport",
+      "trigger": "Space / play button",
+      "result": "toggle play without moving focus",
+      "keyboard": "Space",
+      "aria": "play button aria-pressed",
+      "motion": [
+        "button.press"
+      ]
+    },
+    {
+      "id": "seek",
+      "trigger": "drag progress or click track",
+      "result": "seek preview while dragging; commit on release",
+      "keyboard": "←/→ 5s",
+      "aria": "slider valuenow seconds",
+      "motion": [
+        "slider.drag"
+      ]
+    },
+    {
+      "id": "mode-cycle",
+      "trigger": "click play-mode button",
+      "result": "Sequential → RepeatAll → RepeatOne → Shuffle → ShuffleAll → Sequential",
+      "keyboard": "button Enter",
+      "aria": "aria-label = current mode",
+      "motion": [
+        "button.press"
+      ]
+    },
+    {
+      "id": "volume",
+      "trigger": "drag volume / mute button",
+      "result": "0–100; mute remembers prior level",
+      "keyboard": "↑/↓ when bar focused",
+      "aria": "slider",
+      "motion": [
+        "slider.drag"
+      ]
+    },
+    {
+      "id": "queue.open",
+      "trigger": "click queue or Q",
+      "result": "drawer opens; current track visible",
+      "keyboard": "Q, Esc closes",
+      "aria": "dialog focus trap",
+      "motion": [
+        "drawer.open"
+      ]
+    },
+    {
+      "id": "command.open",
+      "trigger": "Ctrl+K",
+      "result": "palette opens, input focused, first result selected",
+      "keyboard": "↑↓ move, Enter run, Esc close",
+      "aria": "combobox",
+      "motion": [
+        "command.open"
+      ]
+    },
+    {
+      "id": "search.focus",
+      "trigger": "Ctrl+F / click search",
+      "result": "focus field, keep current view",
+      "keyboard": "Ctrl+F",
+      "aria": "search landmark",
+      "motion": [
+        "nav.select"
+      ]
+    },
+    {
+      "id": "theme.toggle",
+      "trigger": "click moon / Ctrl+T",
+      "result": "Paper ↔ Nocturne; no reload",
+      "keyboard": "Ctrl+T",
+      "aria": "button label updates",
+      "motion": [
+        "theme.switch"
+      ]
+    },
+    {
+      "id": "mini.toggle",
+      "trigger": "Ctrl+M / mini button",
+      "result": "main hides; mini window opens at saved position",
+      "keyboard": "Ctrl+M",
+      "aria": "toggle button",
+      "motion": [
+        "mini.enter"
+      ]
+    },
+    {
+      "id": "lyrics.toggle",
+      "trigger": "Ctrl+L / lyrics button",
+      "result": "desktop lyrics window opens/closes; state persists",
+      "keyboard": "Ctrl+L",
+      "aria": "toggle",
+      "motion": [
+        "lyrics.panel"
+      ]
+    },
+    {
+      "id": "lyrics.click",
+      "trigger": "click a lyric line",
+      "result": "seek to that line; playback state unchanged",
+      "keyboard": "not applicable",
+      "aria": "line button labelled",
+      "motion": [
+        "lyrics.line"
+      ]
+    },
+    {
+      "id": "lyrics.lock",
+      "trigger": "double-click capsule / tray menu",
+      "result": "lock hides all controls; unlock via double-click or tray",
+      "keyboard": "menu item",
+      "aria": "lock state announced",
+      "motion": [
+        "lyrics.lock"
+      ]
+    },
+    {
+      "id": "context.dismiss",
+      "trigger": "Esc / click outside",
+      "result": "close menu without action",
+      "keyboard": "Esc",
+      "aria": "focus returns to trigger",
+      "motion": [
+        "modal.close"
+      ]
+    },
+    {
+      "id": "batch.select",
+      "trigger": "Ctrl+A / checkbox",
+      "result": "batch bar replaces toolbar; count announced",
+      "keyboard": "Ctrl+A, Esc clears",
+      "aria": "selection count live",
+      "motion": [
+        "batch.enter"
+      ]
+    },
+    {
+      "id": "scan.start",
+      "trigger": "add folder / rescan",
+      "result": "progress row appears; library remains browsable",
+      "keyboard": "button",
+      "aria": "progressbar",
+      "motion": [
+        "progress.fill"
+      ]
+    },
+    {
+      "id": "settings.change",
+      "trigger": "toggle/switch",
+      "result": "applies immediately; no apply button",
+      "keyboard": "Space toggles",
+      "aria": "switch checked",
+      "motion": [
+        "button.press"
+      ]
+    },
+    {
+      "id": "dialog.submit",
+      "trigger": "Enter in form",
+      "result": "primary action if valid; invalid shows inline error",
+      "keyboard": "Enter, Esc cancel",
+      "aria": "dialog labelled by title",
+      "motion": [
+        "modal.close"
+      ]
+    },
+    {
+      "id": "tray.action",
+      "trigger": "right-click tray icon",
+      "result": "native menu; actions mirror player bar",
+      "keyboard": "OS menu keys",
+      "aria": "native",
+      "motion": [
+        "tray.open"
+      ]
+    },
+    {
+      "id": "native.reveal",
+      "trigger": "在文件夹中显示",
+      "result": "Explorer opens with file selected",
+      "keyboard": "menu item",
+      "aria": "native",
+      "motion": []
+    }
+  ]
+}
