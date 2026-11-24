@@ -4,7 +4,7 @@
 
 ## 读取顺序
 
-1. `inventory.json`：先确认边界——52 个设计界面 + 7 个原生系统对话框，共 59 个可操作表面。
+1. `inventory.json`：先确认边界——53 个设计界面 + 7 个原生系统对话框，共 60 个可操作表面。
 2. `interactions.json`：再接行为——触发、结果、键盘、aria 与 motion 引用。
 3. `motion.json`：再定节奏——token、属性、曲线、减弱动态替代。
 4. `flows.json`：最后串路径——播放、搜索、右键、多选、迷你、歌词、设置、托盘、扫描、备份、队列。
@@ -26,16 +26,16 @@
 
 | 类别 | 数量 |
 | --- | --- |
-| view / 浏览 | 10 |
+| view / 浏览 | 11 |
 | global / 框架 | 8 |
 | overlay / 外设 | 7 |
 | menu / 右键 | 6 |
 | dialog / 对话框 | 11 |
 | tool / 工具窗口 | 4 |
 | settings / 设置 | 6 |
-| **designed** | **52** |
+| **designed** | **53** |
 | native OS dialogs | 7 |
-| **total** | **59** |
+| **total** | **60** |
 | motion patterns | 48 |
 | interactions | 23 |
 | flows | 12 |

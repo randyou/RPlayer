@@ -18,9 +18,9 @@
     ]
   },
   "counts": {
-    "designed": 52,
+    "designed": 53,
     "native": 7,
-    "total": 59
+    "total": 60
   },
   "surfaces": [
     {
@@ -241,6 +241,37 @@
         "rule.update"
       ],
       "a11y": "rule summary readable as sentence"
+    },
+    {
+      "id": "VIEW.NOW_PLAYING",
+      "category": "view",
+      "title": "正在播放（沉浸页）",
+      "source": "src/app/now_playing.rs",
+      "states": [
+        "default",
+        "playing",
+        "paused",
+        "no-lyrics",
+        "immersive"
+      ],
+      "actions": [
+        "play-pause",
+        "next",
+        "previous",
+        "seek",
+        "favorite",
+        "queue",
+        "equalizer",
+        "back",
+        "immersive"
+      ],
+      "motion": [
+        "page.enter",
+        "scene.enter",
+        "cover.crossfade",
+        "lyrics.line"
+      ],
+      "a11y": "main region; lyrics current line aria-current; transport controls labelled"
     },
     {
       "id": "CHROME.TITLEBAR",
