@@ -585,6 +585,11 @@ impl RPlayerApp {
                     let selected = self.selected == Some(id);
                     let checked = self.checked.contains(&id);
                     let hovered = response.hovered();
+                    let hover_t = ui.ctx().animate_bool_with_time(
+                        egui::Id::new(("track-row-hover", id)),
+                        hovered && !current && !selected && !checked,
+                        crate::ui::motion::duration(crate::ui::motion::FAST),
+                    );
                     let row_label = format!("{} — {}", track.title, track.artist);
                     response.widget_info(move || {
                         WidgetInfo::selected(
@@ -616,8 +621,18 @@ impl RPlayerApp {
                         painter.rect_filled(pill, row_radius, theme::accent_alpha(0.05));
                     } else if selected {
                         painter.rect_filled(pill, row_radius, theme::c().hover);
-                    } else if hovered {
-                        painter.rect_filled(pill, row_radius, theme::c().card);
+                    } else if hover_t > 0.001 {
+                        let fill = theme::c().card;
+                        painter.rect_filled(
+                            pill,
+                            row_radius,
+                            egui::Color32::from_rgba_unmultiplied(
+                                fill.r(),
+                                fill.g(),
+                                fill.b(),
+                                (255.0 * hover_t) as u8,
+                            ),
+                        );
                     }
 
                     let index_rect = columns.index_rect(rect);
