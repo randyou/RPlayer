@@ -23,16 +23,15 @@ impl RPlayerApp {
         self.now_queue_panel(ctx);
 
         egui::TopBottomPanel::bottom("rplayer-now-controls")
-            .exact_height(112.0)
+            .exact_height(92.0)
             .frame(
                 Frame::NONE
-                    .fill(theme::c().sidebar)
-                    .stroke(Stroke::new(1.0_f32, theme::c().border_soft))
+                    .fill(theme::sidebar_deep())
                     .inner_margin(Margin {
-                        left: 26,
-                        right: 26,
-                        top: 9,
-                        bottom: 10,
+                        left: 24,
+                        right: 24,
+                        top: 6,
+                        bottom: 6,
                     }),
             )
             .show(ctx, |ui| self.now_controls(ui, ctx));
@@ -42,139 +41,21 @@ impl RPlayerApp {
             .show(ctx, |ui| {
                 ambient_background(ui, self.cover_tint);
 
-                ui.horizontal(|ui| {
-                    if widgets::icon_button(ui, Icon::ChevronDown, 34.0, "收起正在播放").clicked() {
-                        self.expanded = false;
-                    }
-                    ui.add_space(8.0);
-                    ui.label(
-                        RichText::new("正在播放")
-                            .size(11.5)
-                            .strong()
-                            .color(theme::c().muted),
-                    );
-                    ui.label(RichText::new("·").size(11.0).color(theme::c().faint));
-                    ui.label(
-                        RichText::new("RPlayer")
-                            .size(11.0)
-                            .color(theme::c().faint),
-                    );
-
-                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        if widgets::icon_button_tinted(
-                            ui,
-                            Icon::Queue,
-                            32.0,
-                            theme::c().muted,
-                            self.queue_open,
-                            "播放队列",
-                        )
-                        .clicked()
-                        {
-                            self.queue_open = !self.queue_open;
-                        }
-
-                        let favorite = self.current.is_some_and(|id| self.library.is_favorite(id));
-                        if widgets::icon_button_tinted(
-                            ui,
-                            if favorite {
-                                Icon::HeartFilled
-                            } else {
-                                Icon::Heart
-                            },
-                            32.0,
-                            if favorite { theme::c().accent } else { theme::c().muted },
-                            favorite,
-                            if favorite { "取消收藏" } else { "收藏" },
-                        )
-                        .clicked()
-                        {
-                            if let Some(id) = self.current {
-                                self.toggle_favorite(id);
-                            }
-                        }
-
-                        ui.add_space(2.0);
-                        if widgets::icon_button(
-                            ui,
-                            if self.theme_mode.is_dark() {
-                                Icon::Sun
-                            } else {
-                                Icon::Moon
-                            },
-                            32.0,
-                            "切换主题",
-                        )
-                        .clicked()
-                        {
-                            self.toggle_theme(ui.ctx());
-                        }
-                        if widgets::icon_button_tinted(
-                            ui,
-                            Icon::Equalizer,
-                            32.0,
-                            theme::c().muted,
-                            self.eq_open,
-                            "均衡器",
-                        )
-                        .clicked()
-                        {
-                            self.toggle_eq();
-                        }
-                        if widgets::icon_button_tinted(
-                            ui,
-                            Icon::Lyrics,
-                            32.0,
-                            theme::c().muted,
-                            self.desktop_lyrics_open,
-                            "桌面歌词",
-                        )
-                        .clicked()
-                        {
-                            self.toggle_desktop_lyrics(ui.ctx());
-                        }
-                        if widgets::icon_button_tinted(
-                            ui,
-                            Icon::MiniPlayer,
-                            32.0,
-                            theme::c().muted,
-                            self.mini_open,
-                            "迷你播放器",
-                        )
-                        .clicked()
-                        {
-                            self.toggle_mini(ui.ctx());
-                        }
-                        if widgets::icon_button_tinted(
-                            ui,
-                            Icon::Settings,
-                            32.0,
-                            theme::c().muted,
-                            self.settings_open,
-                            "设置",
-                        )
-                        .clicked()
-                        {
-                            self.settings_open = !self.settings_open;
-                        }
-                    });
-                });
-
                 ui.add_space(8.0);
 
                 let Some(track) = self.current.and_then(|id| self.library.track(id)).cloned() else {
                     return;
                 };
                 let content_height = ui.available_height();
-                let cover_size = (content_height - 40.0).clamp(210.0, 380.0);
-                let left_width = (ui.available_width() * 0.44).max(cover_size + 24.0);
+                let cover_size = (content_height - 150.0).clamp(280.0, 430.0);
+                let left_width = (ui.available_width() * 0.46).max(cover_size + 70.0);
 
                 ui.horizontal(|ui| {
                     ui.allocate_ui_with_layout(
                         Vec2::new(left_width, content_height),
                         Layout::top_down(Align::Center),
                         |ui| {
-                            let top_gap = ((content_height - cover_size) * 0.5 - 10.0).max(0.0);
+                            let top_gap = ((content_height - cover_size) * 0.5 - 22.0).max(0.0);
                             ui.add_space(top_gap);
                             if let Some(texture) = self.cover_for_current() {
                                 ui.add(
@@ -182,16 +63,16 @@ impl RPlayerApp {
                                         texture.id(),
                                         Vec2::splat(cover_size),
                                     ))
-                                    .corner_radius(CornerRadius::same(18)),
+                                    .corner_radius(CornerRadius::same(2)),
                                 );
                             } else {
                                 let (rect, _) =
                                     ui.allocate_exact_size(Vec2::splat(cover_size), Sense::hover());
                                 let painter = ui.painter();
-                                painter.rect_filled(rect, CornerRadius::same(18), theme::c().card);
+                                painter.rect_filled(rect, CornerRadius::same(2), theme::c().card);
                                 painter.rect_stroke(
                                     rect,
-                                    CornerRadius::same(18),
+                                    CornerRadius::same(2),
                                     Stroke::new(1.0_f32, theme::c().border),
                                     egui::StrokeKind::Inside,
                                 );
@@ -215,30 +96,29 @@ impl RPlayerApp {
                         },
                     );
 
-                    ui.add_space(12.0);
+                    ui.add_space(20.0);
 
                     ui.allocate_ui_with_layout(
                         Vec2::new(ui.available_width(), content_height),
                         Layout::top_down(Align::LEFT),
                         |ui| {
-                            ui.add_space(26.0);
+                            ui.add_space(34.0);
                             ui.add(
                                 Label::new(
                                     RichText::new(&track.title)
-                                        .size(32.0)
-                                        .strong()
+                                        .font(crate::ui::tokens::serif(56.0))
                                         .color(theme::c().text),
                                 )
                                 .truncate(),
                             );
-                            ui.add_space(5.0);
+                            ui.add_space(8.0);
                             ui.add(
                                 Label::new(
-                                    RichText::new(&track.artist).size(14.0).color(theme::c().muted),
+                                    RichText::new(&track.artist).size(12.5).color(theme::c().muted),
                                 )
                                 .truncate(),
                             );
-                            ui.add_space(2.0);
+                            ui.add_space(3.0);
                             ui.add(
                                 Label::new(
                                     RichText::new(format!(
@@ -247,7 +127,7 @@ impl RPlayerApp {
                                         track.format_label(),
                                         model::format_duration(track.duration)
                                     ))
-                                    .size(10.5)
+                                    .font(crate::ui::tokens::mono(9.0))
                                     .color(theme::c().faint),
                                 )
                                 .truncate(),
@@ -388,11 +268,11 @@ impl RPlayerApp {
             (lines, lyrics.active_index(current))
         };
 
-        let start = active.map(|active| active.saturating_sub(4)).unwrap_or(0);
-        let visible = 9;
-        let line_height = 44.0;
-        let top_gap = ((content_height - 160.0 - visible as f32 * line_height) * 0.5).max(0.0);
-        ui.add_space(top_gap.min(24.0));
+        let start = active.map(|active| active.saturating_sub(3)).unwrap_or(0);
+        let visible = 7;
+        let line_height = 48.0;
+        let top_gap = ((content_height - 220.0 - visible as f32 * line_height) * 0.5).max(0.0);
+        ui.add_space(top_gap.min(20.0));
 
         let mut shown = 0;
         for (index, (text, time)) in lines.iter().enumerate().skip(start).take(visible) {
@@ -402,7 +282,7 @@ impl RPlayerApp {
             }
             let is_active = active == Some(index);
             let color = if is_active {
-                theme::c().accent
+                theme::signal()
             } else if active.is_none() && index == start {
                 theme::c().text
             } else if active.is_some_and(|active| index.abs_diff(active) == 1) {
@@ -410,12 +290,11 @@ impl RPlayerApp {
             } else {
                 theme::c().faint
             };
-            let size = if is_active { 22.0 } else { 14.0 };
+            let size = if is_active { 30.0 } else { 21.0 };
             let response = ui.add(
                 Label::new(
                     RichText::new(text)
                         .size(size)
-                        .strong()
                         .color(color),
                 )
                 .truncate()
@@ -427,7 +306,7 @@ impl RPlayerApp {
             {
                 self.seek_to(*time);
             }
-            ui.add_space(if is_active { 16.0 } else { 12.0 });
+            ui.add_space(if is_active { 14.0 } else { 8.0 });
             shown += 1;
         }
         if shown == 0 {
@@ -541,7 +420,7 @@ impl RPlayerApp {
             ui.label(
                 RichText::new(model::format_duration(self.current_position()))
                     .font(FontId::monospace(10.5))
-                    .color(theme::c().muted),
+                    .color(theme::sidebar_muted()),
             );
             let width = (ui.available_width() - 92.0).max(120.0);
             let seek = ui
@@ -557,7 +436,7 @@ impl RPlayerApp {
             ui.label(
                 RichText::new(model::format_duration(self.current_duration()))
                     .font(FontId::monospace(10.5))
-                    .color(theme::c().muted),
+                    .color(theme::sidebar_muted()),
             );
         });
 
@@ -570,11 +449,10 @@ impl RPlayerApp {
                 Layout::left_to_right(Align::Center),
                 |ui| {
                     ui.spacing_mut().item_spacing.x = 5.0;
-                    if widgets::icon_button_tinted(
+                    if widgets::sidebar_icon_button_tinted(
                         ui,
                         self.play_mode.icon(),
                         30.0,
-                        theme::c().muted,
                         self.play_mode.active(),
                         self.play_mode.tooltip(),
                     )
@@ -586,7 +464,7 @@ impl RPlayerApp {
                     ui.label(
                         RichText::new("正在播放")
                             .size(10.5)
-                            .color(theme::c().faint),
+                            .color(theme::sidebar_faint()),
                     );
                 },
             );
@@ -598,13 +476,13 @@ impl RPlayerApp {
                 |ui| {
                     ui.add_space(((ui.available_width() - controls_width) / 2.0).max(0.0));
                     ui.spacing_mut().item_spacing.x = 10.0;
-                    if widgets::icon_button(ui, Icon::Prev, 34.0, "上一首").clicked() {
+                    if widgets::sidebar_icon_button(ui, Icon::Prev, 34.0, "上一首").clicked() {
                         self.previous_track(ctx);
                     }
                     if widgets::play_button(ui, self.is_playing(), true).clicked() {
                         self.toggle_play(ctx);
                     }
-                    if widgets::icon_button(ui, Icon::Next, 34.0, "下一首").clicked() {
+                    if widgets::sidebar_icon_button(ui, Icon::Next, 34.0, "下一首").clicked() {
                         self.next_track(ctx, false);
                     }
                 },
@@ -614,11 +492,10 @@ impl RPlayerApp {
                 Vec2::new(ui.available_width(), 56.0),
                 Layout::right_to_left(Align::Center),
                 |ui| {
-                    if widgets::icon_button_tinted(
+                    if widgets::sidebar_icon_button_tinted(
                         ui,
                         Icon::Queue,
                         30.0,
-                        theme::c().muted,
                         self.queue_open,
                         "播放队列",
                     )
@@ -626,7 +503,7 @@ impl RPlayerApp {
                     {
                         self.queue_open = !self.queue_open;
                     }
-                    if widgets::icon_button(
+                    if widgets::sidebar_icon_button(
                         ui,
                         if self.volume <= 0.005 {
                             Icon::VolumeMuted

@@ -217,9 +217,10 @@ impl RPlayerApp {
             return;
         }
         let available = ui.available_width();
-        let card_width = 168.0;
-        let gap = 16.0;
-        let columns = (((available + gap) / (card_width + gap)).floor() as usize).max(1);
+        let gap = 24.0;
+        let columns = (((available + gap) / (188.0 + gap)).floor() as usize).clamp(3, 5);
+        let card_width = ((available - gap * (columns.saturating_sub(1) as f32)) / columns as f32)
+            .clamp(140.0, 232.0);
         egui::ScrollArea::vertical()
             .id_salt("rplayer-albums")
             .auto_shrink([false, false])
@@ -230,8 +231,11 @@ impl RPlayerApp {
                         for group in row {
                             self.album_card(ui, group, card_width);
                         }
+                        if row.len() < columns {
+                            self.album_import_card(ui, card_width);
+                        }
                     });
-                    ui.add_space(16.0);
+                    ui.add_space(24.0);
                 }
             });
     }
@@ -250,9 +254,10 @@ impl RPlayerApp {
             return;
         }
         let available = ui.available_width();
-        let card_width = 168.0;
-        let gap = 16.0;
-        let columns = (((available + gap) / (card_width + gap)).floor() as usize).max(1);
+        let gap = 24.0;
+        let columns = (((available + gap) / (188.0 + gap)).floor() as usize).clamp(3, 5);
+        let card_width = ((available - gap * (columns.saturating_sub(1) as f32)) / columns as f32)
+            .clamp(140.0, 232.0);
         egui::ScrollArea::vertical()
             .id_salt("rplayer-artists")
             .auto_shrink([false, false])
@@ -264,23 +269,67 @@ impl RPlayerApp {
                             self.artist_card(ui, group, card_width);
                         }
                     });
-                    ui.add_space(16.0);
+                    ui.add_space(24.0);
                 }
             });
     }
 
+    fn album_import_card(&mut self, ui: &mut Ui, width: f32) {
+        let card_height = width + 64.0;
+        let (rect, response) = ui.allocate_exact_size(Vec2::new(width, card_height), Sense::click());
+        let cover = Rect::from_min_size(rect.min, Vec2::splat(width));
+        let hovered = response.hovered();
+        let painter = ui.painter();
+        painter.rect_filled(cover, CornerRadius::same(2), theme::c().panel);
+        painter.rect_stroke(
+            cover,
+            CornerRadius::same(2),
+            Stroke::new(1.0_f32, theme::c().border),
+            egui::StrokeKind::Inside,
+        );
+        let icon_color = if hovered {
+            theme::c().accent
+        } else {
+            theme::c().faint
+        };
+        icons::paint(
+            painter,
+            Rect::from_center_size(cover.center() - Vec2::new(0.0, 12.0), Vec2::splat(24.0)),
+            Icon::Plus,
+            icon_color,
+        );
+        painter.text(
+            cover.center() + Vec2::new(0.0, 14.0),
+            Align2::CENTER_CENTER,
+            "添加音乐",
+            FontId::proportional(12.5),
+            theme::c().muted,
+        );
+        painter.text(
+            cover.center() + Vec2::new(0.0, 32.0),
+            Align2::CENTER_CENTER,
+            "扫描文件夹",
+            FontId::proportional(9.5),
+            theme::c().faint,
+        );
+        if response.clicked() {
+            self.open_folder_picker();
+        }
+        response.on_hover_cursor(CursorIcon::PointingHand);
+    }
+
     fn album_card(&mut self, ui: &mut Ui, group: &AlbumGroup, width: f32) {
-        let card_height = 222.0;
+        let card_height = width + 64.0;
         let (rect, response) = ui.allocate_exact_size(Vec2::new(width, card_height), Sense::click());
         let hovered = response.hovered();
         let cover = Rect::from_min_size(rect.min, Vec2::splat(width));
 
         self.browse.ensure(&group.key, &group.first);
         let texture = self.browse.texture(&group.key);
-        ui.painter()
-            .rect_filled(cover, CornerRadius::same(12), theme::c().card);
+        let painter = ui.painter();
+        painter.rect_filled(cover, CornerRadius::same(2), theme::c().card);
         if let Some(texture) = texture {
-            ui.painter().image(
+            painter.image(
                 texture.id(),
                 cover,
                 Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
@@ -288,49 +337,47 @@ impl RPlayerApp {
             );
         } else {
             icons::paint(
-                ui.painter(),
+                painter,
                 Rect::from_center_size(cover.center(), Vec2::splat(44.0)),
                 Icon::Music,
                 theme::c().faint,
             );
         }
         if hovered {
-            ui.painter()
-                .rect_filled(cover, CornerRadius::same(12), theme::accent_alpha(0.08));
-            let play = Rect::from_center_size(cover.center(), Vec2::splat(44.0));
-            ui.painter()
-                .circle_filled(play.center(), 22.0, theme::c().accent);
+            painter.rect_filled(cover, CornerRadius::same(2), theme::accent_alpha(0.10));
+            let play = Rect::from_center_size(cover.center(), Vec2::splat(40.0));
+            painter.circle_filled(play.center(), 20.0, theme::c().accent);
             icons::paint(
-                ui.painter(),
-                play.shrink(12.0),
+                painter,
+                play.shrink(11.0),
                 Icon::Play,
                 theme::c().on_accent,
             );
         }
 
-        ui.painter().text(
+        painter.text(
             Pos2::new(rect.left(), cover.bottom() + 12.0),
             Align2::LEFT_TOP,
-            &truncate(&group.title, 16),
-            FontId::proportional(13.0),
+            &truncate(&group.title, 18),
+            crate::ui::tokens::serif(14.0),
             theme::c().text,
         );
-        ui.painter().text(
-            Pos2::new(rect.left(), cover.bottom() + 32.0),
+        painter.text(
+            Pos2::new(rect.left(), cover.bottom() + 34.0),
             Align2::LEFT_TOP,
-            &truncate(&group.artist, 16),
-            FontId::proportional(11.0),
+            &truncate(&group.artist, 18),
+            FontId::proportional(10.5),
             theme::c().muted,
         );
         let meta = match group.year {
             Some(year) => format!("{year} · {} 首", group.ids.len()),
             None => format!("{} 首", group.ids.len()),
         };
-        ui.painter().text(
+        painter.text(
             Pos2::new(rect.left(), cover.bottom() + 50.0),
             Align2::LEFT_TOP,
             meta,
-            FontId::proportional(10.0),
+            crate::ui::tokens::mono(8.5),
             theme::c().faint,
         );
 
@@ -359,21 +406,18 @@ impl RPlayerApp {
     }
 
     fn artist_card(&mut self, ui: &mut Ui, group: &ArtistGroup, width: f32) {
-        let card_height = 222.0;
+        let card_height = width + 64.0;
         let (rect, response) = ui.allocate_exact_size(Vec2::new(width, card_height), Sense::click());
         let hovered = response.hovered();
-        let cover = Rect::from_center_size(
-            Pos2::new(rect.center().x, rect.top() + width * 0.5),
-            Vec2::splat(width * 0.86),
-        );
+        let cover = Rect::from_min_size(rect.min, Vec2::splat(width));
 
         let key = album_key(&group.first);
         self.browse.ensure(&key, &group.first);
         let texture = self.browse.texture(&key);
-        ui.painter()
-            .rect_filled(cover, CornerRadius::same(12), theme::c().card);
+        let painter = ui.painter();
+        painter.rect_filled(cover, CornerRadius::same(2), theme::c().card);
         if let Some(texture) = texture {
-            ui.painter().image(
+            painter.image(
                 texture.id(),
                 cover,
                 Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
@@ -381,40 +425,38 @@ impl RPlayerApp {
             );
         } else {
             let initial = group.name.chars().next().unwrap_or('?').to_string();
-            ui.painter().text(
+            painter.text(
                 cover.center(),
                 Align2::CENTER_CENTER,
                 initial,
-                FontId::proportional(42.0),
+                crate::ui::tokens::serif(52.0),
                 theme::c().accent,
             );
         }
         if hovered {
-            ui.painter()
-                .rect_filled(cover, CornerRadius::same(12), theme::accent_alpha(0.10));
-            let play = Rect::from_center_size(cover.center(), Vec2::splat(44.0));
-            ui.painter()
-                .circle_filled(play.center(), 22.0, theme::c().accent);
+            painter.rect_filled(cover, CornerRadius::same(2), theme::accent_alpha(0.10));
+            let play = Rect::from_center_size(cover.center(), Vec2::splat(40.0));
+            painter.circle_filled(play.center(), 20.0, theme::c().accent);
             icons::paint(
-                ui.painter(),
-                play.shrink(12.0),
+                painter,
+                play.shrink(11.0),
                 Icon::Play,
                 theme::c().on_accent,
             );
         }
 
-        ui.painter().text(
-            Pos2::new(rect.center().x, cover.bottom() + 10.0),
-            Align2::CENTER_TOP,
-            &truncate(&group.name, 12),
-            FontId::proportional(14.0),
+        painter.text(
+            Pos2::new(rect.left(), cover.bottom() + 12.0),
+            Align2::LEFT_TOP,
+            &truncate(&group.name, 16),
+            crate::ui::tokens::serif(14.0),
             theme::c().text,
         );
-        ui.painter().text(
-            Pos2::new(rect.center().x, cover.bottom() + 32.0),
-            Align2::CENTER_TOP,
+        painter.text(
+            Pos2::new(rect.left(), cover.bottom() + 36.0),
+            Align2::LEFT_TOP,
             format!("{} 张专辑 · {} 首", group.album_count, group.ids.len()),
-            FontId::proportional(10.0),
+            crate::ui::tokens::mono(8.5),
             theme::c().faint,
         );
 
@@ -453,11 +495,11 @@ impl RPlayerApp {
         self.browse.ensure(&group.key, &group.first);
         let texture = self.browse.texture(&group.key);
         ui.horizontal(|ui| {
-            let cover_size = 158.0;
+            let cover_size = 156.0;
             let (cover, _) =
                 ui.allocate_exact_size(Vec2::splat(cover_size), Sense::hover());
             ui.painter()
-                .rect_filled(cover, CornerRadius::same(12), theme::c().card);
+                .rect_filled(cover, CornerRadius::same(2), theme::c().card);
             if let Some(texture) = texture {
                 ui.painter().image(
                     texture.id(),
@@ -474,19 +516,24 @@ impl RPlayerApp {
                 );
             }
 
-            ui.add_space(18.0);
+            ui.add_space(24.0);
             ui.vertical(|ui| {
-                ui.add_space(4.0);
+                ui.add_space(2.0);
+                ui.label(
+                    egui::RichText::new("ALBUM")
+                        .font(crate::ui::tokens::mono(9.0))
+                        .color(theme::c().faint),
+                );
+                ui.add_space(2.0);
                 ui.label(
                     egui::RichText::new(&group.title)
-                        .size(25.0)
-                        .strong()
+                        .font(crate::ui::tokens::serif(42.0))
                         .color(theme::c().text),
                 );
                 ui.add_space(4.0);
                 ui.label(
                     egui::RichText::new(&group.artist)
-                        .size(13.0)
+                        .size(12.0)
                         .color(theme::c().muted),
                 );
                 let year = group
@@ -499,10 +546,10 @@ impl RPlayerApp {
                         group.ids.len(),
                         crate::model::format_duration(group.duration)
                     ))
-                    .size(10.5)
+                    .font(crate::ui::tokens::mono(9.0))
                     .color(theme::c().faint),
                 );
-                ui.add_space(10.0);
+                ui.add_space(12.0);
                 ui.horizontal(|ui| {
                     ui.spacing_mut().item_spacing.x = 10.0;
                     if widgets::primary_button_icon(ui, crate::ui::icons::Icon::Play, "播放全部").clicked() {
@@ -544,7 +591,7 @@ impl RPlayerApp {
             let cover_size = 118.0;
             let (cover, _) = ui.allocate_exact_size(Vec2::splat(cover_size), Sense::hover());
             ui.painter()
-                .rect_filled(cover, CornerRadius::same(12), theme::c().card);
+                .rect_filled(cover, CornerRadius::same(2), theme::c().card);
             if let Some(texture) = texture {
                 ui.painter().image(
                     texture.id(),
@@ -557,7 +604,7 @@ impl RPlayerApp {
                     cover.center(),
                     Align2::CENTER_CENTER,
                     group.name.chars().next().unwrap_or('?').to_string(),
-                    FontId::proportional(40.0),
+                    crate::ui::tokens::serif(40.0),
                     theme::c().accent,
                 );
             }
@@ -565,9 +612,13 @@ impl RPlayerApp {
             ui.vertical(|ui| {
                 ui.add_space(2.0);
                 ui.label(
+                    egui::RichText::new("ARTIST")
+                        .font(crate::ui::tokens::mono(9.0))
+                        .color(theme::c().faint),
+                );
+                ui.label(
                     egui::RichText::new(&group.name)
-                        .size(25.0)
-                        .strong()
+                        .font(crate::ui::tokens::serif(38.0))
                         .color(theme::c().text),
                 );
                 ui.label(

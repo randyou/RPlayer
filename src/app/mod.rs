@@ -3086,6 +3086,7 @@ impl eframe::App for RPlayerApp {
         }
 
         if self.expanded && self.current.is_some() {
+            self.topbar_panel(ctx);
             self.now_playing(ctx);
             self.equalizer_window(ctx);
             self.settings_window(ctx);

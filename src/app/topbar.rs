@@ -277,15 +277,19 @@ impl RPlayerApp {
     }
 
     fn topbar_breadcrumb(&self, ui: &mut Ui) {
-        let (icon, label) = match self.view {
-            View::Library => (Icon::Disc, "本地曲库"),
-            View::Albums => (Icon::Disc, "专辑"),
-            View::Artists => (Icon::Disc, "艺术家"),
-            View::Favorites => (Icon::Heart, "我的收藏"),
-            View::Recent => (Icon::Clock, "最近播放"),
-            View::Folders => (Icon::Folder, "音乐目录"),
-            View::Playlist(_) => (Icon::Music, "播放列表"),
-            View::Smart(_) => (Icon::List, "智能歌单"),
+        let (icon, label) = if self.expanded {
+            (Icon::ChevronDown, "正在播放")
+        } else {
+            match self.view {
+                View::Library => (Icon::Disc, "本地曲库"),
+                View::Albums => (Icon::Disc, "专辑"),
+                View::Artists => (Icon::Disc, "艺术家"),
+                View::Favorites => (Icon::Heart, "我的收藏"),
+                View::Recent => (Icon::Clock, "最近播放"),
+                View::Folders => (Icon::Folder, "音乐目录"),
+                View::Playlist(_) => (Icon::Music, "播放列表"),
+                View::Smart(_) => (Icon::List, "智能歌单"),
+            }
         };
         ui.allocate_ui_with_layout(
             Vec2::new(220.0, tokens::TOPBAR_HEIGHT),

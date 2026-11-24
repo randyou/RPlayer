@@ -52,11 +52,38 @@ impl RPlayerApp {
             Icon::Disc,
             "本地曲库",
             Some(self.library.tracks.len()),
-            matches!(self.view, View::Library | View::Albums | View::Artists),
+            self.view == View::Library,
         )
         .clicked()
         {
             self.switch_view(View::Library);
+        }
+
+        let all_ids: Vec<u64> = self.library.tracks.iter().map(|track| track.id).collect();
+        let album_count = self.album_groups(&all_ids).len();
+        if widgets::nav_item(
+            ui,
+            Icon::Album,
+            "专辑",
+            Some(album_count),
+            self.view == View::Albums,
+        )
+        .clicked()
+        {
+            self.switch_view(View::Albums);
+        }
+
+        let artist_count = self.artist_groups(&all_ids).len();
+        if widgets::nav_item(
+            ui,
+            Icon::Artist,
+            "艺术家",
+            Some(artist_count),
+            self.view == View::Artists,
+        )
+        .clicked()
+        {
+            self.switch_view(View::Artists);
         }
 
         if widgets::nav_item(

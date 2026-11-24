@@ -35,6 +35,8 @@ pub enum Icon {
     Edit,
     Clock,
     Disc,
+    Album,
+    Artist,
     Check,
     Grid,
     Queue,
@@ -277,6 +279,27 @@ pub fn paint(painter: &Painter, rect: Rect, icon: Icon, color: Color32) {
         Icon::Disc => {
             c.ring(0.50, 0.50, 0.36);
             c.ring(0.50, 0.50, 0.12);
+        }
+        Icon::Album => {
+            let r = Rect::from_min_size(c.p(0.16, 0.16), Vec2::splat(side * 0.68));
+            c.painter.rect_stroke(
+                r,
+                side * 0.04,
+                Stroke::new(c.stroke, c.color),
+                egui::StrokeKind::Inside,
+            );
+            c.ring(0.50, 0.50, 0.16);
+        }
+        Icon::Artist => {
+            c.ring(0.50, 0.31, 0.15);
+            c.polyline(&[
+                (0.20, 0.84),
+                (0.24, 0.68),
+                (0.38, 0.57),
+                (0.62, 0.57),
+                (0.76, 0.68),
+                (0.80, 0.84),
+            ]);
         }
         Icon::Check => {
             c.polyline(&[(0.20, 0.52), (0.42, 0.73), (0.81, 0.27)]);

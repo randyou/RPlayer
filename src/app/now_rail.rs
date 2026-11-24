@@ -20,7 +20,11 @@ impl RPlayerApp {
     }
 
     pub(super) fn now_rail_panel(&mut self, ctx: &egui::Context) {
-        if !self.now_rail_open || self.current.is_none() || !Self::rail_available(ctx) {
+        if !self.now_rail_open
+            || self.current.is_none()
+            || !Self::rail_available(ctx)
+            || matches!(self.view, super::View::Albums | super::View::Artists)
+        {
             return;
         }
 

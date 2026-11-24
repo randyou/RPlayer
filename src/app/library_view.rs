@@ -103,6 +103,16 @@ impl RPlayerApp {
                 let fade = 1.0 - (1.0 - self.view_fade).powi(3);
                 ui.add_space((1.0 - fade) * 10.0);
                 ui.multiply_opacity(fade);
+
+                if self.view == View::Albums && self.album_focus.is_some() {
+                    self.albums_page(ui, ids);
+                    return;
+                }
+                if self.view == View::Artists && self.artist_focus.is_some() {
+                    self.artists_page(ui, ids);
+                    return;
+                }
+
                 self.central_header(ui, ids, total_seconds);
                 ui.add_space(10.0);
                 if matches!(self.view, View::Library | View::Albums | View::Artists) {
@@ -173,6 +183,60 @@ impl RPlayerApp {
             _ => self.view_header(ids.len(), total_seconds),
         };
         ui.horizontal(|ui| {
+            if let View::Playlist(pid) = self.view {
+                if let Some(playlist) = self.library.playlists.iter().find(|p| p.id == pid) {
+                    let (rect, _) = ui.allocate_exact_size(Vec2::splat(120.0), Sense::hover());
+                    let painter = ui.painter();
+                    painter.rect_filled(rect, CornerRadius::same(2), theme::c().card);
+                    painter.rect_stroke(
+                        rect,
+                        CornerRadius::same(2),
+                        Stroke::new(1.0_f32, theme::c().border_soft),
+                        egui::StrokeKind::Inside,
+                    );
+                    let mid = rect.center();
+                    let quadrant = Vec2::splat(rect.width() * 0.5);
+                    painter.rect_filled(
+                        Rect::from_min_size(rect.min, quadrant),
+                        CornerRadius::ZERO,
+                        theme::accent_alpha(0.10),
+                    );
+                    painter.rect_filled(
+                        Rect::from_min_size(
+                            Pos2::new(mid.x, rect.top()),
+                            quadrant,
+                        ),
+                        CornerRadius::ZERO,
+                        theme::c().card,
+                    );
+                    painter.rect_filled(
+                        Rect::from_min_size(
+                            Pos2::new(rect.left(), mid.y),
+                            quadrant,
+                        ),
+                        CornerRadius::ZERO,
+                        theme::c().card,
+                    );
+                    painter.rect_filled(
+                        Rect::from_min_size(mid, quadrant),
+                        CornerRadius::ZERO,
+                        theme::accent_alpha(0.06),
+                    );
+                    painter.text(
+                        rect.center(),
+                        Align2::CENTER_CENTER,
+                        playlist
+                            .name
+                            .chars()
+                            .next()
+                            .unwrap_or('R')
+                            .to_string(),
+                        crate::ui::tokens::serif(42.0),
+                        theme::c().text,
+                    );
+                    ui.add_space(10.0);
+                }
+            }
             ui.vertical(|ui| {
                 ui.spacing_mut().item_spacing.y = 2.0;
                 let kicker = match self.view {
