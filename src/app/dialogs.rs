@@ -32,11 +32,15 @@ enum Outcome {
     AddFolder,
     RemoveFolder(PathBuf),
     Rescan,
-    LyricsMatch {
+    LyricsSearch {
         id: u64,
         title: String,
         artist: String,
         album: String,
+    },
+    UseLyrics {
+        id: u64,
+        text: String,
     },
 }
 
@@ -241,28 +245,99 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                     }
                 }
 
-                Dialog::LyricsMatch { id, title, artist, album } => {
+                Dialog::LyricsMatch {
+                    id,
+                    title,
+                    artist,
+                    album,
+                    candidates,
+                    searching,
+                    error,
+                } => {
                     dialog_header(
                         ui,
                         "重新匹配歌词",
-                        "修改搜索条件，RPlayer 会清除当前缓存并按新条件重新搜索。",
+                        "修改搜索条件，搜索候选后选择正确的一版。",
                     );
                     ui.add_space(12.0);
                     tag_field(ui, "歌名", title);
                     tag_field(ui, "艺术家", artist);
                     tag_field(ui, "专辑", album);
                     ui.add_space(6.0);
-                    ui.label(
-                        RichText::new("留空艺术家/专辑可扩大搜索范围；结果仍可能不唯一。")
-                            .size(10.5)
-                            .color(theme::c().faint),
-                    );
-                    ui.add_space(14.0);
-                    let action = dialog_footer(ui, "搜索并应用", false);
+                    if *searching {
+                        ui.label(
+                            RichText::new("正在搜索候选…")
+                                .size(10.5)
+                                .color(theme::c().accent),
+                        );
+                    } else if let Some(message) = error {
+                        ui.label(
+                            RichText::new(message.as_str())
+                                .size(10.5)
+                                .color(theme::c().danger),
+                        );
+                    } else {
+                        ui.label(
+                            RichText::new("留空艺术家/专辑可扩大搜索范围。")
+                                .size(10.5)
+                                .color(theme::c().faint),
+                        );
+                    }
+                    if !candidates.is_empty() {
+                        ui.add_space(8.0);
+                        ScrollArea::vertical().max_height(250.0).show(ui, |ui| {
+                            for candidate in candidates.iter() {
+                                Frame::NONE
+                                    .fill(theme::c().card)
+                                    .corner_radius(CornerRadius::same(8))
+                                    .inner_margin(Margin::symmetric(8, 6))
+                                    .show(ui, |ui| {
+                                        ui.horizontal(|ui| {
+                                            ui.vertical(|ui| {
+                                                ui.label(
+                                                    RichText::new(&candidate.title)
+                                                        .size(12.0)
+                                                        .strong()
+                                                        .color(theme::c().text),
+                                                );
+                                                ui.label(
+                                                    RichText::new(format!(
+                                                        "{} · {} · {:.0}s",
+                                                        candidate.artist,
+                                                        candidate.album,
+                                                        candidate.duration
+                                                    ))
+                                                    .size(10.0)
+                                                    .color(theme::c().muted),
+                                                );
+                                            });
+                                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                                                if widgets::text_button(ui, "使用").clicked() {
+                                                    outcome = Outcome::UseLyrics {
+                                                        id: *id,
+                                                        text: candidate.text.clone(),
+                                                    };
+                                                }
+                                                if candidate.synced {
+                                                    ui.label(
+                                                        RichText::new("时间轴")
+                                                            .size(9.0)
+                                                            .color(theme::c().accent),
+                                                    );
+                                                }
+                                            });
+                                        });
+                                    });
+                                ui.add_space(4.0);
+                            }
+                        });
+                    }
+                    ui.add_space(10.0);
+                    let action = dialog_footer(ui, "搜索候选", false);
                     if action == FooterAction::Cancel {
                         outcome = Outcome::Close;
                     } else if action == FooterAction::Confirm && !title.trim().is_empty() {
-                        outcome = Outcome::LyricsMatch {
+                        outcome = Outcome::LyricsSearch {
                             id: *id,
                             title: title.clone(),
                             artist: artist.clone(),
@@ -383,7 +458,7 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                                 .color(theme::c().text),
                         );
                         ui.label(
-                            RichText::new("0.10.17 · 本地音乐播放器")
+                            RichText::new("0.10.18 · 本地音乐播放器")
                                 .size(11.0)
                                 .color(theme::c().muted),
                         );
@@ -466,9 +541,11 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
             }
             app.dialog = Dialog::None;
         }
-        Outcome::LyricsMatch { id, title, artist, album } => {
-            app.request_lyrics_custom(ctx, id, title, artist, album);
-            app.dialog = Dialog::None;
+        Outcome::LyricsSearch { id, title, artist, album } => {
+            app.start_lyrics_search(id, title, artist, album);
+        }
+        Outcome::UseLyrics { id, text } => {
+            app.apply_lyrics_candidate(id, &text);
         }
         Outcome::BatchTags {
             ids,

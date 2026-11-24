@@ -150,6 +150,9 @@ pub(super) enum Dialog {
         title: String,
         artist: String,
         album: String,
+        candidates: Vec<crate::lyrics_fetch::Candidate>,
+        searching: bool,
+        error: Option<String>,
     },
     Folders,
     About,
@@ -236,6 +239,7 @@ pub struct RPlayerApp {
     lyrics: Option<crate::lyrics::Lyrics>,
     lyrics_for: Option<u64>,
     lyrics_editor: Option<crate::lyrics::LyricsEditor>,
+    lyrics_candidates_rx: Option<Receiver<Result<Vec<crate::lyrics_fetch::Candidate>, FetchError>>>,
     lyrics_source: Option<String>,
     expanded: bool,
     batch_mode: bool,
@@ -373,6 +377,7 @@ impl RPlayerApp {
             lyrics: None,
             lyrics_for: None,
             lyrics_editor: None,
+            lyrics_candidates_rx: None,
             lyrics_source: None,
             expanded: false,
             batch_mode: false,
@@ -1181,8 +1186,80 @@ impl RPlayerApp {
             title: track.title.clone(),
             artist: track.artist.clone(),
             album: track.album.clone(),
+            candidates: Vec::new(),
+            searching: false,
+            error: None,
         };
         self.focus_pending = true;
+    }
+
+    fn start_lyrics_search(&mut self, id: u64, title: String, artist: String, album: String) {
+        let duration = self.library.track(id).map(|track| track.duration).unwrap_or(0.0);
+        let (tx, rx) = std::sync::mpsc::channel();
+        self.lyrics_candidates_rx = Some(rx);
+        if let Dialog::LyricsMatch {
+            searching,
+            error,
+            candidates,
+            ..
+        } = &mut self.dialog
+        {
+            *searching = true;
+            *error = None;
+            candidates.clear();
+        }
+        std::thread::spawn(move || {
+            let result = lyrics_fetch::search_candidates(&title, &artist, &album, duration);
+            let _ = tx.send(result);
+        });
+    }
+
+    fn poll_lyrics_candidates(&mut self) {
+        let Some(rx) = &self.lyrics_candidates_rx else { return; };
+        match rx.try_recv() {
+            Ok(result) => {
+                self.lyrics_candidates_rx = None;
+                if let Dialog::LyricsMatch {
+                    searching,
+                    error,
+                    candidates,
+                    ..
+                } = &mut self.dialog
+                {
+                    *searching = false;
+                    match result {
+                        Ok(list) => {
+                            if list.is_empty() {
+                                *error = Some("没有找到候选歌词".to_string());
+                            }
+                            *candidates = list;
+                        }
+                        Err(err) => *error = Some(err.to_string()),
+                    }
+                }
+            }
+            Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+                self.lyrics_candidates_rx = None;
+            }
+            Err(std::sync::mpsc::TryRecvError::Empty) => {}
+        }
+    }
+
+    fn apply_lyrics_candidate(&mut self, id: u64, text: &str) {
+        let lyrics = crate::lyrics::parse_lrc(text);
+        if lyrics.is_empty() {
+            self.toast("候选歌词内容为空", ToastKind::Error);
+            return;
+        }
+        match crate::lyrics::store_custom(id, &lyrics) {
+            Ok(()) => {
+                self.lyrics = Some(lyrics);
+                self.lyrics_source = Some("匹配".to_string());
+                self.dialog = Dialog::None;
+                self.toast("歌词已应用", ToastKind::Success);
+            }
+            Err(err) => self.toast(format!("保存歌词失败：{err}"), ToastKind::Error),
+        }
     }
 
     fn request_lyrics_custom(
@@ -2731,6 +2808,10 @@ impl eframe::App for RPlayerApp {
         }
 
         self.handle_overlay_commands(ctx);
+        self.poll_lyrics_candidates();
+        if self.lyrics_candidates_rx.is_some() {
+            ctx.request_repaint_after(std::time::Duration::from_millis(100));
+        }
         self.poll_scan();
         self.sync_watch();
         self.poll_watch();

@@ -119,6 +119,117 @@ fn http_get(url: &str) -> Result<String, String> {
     Ok(String::from_utf8_lossy(&output.stdout).into_owned())
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct Candidate {
+    pub id: u64,
+    pub title: String,
+    pub artist: String,
+    pub album: String,
+    pub duration: f64,
+    pub synced: bool,
+    pub text: String,
+}
+
+/// Returns all usable candidates for the user to choose from.
+pub fn search_candidates(
+    title: &str,
+    artist: &str,
+    album: &str,
+    duration: f64,
+) -> Result<Vec<Candidate>, FetchError> {
+    let title = title.trim();
+    if title.is_empty() {
+        return Err(FetchError::NotFound);
+    }
+    let mut queries = Vec::new();
+    if !artist.trim().is_empty() && !album.trim().is_empty() {
+        queries.push(format!(
+            "{API_BASE}?track_name={}&artist_name={}&album_name={}",
+            encode(title),
+            encode(artist.trim()),
+            encode(album.trim())
+        ));
+    }
+    if !artist.trim().is_empty() {
+        queries.push(format!(
+            "{API_BASE}?track_name={}&artist_name={}",
+            encode(title),
+            encode(artist.trim())
+        ));
+    }
+    queries.push(format!("{API_BASE}?track_name={}", encode(title)));
+
+    for url in queries {
+        let Ok(body) = http_get(&url) else { continue; };
+        let mut candidates = candidates_from_json(&body);
+        if !candidates.is_empty() {
+            candidates.sort_by(|a, b| {
+                let a_diff = (a.duration - duration).abs();
+                let b_diff = (b.duration - duration).abs();
+                b.synced
+                    .cmp(&a.synced)
+                    .then_with(|| a_diff.total_cmp(&b_diff))
+            });
+            candidates.dedup_by_key(|candidate| candidate.id);
+            candidates.truncate(20);
+            return Ok(candidates);
+        }
+    }
+    Err(FetchError::NotFound)
+}
+
+pub(crate) fn candidates_from_json(body: &str) -> Vec<Candidate> {
+    let Ok(items) = serde_json::from_str::<Value>(body) else {
+        return Vec::new();
+    };
+    let Some(array) = items.as_array() else {
+        return Vec::new();
+    };
+    let mut output = Vec::new();
+    for item in array {
+        if item.get("instrumental").and_then(Value::as_bool).unwrap_or(false) {
+            continue;
+        }
+        let synced = item
+            .get("syncedLyrics")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|text| !text.is_empty());
+        let plain = item
+            .get("plainLyrics")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|text| !text.is_empty());
+        let (text, is_synced) = match (synced, plain) {
+            (Some(text), _) => (text.to_string(), true),
+            (None, Some(text)) => (text.to_string(), false),
+            _ => continue,
+        };
+        output.push(Candidate {
+            id: item.get("id").and_then(Value::as_u64).unwrap_or(0),
+            title: item
+                .get("trackName")
+                .and_then(Value::as_str)
+                .unwrap_or("未知歌曲")
+                .to_string(),
+            artist: item
+                .get("artistName")
+                .and_then(Value::as_str)
+                .unwrap_or("未知艺术家")
+                .to_string(),
+            album: item
+                .get("albumName")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .to_string(),
+            duration: item.get("duration").and_then(Value::as_f64).unwrap_or(0.0),
+            synced: is_synced,
+            text,
+        });
+    }
+    output
+}
+
 /// Picks the best candidate from an LRCLIB search response. Split out for tests.
 pub(crate) fn select_from_json(body: &str, duration: f64) -> Option<FetchResult> {
     let items: Value = serde_json::from_str(body).ok()?;
@@ -213,6 +324,19 @@ mod tests {
         let result = select_from_json(body, 200.0).expect("candidate");
         assert!(result.synced);
         assert!(result.text.contains("[00:01.00]"));
+    }
+
+    #[test]
+    fn parses_candidate_list_for_user_selection() {
+        let body = r#"[
+            {"id":1,"trackName":"晴天","artistName":"周杰伦","albumName":"叶惠美","duration":269.0,"syncedLyrics":"[00:01.00]line","plainLyrics":"line"},
+            {"id":2,"trackName":"晴天","artistName":"翻唱","albumName":"","duration":270.0,"syncedLyrics":null,"plainLyrics":"plain"}
+        ]"#;
+        let candidates = candidates_from_json(body);
+        assert_eq!(candidates.len(), 2);
+        assert_eq!(candidates[0].title, "晴天");
+        assert!(candidates[0].synced);
+        assert!(!candidates[1].synced);
     }
 
     #[test]
