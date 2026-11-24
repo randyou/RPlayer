@@ -342,23 +342,26 @@ impl RPlayerApp {
 
         egui::Window::new("播放队列")
             .id(egui::Id::new("rplayer-queue-window"))
-            .anchor(Align2::RIGHT_BOTTOM, Vec2::new(-20.0, -116.0))
+            .anchor(
+                Align2::RIGHT_TOP,
+                Vec2::new(0.0, crate::ui::tokens::TOPBAR_HEIGHT),
+            )
             .title_bar(false)
             .resizable(false)
-            .default_width(360.0)
-            .max_height(438.0)
+            .fixed_size(Vec2::new(
+                360.0,
+                (ctx.screen_rect().height()
+                    - crate::ui::tokens::TOPBAR_HEIGHT
+                    - crate::ui::tokens::PLAYER_HEIGHT)
+                    .max(280.0),
+            ))
             .frame(
                 Frame::NONE
                     .fill(theme::c().panel)
-                    .stroke(Stroke::new(1.0_f32, theme::c().border))
-                    .corner_radius(CornerRadius::same(16))
-                    .inner_margin(Margin::same(14))
-                    .shadow(egui::epaint::Shadow {
-                        offset: [0, 14],
-                        blur: 44,
-                        spread: 0,
-                        color: Color32::from_black_alpha(150),
-                    }),
+                    .stroke(Stroke::new(1.0_f32, theme::c().border_soft))
+                    .corner_radius(CornerRadius::ZERO)
+                    .inner_margin(Margin::same(18))
+                    .shadow(egui::epaint::Shadow::NONE),
             )
             .show(ctx, |ui| {
                 ui.set_min_width(332.0);

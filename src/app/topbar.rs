@@ -266,6 +266,9 @@ impl RPlayerApp {
                             || rect.right() - pos.x <= 6.0
                             || rect.bottom() - pos.y <= 6.0
                     });
+                if drag.clicked() && self.expanded {
+                    self.expanded = false;
+                }
                 if drag.drag_started() && !on_edge {
                     ctx.send_viewport_cmd(ViewportCommand::StartDrag);
                 }
@@ -276,7 +279,7 @@ impl RPlayerApp {
             });
     }
 
-    fn topbar_breadcrumb(&self, ui: &mut Ui) {
+    fn topbar_breadcrumb(&mut self, ui: &mut Ui) {
         let (icon, label) = if self.expanded {
             (Icon::ChevronDown, "正在播放")
         } else {
@@ -291,20 +294,27 @@ impl RPlayerApp {
                 View::Smart(_) => (Icon::List, "智能歌单"),
             }
         };
-        ui.allocate_ui_with_layout(
-            Vec2::new(220.0, tokens::TOPBAR_HEIGHT),
-            Layout::left_to_right(Align::Center),
-            |ui| {
-                let (rect, _) = ui.allocate_exact_size(Vec2::splat(15.0), Sense::hover());
-                icons::paint(ui.painter(), rect, icon, theme::c().faint);
-                ui.add_space(6.0);
-                ui.label(
-                    RichText::new(format!("资料库  /  {label}"))
-                        .font(tokens::mono(9.5))
-                        .color(theme::c().muted),
-                );
-            },
-        );
+        let response = ui
+            .allocate_ui_with_layout(
+                Vec2::new(220.0, tokens::TOPBAR_HEIGHT),
+                Layout::left_to_right(Align::Center),
+                |ui| {
+                    let (rect, _) = ui.allocate_exact_size(Vec2::splat(15.0), Sense::hover());
+                    icons::paint(ui.painter(), rect, icon, theme::c().faint);
+                    ui.add_space(6.0);
+                    ui.label(
+                        RichText::new(format!("资料库  /  {label}"))
+                            .font(tokens::mono(9.5))
+                            .color(theme::c().muted),
+                    );
+                },
+            )
+            .response
+            .interact(Sense::click())
+            .on_hover_cursor(egui::CursorIcon::PointingHand);
+        if response.clicked() && self.expanded {
+            self.expanded = false;
+        }
     }
 
     fn topbar_actions(&mut self, ui: &mut Ui, compact: bool) {

@@ -2,7 +2,7 @@
 
 use eframe::egui;
 use egui::{
-    Align, Align2, CornerRadius, Frame, Layout, RichText, Sense, Stroke, Vec2,
+    Align, Align2, CornerRadius, FontId, Frame, Layout, Pos2, RichText, Sense, Stroke, Vec2,
 };
 
 use super::RPlayerApp;
@@ -56,10 +56,10 @@ impl RPlayerApp {
         // on high-DPI / short windows, then scroll the long preference body.
         let available = ctx.screen_rect().size();
         let settings_size = Vec2::new(
-            (available.x - 24.0).clamp(320.0, 470.0),
-            (available.y - 48.0).clamp(240.0, 640.0),
+            (available.x - 40.0).clamp(640.0, 760.0),
+            (available.y - 80.0).clamp(500.0, 600.0),
         );
-        let content_height = (settings_size.y - 118.0).max(180.0);
+        let content_height = (settings_size.y - 118.0).max(300.0);
 
         egui::Window::new("rplayer-settings")
             .title_bar(false)
@@ -104,7 +104,7 @@ impl RPlayerApp {
                                 .color(theme::c().text),
                         );
                         ui.label(
-                            RichText::new("外观、桌面歌词与在线内容")
+                            RichText::new("主题、桌面歌词与数据")
                                 .size(10.5)
                                 .color(theme::c().faint),
                         );
@@ -116,11 +116,41 @@ impl RPlayerApp {
                     });
                 });
 
-                ui.add_space(12.0);
+                ui.add_space(8.0);
+                ui.horizontal_top(|ui| {
+                    ui.allocate_ui_with_layout(
+                        Vec2::new(148.0, content_height),
+                        Layout::top_down(Align::LEFT),
+                        |ui| {
+                            ui.add_space(6.0);
+                            for (index, label) in [
+                                "外观",
+                                "桌面歌词",
+                                "迷你播放器",
+                                "离线模式",
+                                "在线内容",
+                                "数据",
+                            ]
+                            .iter()
+                            .enumerate()
+                            {
+                                if settings_nav_item(ui, label, self.settings_tab == index)
+                                    .clicked()
+                                {
+                                    self.settings_tab = index;
+                                }
+                            }
+                        },
+                    );
+                    ui.add_space(8.0);
+                    ui.separator();
+                    ui.add_space(10.0);
+                    ui.vertical(|ui| {
                 egui::ScrollArea::vertical()
                     .max_height(content_height)
                     .auto_shrink([false, false])
                     .show(ui, |ui| {
+                if self.settings_tab == 0 {
                 section(ui, "外观");
                 Frame::NONE
                     .fill(theme::c().card)
@@ -134,16 +164,68 @@ impl RPlayerApp {
                                 .color(theme::c().text),
                         );
                         ui.add_space(7.0);
-                        ui.horizontal_wrapped(|ui| {
-                            ui.spacing_mut().item_spacing.x = 6.0;
+                        ui.horizontal(|ui| {
+                            ui.spacing_mut().item_spacing.x = 10.0;
                             for preset in ThemePreset::VISIBLE {
-                                if widgets::chip(
-                                    ui,
+                                let (rect, response) = ui
+                                    .allocate_exact_size(Vec2::new(220.0, 64.0), Sense::click());
+                                let (canvas, ink, accent) = if preset.is_dark() {
+                                    (
+                                        egui::Color32::from_rgb(0x0F, 0x12, 0x0F),
+                                        egui::Color32::from_rgb(0xF0, 0xE9, 0xDA),
+                                        egui::Color32::from_rgb(0x8F, 0xB7, 0x9A),
+                                    )
+                                } else {
+                                    (
+                                        egui::Color32::from_rgb(0xF4, 0xEF, 0xE5),
+                                        egui::Color32::from_rgb(0x1D, 0x1B, 0x16),
+                                        egui::Color32::from_rgb(0x2E, 0x5B, 0x44),
+                                    )
+                                };
+                                let painter = ui.painter();
+                                painter.rect_filled(rect, CornerRadius::same(8), canvas);
+                                painter.rect_stroke(
+                                    rect,
+                                    CornerRadius::same(8),
+                                    Stroke::new(
+                                        if self.theme_preset == preset { 2.0 } else { 1.0 },
+                                        if self.theme_preset == preset {
+                                            theme::c().accent
+                                        } else {
+                                            theme::c().border_soft
+                                        },
+                                    ),
+                                    egui::StrokeKind::Inside,
+                                );
+                                painter.rect_filled(
+                                    egui::Rect::from_min_size(
+                                        Pos2::new(rect.left() + 14.0, rect.top() + 14.0),
+                                        Vec2::new(34.0, 36.0),
+                                    ),
+                                    CornerRadius::same(2),
+                                    accent,
+                                );
+                                painter.text(
+                                    Pos2::new(rect.left() + 58.0, rect.top() + 24.0),
+                                    Align2::LEFT_CENTER,
                                     preset.label(),
-                                    self.theme_preset == preset,
-                                )
-                                .clicked()
-                                {
+                                    FontId::proportional(13.0),
+                                    ink,
+                                );
+                                painter.text(
+                                    Pos2::new(rect.left() + 58.0, rect.top() + 42.0),
+                                    Align2::LEFT_CENTER,
+                                    if preset.is_dark() { "Nocturne" } else { "Paper" },
+                                    crate::ui::tokens::mono(8.5),
+                                    if preset.is_dark() {
+                                        egui::Color32::from_rgb(0xB0, 0xA5, 0x94)
+                                    } else {
+                                        egui::Color32::from_rgb(0x6B, 0x64, 0x57)
+                                    },
+                                );
+                                crate::ui::focus::focus_on_click(&response);
+                                crate::ui::focus::ring(ui, &response);
+                                if response.clicked() {
                                     requested_theme = Some(preset);
                                 }
                             }
@@ -190,9 +272,71 @@ impl RPlayerApp {
                                 }
                             }
                         });
+                        ui.add_space(10.0);
+                        let (preview, _) = ui.allocate_exact_size(
+                            Vec2::new(ui.available_width(), 104.0),
+                            Sense::hover(),
+                        );
+                        let painter = ui.painter();
+                        painter.rect_filled(preview, CornerRadius::same(8), theme::c().bg);
+                        painter.rect_stroke(
+                            preview,
+                            CornerRadius::same(8),
+                            Stroke::new(1.0_f32, theme::c().border_soft),
+                            egui::StrokeKind::Inside,
+                        );
+                        let side = egui::Rect::from_min_size(
+                            preview.min,
+                            Vec2::new(86.0, preview.height()),
+                        );
+                        painter.rect_filled(
+                            side,
+                            CornerRadius { nw: 8, sw: 8, ne: 0, se: 0 },
+                            theme::sidebar_deep(),
+                        );
+                        painter.rect_filled(
+                            egui::Rect::from_min_size(
+                                Pos2::new(side.left() + 12.0, side.top() + 18.0),
+                                Vec2::new(52.0, 7.0),
+                            ),
+                            CornerRadius::same(2),
+                            theme::c().accent,
+                        );
+                        for index in 0..3 {
+                            painter.rect_filled(
+                                egui::Rect::from_min_size(
+                                    Pos2::new(side.left() + 12.0, side.top() + 40.0 + index as f32 * 16.0),
+                                    Vec2::new(56.0, 5.0),
+                                ),
+                                CornerRadius::same(2),
+                                theme::with_alpha(theme::sidebar_text(), 0.42),
+                            );
+                        }
+                        painter.text(
+                            Pos2::new(preview.left() + 108.0, preview.top() + 26.0),
+                            Align2::LEFT_CENTER,
+                            "本地曲库",
+                            crate::ui::tokens::serif(20.0),
+                            theme::c().text,
+                        );
+                        for index in 0..2 {
+                            painter.rect_filled(
+                                egui::Rect::from_min_size(
+                                    Pos2::new(preview.left() + 108.0, preview.top() + 52.0 + index as f32 * 20.0),
+                                    Vec2::new(preview.width() - 132.0, 7.0),
+                                ),
+                                CornerRadius::same(2),
+                                if index == 0 {
+                                    theme::accent_soft()
+                                } else {
+                                    theme::c().card
+                                },
+                            );
+                        }
                     });
+                }
 
-                ui.add_space(16.0);
+                if self.settings_tab == 1 {
                 section(ui, "桌面歌词");
                 Frame::NONE
                     .fill(theme::c().card)
@@ -282,7 +426,9 @@ impl RPlayerApp {
                         });
                     });
 
-                ui.add_space(16.0);
+                }
+
+                if self.settings_tab == 2 {
                 section(ui, "迷你播放器");
                 Frame::NONE
                     .fill(theme::c().card)
@@ -332,7 +478,9 @@ impl RPlayerApp {
                         );
                     });
 
-                ui.add_space(16.0);
+                }
+
+                if self.settings_tab == 3 {
                 section(ui, "离线模式");
                 Frame::NONE
                     .fill(theme::c().card)
@@ -360,7 +508,9 @@ impl RPlayerApp {
                         );
                     });
 
-                ui.add_space(16.0);
+                }
+
+                if self.settings_tab == 4 {
                 section(ui, "在线内容");
                 Frame::NONE
                     .fill(theme::c().card)
@@ -469,7 +619,9 @@ impl RPlayerApp {
                         });
                     });
 
-                ui.add_space(16.0);
+                }
+
+                if self.settings_tab == 5 {
                 section(ui, "数据");
                 Frame::NONE
                     .fill(theme::c().card)
@@ -514,6 +666,7 @@ impl RPlayerApp {
                                 .color(theme::c().muted),
                         );
                     });
+                }
 
                 ui.add_space(18.0);
                 ui.horizontal(|ui| {
@@ -537,6 +690,8 @@ impl RPlayerApp {
                     }
                 });
                     });
+                    });
+                });
             });
 
         if let Some(preset) = requested_theme {
@@ -765,6 +920,31 @@ impl RPlayerApp {
         }
         self.prefs_dirty = false;
     }
+}
+
+fn settings_nav_item(ui: &mut egui::Ui, label: &str, selected: bool) -> egui::Response {
+    let response = ui.add_sized(
+        [132.0, 34.0],
+        egui::Button::new(
+            RichText::new(label)
+                .size(12.0)
+                .color(if selected {
+                    theme::c().accent
+                } else {
+                    theme::c().muted
+                }),
+        )
+        .fill(if selected {
+            theme::accent_soft()
+        } else {
+            egui::Color32::TRANSPARENT
+        })
+        .stroke(Stroke::NONE)
+        .corner_radius(CornerRadius::same(8)),
+    );
+    crate::ui::focus::focus_on_click(&response);
+    crate::ui::focus::ring(ui, &response);
+    response
 }
 
 fn section(ui: &mut egui::Ui, text: &str) {

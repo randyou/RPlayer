@@ -40,6 +40,28 @@ struct Item {
     keywords: &'static str,
 }
 
+impl Command {
+    fn group(self) -> u8 {
+        match self {
+            Command::LibraryView
+            | Command::AlbumView
+            | Command::ArtistView
+            | Command::Favorites
+            | Command::Recent => 0,
+            Command::PlayPause | Command::Next | Command::Previous | Command::Search => 1,
+            _ => 2,
+        }
+    }
+
+    fn group_label(self) -> &'static str {
+        match self.group() {
+            0 => "跳转",
+            1 => "播放与搜索",
+            _ => "操作",
+        }
+    }
+}
+
 const ITEMS: [Item; 20] = [
     Item {
         command: Command::PlayPause,
@@ -223,14 +245,14 @@ impl RPlayerApp {
             .title_bar(false)
             .resizable(false)
             .collapsible(false)
-            .fixed_size(Vec2::new(520.0, 360.0))
+            .fixed_size(Vec2::new(640.0, 430.0))
             .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
             .frame(
                 Frame::NONE
                     .fill(theme::with_alpha(theme::c().panel, appear))
                     .stroke(Stroke::new(1.0_f32, theme::with_alpha(theme::c().border, appear)))
-                    .corner_radius(egui::CornerRadius::same(16))
-                    .inner_margin(Margin::same(16))
+                    .corner_radius(egui::CornerRadius::same(12))
+                    .inner_margin(Margin::same(18))
                     .shadow(egui::epaint::Shadow {
                         offset: [0, 16],
                         blur: 36,
@@ -243,13 +265,12 @@ impl RPlayerApp {
                 ui.horizontal(|ui| {
                     ui.label(
                         RichText::new("命令")
-                            .size(11.0)
-                            .strong()
+                            .font(crate::ui::tokens::mono(9.5))
                             .color(theme::c().faint),
                     );
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         ui.label(
-                            RichText::new("↑↓ 选择 · Enter 执行 · Esc 关闭")
+                            RichText::new("Esc 关闭")
                                 .size(9.5)
                                 .color(theme::c().faint),
                         );
@@ -257,14 +278,14 @@ impl RPlayerApp {
                 });
                 ui.add_space(8.0);
                 let response = Frame::NONE
-                    .fill(theme::c().card)
-                    .stroke(Stroke::new(1.0_f32, theme::c().border))
+                    .fill(theme::c().bg)
+                    .stroke(Stroke::new(1.0_f32, theme::c().border_soft))
                     .corner_radius(egui::CornerRadius::same(8))
-                    .inner_margin(Margin::symmetric(10, 8))
+                    .inner_margin(Margin::symmetric(12, 10))
                     .show(ui, |ui| {
                         ui.add(
                             egui::TextEdit::singleline(&mut self.command_query)
-                                .hint_text("输入命令，例如：专辑、设置、播放…")
+                                .hint_text("搜索曲目、专辑，或输入命令…")
                                 .frame(false)
                                 .desired_width(f32::INFINITY),
                         )
@@ -276,32 +297,71 @@ impl RPlayerApp {
                 if response.changed() {
                     self.command_index = 0;
                 }
-                ui.add_space(8.0);
+                ui.add_space(6.0);
                 egui::ScrollArea::vertical()
-                    .max_height(250.0)
+                    .max_height(292.0)
                     .show(ui, |ui| {
+                        let mut last_group = None;
                         for (index, item) in filtered.iter().enumerate() {
+                            if last_group != Some(item.command.group()) {
+                                last_group = Some(item.command.group());
+                                ui.add_space(6.0);
+                                ui.label(
+                                    RichText::new(item.command.group_label())
+                                        .font(crate::ui::tokens::mono(8.5))
+                                        .color(theme::c().faint),
+                                );
+                                ui.add_space(2.0);
+                            }
                             let selected = index == self.command_index;
-                            let response = ui.add(
-                                egui::Button::new(
-                                    RichText::new(format!("{}  ·  {}", item.label, item.id))
-                                        .size(12.0)
-                                        .color(if selected {
-                                            theme::c().accent
-                                        } else {
-                                            theme::c().text
-                                        }),
-                                )
-                                .fill(if selected {
-                                    theme::accent_alpha(0.12)
+                            let (rect, response) = ui.allocate_exact_size(
+                                Vec2::new(ui.available_width(), 34.0),
+                                egui::Sense::click(),
+                            );
+                            let response =
+                                response.on_hover_cursor(egui::CursorIcon::PointingHand);
+                            let painter = ui.painter();
+                            if selected {
+                                painter.rect_filled(
+                                    rect,
+                                    egui::CornerRadius::same(7),
+                                    theme::accent_soft(),
+                                );
+                                painter.rect_filled(
+                                    egui::Rect::from_min_size(
+                                        rect.min + Vec2::new(1.0, 6.0),
+                                        Vec2::new(2.0, rect.height() - 12.0),
+                                    ),
+                                    egui::CornerRadius::same(1),
+                                    theme::c().accent,
+                                );
+                            } else if response.hovered() {
+                                painter.rect_filled(
+                                    rect,
+                                    egui::CornerRadius::same(7),
+                                    theme::c().hover,
+                                );
+                            }
+                            painter.text(
+                                egui::Pos2::new(rect.left() + 14.0, rect.center().y),
+                                egui::Align2::LEFT_CENTER,
+                                item.label,
+                                egui::FontId::proportional(12.5),
+                                if selected {
+                                    theme::c().accent
                                 } else {
-                                    egui::Color32::TRANSPARENT
-                                })
-                                .stroke(Stroke::NONE)
-                                .corner_radius(8)
-                                .min_size(Vec2::new(ui.available_width(), 30.0)),
-                            )
-                            .on_hover_cursor(egui::CursorIcon::PointingHand);
+                                    theme::c().text
+                                },
+                            );
+                            if selected {
+                                painter.text(
+                                    egui::Pos2::new(rect.right() - 12.0, rect.center().y),
+                                    egui::Align2::RIGHT_CENTER,
+                                    "Enter",
+                                    crate::ui::tokens::mono(8.5),
+                                    theme::c().faint,
+                                );
+                            }
                             if response.clicked() {
                                 execute = Some(item.command);
                             }
@@ -310,6 +370,29 @@ impl RPlayerApp {
                             }
                         }
                     });
+                ui.add_space(6.0);
+                ui.horizontal(|ui| {
+                    crate::ui::components::keycap(ui, "↑↓");
+                    ui.label(
+                        RichText::new("选择")
+                            .size(9.5)
+                            .color(theme::c().faint),
+                    );
+                    ui.add_space(8.0);
+                    crate::ui::components::keycap(ui, "Enter");
+                    ui.label(
+                        RichText::new("执行")
+                            .size(9.5)
+                            .color(theme::c().faint),
+                    );
+                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                        ui.label(
+                            RichText::new(format!("{} 项结果", filtered.len()))
+                                .size(9.5)
+                                .color(theme::c().faint),
+                        );
+                    });
+                });
             });
 
         if let Some(command) = execute {
@@ -346,7 +429,7 @@ impl RPlayerApp {
 
 fn filtered_commands(query: &str) -> Vec<&'static Item> {
     let query = query.trim().to_lowercase();
-    ITEMS
+    let mut items: Vec<&'static Item> = ITEMS
         .iter()
         .filter(|item| {
             query.is_empty()
@@ -354,7 +437,9 @@ fn filtered_commands(query: &str) -> Vec<&'static Item> {
                 || item.keywords.contains(&query)
                 || item.id.contains(&query)
         })
-        .collect()
+        .collect();
+    items.sort_by_key(|item| item.command.group());
+    items
 }
 
 #[cfg(test)]

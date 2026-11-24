@@ -125,19 +125,22 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
         .frame(
             Frame::NONE
                 .fill(fade(theme::c().panel, enter))
-                .stroke(Stroke::new(1.0_f32, fade(theme::c().border, enter)))
-                .corner_radius(CornerRadius::same(18))
-                .inner_margin(Margin::same(22))
+                .stroke(Stroke::new(
+                    1.0_f32,
+                    fade(theme::c().border_soft, enter),
+                ))
+                .corner_radius(CornerRadius::same(10))
+                .inner_margin(Margin::same(20))
                 .shadow(egui::epaint::Shadow {
-                    offset: [0, 20],
-                    blur: 60,
+                    offset: [0, 12],
+                    blur: 30,
                     spread: 0,
-                    color: Color32::from_black_alpha((180.0 * enter) as u8),
+                    color: Color32::from_black_alpha((90.0 * enter) as u8),
                 }),
         )
         .show(ctx, |ui| {
             ui.multiply_opacity(enter);
-            ui.set_width(404.0);
+            ui.set_width(460.0);
             match &mut app.dialog {
                 Dialog::None => {}
                 Dialog::NewPlaylist { name } => {
