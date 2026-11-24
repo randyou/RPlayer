@@ -212,6 +212,9 @@ pub struct RPlayerApp {
     search: String,
     sort: SortState,
     selected: Option<u64>,
+    table_focus: Option<u64>,
+    table_scroll_to: Option<usize>,
+    table_restore: bool,
     current: Option<u64>,
     queue: Vec<u64>,
     queue_index: usize,
@@ -357,6 +360,9 @@ impl RPlayerApp {
             search: String::new(),
             sort: SortState::default(),
             selected: None,
+            table_focus: None,
+            table_scroll_to: None,
+            table_restore: false,
             current: None,
             queue: Vec::new(),
             queue_index: 0,
@@ -2089,8 +2095,12 @@ impl RPlayerApp {
             self.selected = None;
             return;
         }
+        let restore_focus = self.table_focus.or(self.selected);
+        let restore_table = self.table_focus.is_some() || self.selected.is_some();
         self.view = view;
         self.selected = None;
+        self.table_focus = restore_focus;
+        self.table_restore = restore_table;
         self.batch_mode = false;
         self.checked.clear();
         self.selection_anchor = None;

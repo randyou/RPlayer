@@ -102,11 +102,14 @@ src/ui/focus.rs      2px focus rings for custom controls
 - Buttons scale to 0.975 while pressed via `animate_bool_with_time`.
 - Custom controls draw focus with `src/ui/focus.rs`: `ring` for rounded
   rectangles, `ring_round` for circles, `ring_rect` for table rows/sliders.
+- Track rows use stable IDs `ui.id().with(("track-row", track_id))`; arrow-key
+  navigation is app-level (`table_focus`) and must request focus on the target
+  stable ID, not rely on row order.
 - Text opacity and panel opacity are independent for desktop lyrics.
 
 ## Verification
 
-- Unit tests: `cargo test --release` (currently 55+).
+- Unit tests: `cargo test --release` (currently 59+).
 - Windows UI automation: `agent-desktop snapshot --window-id <id>`, then click
   by `ref_id`; prefer AccessKit names over pixel coordinates.
 - Screenshots must be checked after UI changes; avoid leaving test images in

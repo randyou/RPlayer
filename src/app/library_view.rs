@@ -240,6 +240,9 @@ impl RPlayerApp {
                 if std::mem::take(&mut self.focus_search) {
                     response.request_focus();
                 }
+                if response.has_focus() {
+                    crate::ui::focus::ring_rect(ui, response.rect, 17);
+                }
 
                 ui.add_space(6.0);
                 let compact = self.current.is_some()
@@ -570,39 +573,121 @@ impl RPlayerApp {
 
     fn track_table(&mut self, ui: &mut Ui, ids: &[u64], columns: Columns) {
         let width = ui.available_width();
-        ScrollArea::vertical()
+        let page_rows = (ui.available_height() / ROW_HEIGHT).floor().max(1.0) as usize;
+        let mut area = ScrollArea::vertical()
             .id_salt("rplayer-track-table")
-            .auto_shrink([false, false])
-            .show_rows(ui, ROW_HEIGHT, ids.len(), |ui, range| {
-                ui.spacing_mut().item_spacing.y = 0.0;
-                ui.set_width(width);
-                for index in range {
-                    let id = ids[index];
-                    let Some(track) = self.library.track(id).cloned() else {
-                        continue;
-                    };
-                    let (rect, response) =
-                        ui.allocate_exact_size(Vec2::new(width, ROW_HEIGHT), Sense::click_and_drag());
-                    let response = response.on_hover_cursor(egui::CursorIcon::PointingHand);
-                    crate::ui::focus::focus_on_click(&response);
-                    let current = self.current == Some(id);
-                    let selected = self.selected == Some(id);
-                    let checked = self.checked.contains(&id);
-                    let hovered = response.hovered();
-                    let hover_t = ui.ctx().animate_bool_with_time(
-                        egui::Id::new(("track-row-hover", id)),
-                        hovered && !current && !selected && !checked,
-                        crate::ui::motion::duration(crate::ui::motion::FAST),
-                    );
-                    let row_label = format!("{} — {}", track.title, track.artist);
-                    response.widget_info(move || {
-                        WidgetInfo::selected(
-                            WidgetType::Button,
-                            true,
-                            current || checked,
-                            row_label.clone(),
-                        )
-                    });
+            .auto_shrink([false, false]);
+        if let Some(index) = self.table_scroll_to.take() {
+            let viewport = ui.available_height().max(ROW_HEIGHT);
+            let offset = table_scroll_offset(index, viewport, ROW_HEIGHT);
+            area = area.vertical_scroll_offset(offset);
+        }
+        area.show_rows(ui, ROW_HEIGHT, ids.len(), |ui, range| {
+            ui.spacing_mut().item_spacing.y = 0.0;
+            ui.set_width(width);
+
+            let focused = ui.ctx().memory(|memory| memory.focused());
+            let focused_index = self.table_focus.and_then(|id| {
+                let index = ids.iter().position(|candidate| *candidate == id)?;
+                (focused == Some(track_row_id(ui, id))).then_some(index)
+            });
+            if self.table_focus.is_some() && focused_index.is_none() {
+                if !ids.iter().any(|id| Some(*id) == self.table_focus) {
+                    self.table_focus = None;
+                }
+            }
+
+            let restoring = std::mem::take(&mut self.table_restore);
+            if restoring {
+                let target = self
+                    .table_focus
+                    .filter(|id| ids.contains(id))
+                    .or_else(|| self.selected.filter(|id| ids.contains(id)))
+                    .or_else(|| ids.first().copied());
+                if let Some(id) = target {
+                    if let Some(index) = ids.iter().position(|candidate| *candidate == id) {
+                        self.table_focus = Some(id);
+                        self.table_scroll_to = Some(index);
+                        ui.ctx()
+                            .memory_mut(|memory| memory.request_focus(track_row_id(ui, id)));
+                    }
+                }
+            }
+
+            if let Some(current) = focused_index {
+                let movement = ui.input(|input| {
+                    if input.key_pressed(egui::Key::ArrowUp) {
+                        Some(TableMove::Up)
+                    } else if input.key_pressed(egui::Key::ArrowDown) {
+                        Some(TableMove::Down)
+                    } else if input.key_pressed(egui::Key::Home) {
+                        Some(TableMove::Home)
+                    } else if input.key_pressed(egui::Key::End) {
+                        Some(TableMove::End)
+                    } else if input.key_pressed(egui::Key::PageUp) {
+                        Some(TableMove::PageUp)
+                    } else if input.key_pressed(egui::Key::PageDown) {
+                        Some(TableMove::PageDown)
+                    } else {
+                        None
+                    }
+                });
+                if let Some(movement) = movement {
+                    if let Some(target) = table_target(current, ids.len(), movement, page_rows) {
+                        if target != current {
+                            let id = ids[target];
+                            self.table_focus = Some(id);
+                            self.table_scroll_to = Some(target);
+                            ui.ctx()
+                                .memory_mut(|memory| memory.request_focus(track_row_id(ui, id)));
+                        }
+                    }
+                }
+            }
+
+            for index in range {
+                let id = ids[index];
+                let Some(track) = self.library.track(id).cloned() else {
+                    continue;
+                };
+                let (_, rect) = ui.allocate_space(Vec2::new(width, ROW_HEIGHT));
+                let response =
+                    ui.interact(rect, track_row_id(ui, id), Sense::click_and_drag());
+                let response = response.on_hover_cursor(egui::CursorIcon::PointingHand);
+                crate::ui::focus::focus_on_click(&response);
+                if response.has_focus() {
+                    self.table_focus = Some(id);
+                }
+                let current = self.current == Some(id);
+                let selected = self.selected == Some(id);
+                let checked = self.checked.contains(&id);
+                let hovered = response.hovered();
+                let hover_t = ui.ctx().animate_bool_with_time(
+                    egui::Id::new(("track-row-hover", id)),
+                    hovered && !current && !selected && !checked,
+                    crate::ui::motion::duration(crate::ui::motion::FAST),
+                );
+                let row_label = format!(
+                    "{} — {} · {} · {} · {}",
+                    track.title,
+                    track.artist,
+                    track.album,
+                    track
+                        .path
+                        .extension()
+                        .and_then(|extension| extension.to_str())
+                        .unwrap_or("?")
+                        .to_uppercase(),
+                    track.path.display()
+                );
+                response.widget_info(move || {
+                    WidgetInfo::selected(
+                        WidgetType::Button,
+                        true,
+                        current || checked,
+                        row_label.clone(),
+                    )
+                });
 
                     let painter = ui.painter();
                     let pill = rect;
@@ -1320,4 +1405,77 @@ fn progress_bar(ui: &mut Ui, fraction: f32, width: f32) {
     );
     ui.painter()
         .rect_filled(filled, CornerRadius::same(99), theme::c().accent);
+}
+
+fn track_row_id(ui: &Ui, id: u64) -> egui::Id {
+    ui.id().with(("track-row", id))
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum TableMove {
+    Up,
+    Down,
+    Home,
+    End,
+    PageUp,
+    PageDown,
+}
+
+fn table_target(
+    current: usize,
+    len: usize,
+    movement: TableMove,
+    page_rows: usize,
+) -> Option<usize> {
+    if len == 0 {
+        return None;
+    }
+    let current = current.min(len - 1);
+    let page = page_rows.max(1);
+    let target = match movement {
+        TableMove::Up => current.saturating_sub(1),
+        TableMove::Down => (current + 1).min(len - 1),
+        TableMove::Home => 0,
+        TableMove::End => len - 1,
+        TableMove::PageUp => current.saturating_sub(page),
+        TableMove::PageDown => (current + page).min(len - 1),
+    };
+    Some(target)
+}
+
+fn table_scroll_offset(index: usize, viewport: f32, row_height: f32) -> f32 {
+    (index as f32 * row_height - (viewport - row_height) * 0.5).max(0.0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{table_scroll_offset, table_target, TableMove};
+
+    #[test]
+    fn table_navigation_clamps_at_edges() {
+        assert_eq!(table_target(0, 5, TableMove::Up, 3), Some(0));
+        assert_eq!(table_target(4, 5, TableMove::Down, 3), Some(4));
+        assert_eq!(table_target(2, 5, TableMove::Home, 3), Some(0));
+        assert_eq!(table_target(2, 5, TableMove::End, 3), Some(4));
+    }
+
+    #[test]
+    fn table_paging_uses_page_size_and_clamps() {
+        assert_eq!(table_target(5, 20, TableMove::PageDown, 4), Some(9));
+        assert_eq!(table_target(5, 20, TableMove::PageUp, 4), Some(1));
+        assert_eq!(table_target(18, 20, TableMove::PageDown, 4), Some(19));
+        assert_eq!(table_target(1, 3, TableMove::PageUp, 4), Some(0));
+    }
+
+    #[test]
+    fn empty_table_has_no_target() {
+        assert_eq!(table_target(0, 0, TableMove::Down, 5), None);
+    }
+
+    #[test]
+    fn table_scroll_keeps_target_near_the_center() {
+        assert_eq!(table_scroll_offset(0, 600.0, 50.0), 0.0);
+        assert_eq!(table_scroll_offset(10, 600.0, 50.0), 225.0);
+        assert_eq!(table_scroll_offset(2, 400.0, 50.0), 0.0);
+    }
 }
