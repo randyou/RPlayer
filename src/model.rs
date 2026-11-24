@@ -194,6 +194,9 @@ pub struct Library {
     pub light_theme: bool,
     /// Theme preset id (paper/sand/mist/forest/midnight/charcoal).
     pub theme_preset: String,
+    /// Reduce or disable non-essential UI animations.
+    #[serde(default)]
+    pub reduced_motion: bool,
     /// Whether the desktop lyrics overlay should open with the app.
     pub desktop_lyrics: bool,
     /// Background opacity of the desktop lyrics card (0.0–1.0).
@@ -241,6 +244,7 @@ impl Default for Library {
             recent: Vec::new(),
             light_theme: true,
             theme_preset: "paper".to_string(),
+            reduced_motion: false,
             desktop_lyrics: false,
             desktop_lyrics_opacity: 0.85,
             desktop_lyrics_text_opacity: 1.0,

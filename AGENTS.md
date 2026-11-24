@@ -41,6 +41,7 @@ src/lyrics_fetch.rs  manual LRCLIB lyrics lookup
 src/platform.rs      Windows-specific window/SMTC/tray integration
 src/theme.rs         palettes; all colors come from here
 src/ui/widgets.rs    shared controls and animations
+src/ui/motion.rs     motion tokens and reduced-motion switch
 ```
 
 ## Invariants

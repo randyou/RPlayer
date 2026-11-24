@@ -18,6 +18,7 @@ impl RPlayerApp {
 
         let mut close = false;
         let mut requested_theme: Option<ThemePreset> = None;
+        let mut reduced_motion = self.library.reduced_motion;
         let mut requested_replaygain: Option<String> = None;
         let mut opacity = self.library.desktop_lyrics_opacity;
         let mut text_opacity = self.library.desktop_lyrics_text_opacity;
@@ -157,6 +158,17 @@ impl RPlayerApp {
                             .size(10.0)
                             .color(theme::c().faint),
                         );
+                        ui.add_space(6.0);
+                        ui.horizontal(|ui| {
+                            ui.label(
+                                RichText::new("减少动态效果")
+                                    .size(11.0)
+                                    .color(theme::c().muted),
+                            );
+                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                                widgets::toggle_switch(ui, &mut reduced_motion);
+                            });
+                        });
                         ui.add_space(6.0);
                         ui.horizontal(|ui| {
                             ui.label(
@@ -456,7 +468,7 @@ impl RPlayerApp {
                 ui.add_space(18.0);
                 ui.horizontal(|ui| {
                     ui.label(
-                        RichText::new("RPlayer v0.10.20")
+                        RichText::new("RPlayer v0.11.0")
                             .size(10.0)
                             .color(theme::c().faint),
                     );
@@ -479,6 +491,11 @@ impl RPlayerApp {
 
         if let Some(preset) = requested_theme {
             self.set_theme_preset(ctx, preset);
+        }
+        if self.library.reduced_motion != reduced_motion {
+            self.library.reduced_motion = reduced_motion;
+            crate::ui::motion::set_reduced(reduced_motion);
+            self.persist();
         }
         if let Some(mode) = requested_replaygain {
             if self.library.replaygain != mode {

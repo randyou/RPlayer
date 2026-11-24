@@ -569,7 +569,7 @@ pub fn primary_button_icon(ui: &mut Ui, icon: Icon, text: &str) -> Response {
     let press = ui.ctx().animate_bool_with_time(
         ui.id().with(("press", text)),
         response.is_pointer_button_down_on(),
-        0.08,
+        crate::ui::motion::duration(crate::ui::motion::PRESS),
     );
     let paint_rect = Rect::from_center_size(
         rect.center(),
@@ -598,7 +598,7 @@ pub fn secondary_button_icon(ui: &mut Ui, icon: Icon, text: &str) -> Response {
     let press = ui.ctx().animate_bool_with_time(
         ui.id().with(("press", text)),
         response.is_pointer_button_down_on(),
-        0.08,
+        crate::ui::motion::duration(crate::ui::motion::PRESS),
     );
     let paint_rect = Rect::from_center_size(
         rect.center(),
@@ -642,7 +642,7 @@ pub fn primary_button_full_icon(ui: &mut Ui, icon: Icon, text: &str) -> Response
     let press = ui.ctx().animate_bool_with_time(
         ui.id().with(("press", text)),
         response.is_pointer_button_down_on(),
-        0.08,
+        crate::ui::motion::duration(crate::ui::motion::PRESS),
     );
     let paint_rect = Rect::from_center_size(
         rect.center(),

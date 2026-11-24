@@ -134,7 +134,11 @@ impl RPlayerApp {
             }))
             .show(ctx, |ui| {
                 let dt = ctx.input(|input| input.stable_dt).min(0.1);
-                self.view_fade = (self.view_fade + dt * 4.0).min(1.0);
+                if crate::ui::motion::reduced() {
+                    self.view_fade = 1.0;
+                } else {
+                    self.view_fade = (self.view_fade + dt * 4.0).min(1.0);
+                }
                 if self.view_fade < 1.0 {
                     ctx.request_repaint();
                 }
