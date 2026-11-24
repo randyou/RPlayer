@@ -201,12 +201,16 @@ impl RPlayerApp {
             return;
         }
 
-        let (up, down, enter, escape) = ctx.input(|input| {
+        let (up, down, enter, escape, home, end, page_up, page_down) = ctx.input(|input| {
             (
                 input.key_pressed(Key::ArrowUp),
                 input.key_pressed(Key::ArrowDown),
                 input.key_pressed(Key::Enter),
                 input.key_pressed(Key::Escape),
+                input.key_pressed(Key::Home),
+                input.key_pressed(Key::End),
+                input.key_pressed(Key::PageUp),
+                input.key_pressed(Key::PageDown),
             )
         });
         if escape {
@@ -228,6 +232,23 @@ impl RPlayerApp {
         }
         if down && !filtered.is_empty() {
             self.command_index = (self.command_index + 1) % filtered.len();
+        }
+        let mut scroll_selected = up || down;
+        if home && !filtered.is_empty() {
+            self.command_index = 0;
+            scroll_selected = true;
+        }
+        if end && !filtered.is_empty() {
+            self.command_index = filtered.len() - 1;
+            scroll_selected = true;
+        }
+        if page_up && !filtered.is_empty() {
+            self.command_index = self.command_index.saturating_sub(6);
+            scroll_selected = true;
+        }
+        if page_down && !filtered.is_empty() {
+            self.command_index = (self.command_index + 6).min(filtered.len() - 1);
+            scroll_selected = true;
         }
 
         let appear = if crate::ui::motion::reduced() {
@@ -296,6 +317,7 @@ impl RPlayerApp {
                 }
                 if response.changed() {
                     self.command_index = 0;
+                    scroll_selected = true;
                 }
                 ui.add_space(6.0);
                 egui::ScrollArea::vertical()
@@ -365,8 +387,13 @@ impl RPlayerApp {
                             if response.clicked() {
                                 execute = Some(item.command);
                             }
-                            if selected && enter {
-                                execute = Some(item.command);
+                            if selected {
+                                if scroll_selected {
+                                    response.scroll_to_me(Some(egui::Align::Center));
+                                }
+                                if enter {
+                                    execute = Some(item.command);
+                                }
                             }
                         }
                     });

@@ -225,6 +225,14 @@ impl RPlayerApp {
                                 );
                                 crate::ui::focus::focus_on_click(&response);
                                 crate::ui::focus::ring(ui, &response);
+                                response.widget_info(|| {
+                                    egui::WidgetInfo::selected(
+                                        egui::WidgetType::Button,
+                                        true,
+                                        self.theme_preset == preset,
+                                        format!("主题：{}", preset.label()),
+                                    )
+                                });
                                 if response.clicked() {
                                     requested_theme = Some(preset);
                                 }
@@ -942,6 +950,14 @@ fn settings_nav_item(ui: &mut egui::Ui, label: &str, selected: bool) -> egui::Re
         .stroke(Stroke::NONE)
         .corner_radius(CornerRadius::same(8)),
     );
+    response.widget_info(|| {
+        egui::WidgetInfo::selected(
+            egui::WidgetType::Button,
+            true,
+            selected,
+            format!("设置页：{label}"),
+        )
+    });
     crate::ui::focus::focus_on_click(&response);
     crate::ui::focus::ring(ui, &response);
     response

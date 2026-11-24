@@ -106,6 +106,9 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
     }
 
     if app.dialog != app.last_dialog {
+        if app.last_dialog == Dialog::None {
+            app.dialog_focus_before = ctx.memory(|memory| memory.focused());
+        }
         app.dialog_anim_start = std::time::Instant::now();
         app.last_dialog = app.dialog.clone();
     }
@@ -161,7 +164,7 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
 
                     let entered =
                         response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
-                    let action = dialog_footer(ui, "创建", false);
+                    let action = dialog_footer(ui, "创建", false, !name.trim().is_empty());
                     if action == FooterAction::Cancel {
                         outcome = Outcome::Close;
                     } else if !name.trim().is_empty()
@@ -182,7 +185,7 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                     ui.add_space(20.0);
                     let entered =
                         response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
-                    let action = dialog_footer(ui, "保存", false);
+                    let action = dialog_footer(ui, "保存", false, !name.trim().is_empty());
                     if action == FooterAction::Cancel {
                         outcome = Outcome::Close;
                     } else if !name.trim().is_empty()
@@ -212,7 +215,7 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                         .wrap(),
                     );
                     ui.add_space(20.0);
-                    let action = dialog_footer(ui, "删除", true);
+                    let action = dialog_footer(ui, "删除", true, true);
                     if action == FooterAction::Confirm {
                         outcome = Outcome::DeletePlaylist(id);
                     } else if action == FooterAction::Cancel {
@@ -240,7 +243,7 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                         .wrap(),
                     );
                     ui.add_space(20.0);
-                    let action = dialog_footer(ui, "移除", true);
+                    let action = dialog_footer(ui, "移除", true, true);
                     if action == FooterAction::Confirm {
                         outcome = Outcome::RemoveTrack(id);
                     } else if action == FooterAction::Cancel {
@@ -269,7 +272,7 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                             .color(theme::c().faint),
                     );
                     ui.add_space(12.0);
-                    let action = dialog_footer(ui, "保存标签", false);
+                    let action = dialog_footer(ui, "保存标签", false, true);
                     if action == FooterAction::Cancel {
                         outcome = Outcome::Close;
                     } else if action == FooterAction::Confirm && !edit.title.trim().is_empty() {
@@ -303,7 +306,7 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                     tag_field(ui, "流派", genre);
                     tag_field(ui, "年份", year);
                     ui.add_space(12.0);
-                    let action = dialog_footer(ui, "批量保存", false);
+                    let action = dialog_footer(ui, "批量保存", false, true);
                     if action == FooterAction::Cancel {
                         outcome = Outcome::Close;
                     } else if action == FooterAction::Confirm {
@@ -563,7 +566,7 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                         });
                     }
                     ui.add_space(10.0);
-                    let action = dialog_footer(ui, "搜索候选", false);
+                    let action = dialog_footer(ui, "搜索候选", false, true);
                     if action == FooterAction::Cancel {
                         outcome = Outcome::Close;
                     } else if action == FooterAction::Confirm && !title.trim().is_empty() {
@@ -904,6 +907,10 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
             }
         }
     }
+
+    if app.dialog == Dialog::None {
+        app.restore_dialog_focus(ctx);
+    }
 }
 
 fn dialog_header(ui: &mut Ui, title: &str, subtitle: &str) {
@@ -1001,7 +1008,12 @@ enum FooterAction {
 }
 
 /// Returns the primary or cancel action clicked in the dialog footer.
-fn dialog_footer(ui: &mut Ui, confirm_label: &str, danger: bool) -> FooterAction {
+fn dialog_footer(
+    ui: &mut Ui,
+    confirm_label: &str,
+    danger: bool,
+    enabled: bool,
+) -> FooterAction {
     let mut action = FooterAction::None;
     ui.horizontal(|ui| {
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
@@ -1026,12 +1038,25 @@ fn dialog_footer(ui: &mut Ui, confirm_label: &str, danger: bool) -> FooterAction
                 .corner_radius(10)
                 .min_size(Vec2::new(84.0, 36.0))
             };
-            if ui
-                .add(button)
-                .on_hover_cursor(egui::CursorIcon::PointingHand)
-                .clicked()
-            {
-                action = FooterAction::Confirm;
+            if enabled {
+                if ui
+                    .add(button)
+                    .on_hover_cursor(egui::CursorIcon::PointingHand)
+                    .clicked()
+                {
+                    action = FooterAction::Confirm;
+                }
+            } else {
+                let disabled = Button::new(
+                    RichText::new(confirm_label)
+                        .size(13.0)
+                        .color(theme::c().faint),
+                )
+                .fill(theme::c().card)
+                .stroke(Stroke::new(1.0_f32, theme::c().border_soft))
+                .corner_radius(10)
+                .min_size(Vec2::new(84.0, 36.0));
+                ui.add_enabled(false, disabled);
             }
             if widgets::secondary_button(ui, "取消").clicked() {
                 action = FooterAction::Cancel;

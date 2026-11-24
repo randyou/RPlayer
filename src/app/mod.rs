@@ -263,6 +263,7 @@ pub struct RPlayerApp {
     dialog: Dialog,
     last_dialog: Dialog,
     dialog_anim_start: std::time::Instant,
+    dialog_focus_before: Option<egui::Id>,
     focus_pending: bool,
     focus_search: bool,
     command_open: bool,
@@ -409,6 +410,7 @@ impl RPlayerApp {
             dialog: Dialog::None,
             last_dialog: Dialog::None,
             dialog_anim_start: std::time::Instant::now(),
+            dialog_focus_before: None,
             focus_pending: false,
             focus_search: false,
             command_open: false,
@@ -2684,13 +2686,14 @@ impl RPlayerApp {
     }
 
     fn handle_shortcuts(&mut self, ctx: &egui::Context) {
-        if ctx.input(|i| i.key_pressed(Key::F1)) {
+        if self.dialog == Dialog::None && ctx.input(|i| i.key_pressed(Key::F1)) {
             self.dialog = Dialog::Shortcuts;
         }
 
         if ctx.input(|i| i.key_pressed(Key::Escape)) {
             if self.dialog != Dialog::None {
                 self.dialog = Dialog::None;
+                self.restore_dialog_focus(ctx);
             } else if self.settings_open {
                 self.settings_open = false;
             } else if self.eq_open {
@@ -2704,6 +2707,12 @@ impl RPlayerApp {
             } else if self.expanded {
                 self.expanded = false;
             }
+        }
+
+        // A modal owns the keyboard. Do not let Space/arrows drive the
+        // player or seek the timeline behind the backdrop.
+        if self.dialog != Dialog::None {
+            return;
         }
 
         if ctx.input(|input| input.modifiers.command && input.key_pressed(Key::K)) {
@@ -3023,6 +3032,12 @@ impl RPlayerApp {
 
     fn render_dialog(&mut self, ctx: &egui::Context) {
         dialogs::show(self, ctx);
+    }
+
+    pub(super) fn restore_dialog_focus(&mut self, ctx: &egui::Context) {
+        if let Some(id) = self.dialog_focus_before.take() {
+            ctx.memory_mut(|memory| memory.request_focus(id));
+        }
     }
 }
 
