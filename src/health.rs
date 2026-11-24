@@ -3,6 +3,8 @@
 
 use std::collections::HashMap;
 
+use std::path::{Path, PathBuf};
+
 use crate::model::Track;
 
 #[derive(Debug, Clone, Default)]
@@ -26,6 +28,27 @@ impl HealthReport {
     }
 }
 
+/// Maps a path from one root directory to another.
+pub fn relink_path(path: &Path, old_root: &Path, new_root: &Path) -> Option<PathBuf> {
+    let normalize = |value: &Path| {
+        value
+            .to_string_lossy()
+            .replace('\\', "/")
+            .trim_end_matches('/')
+            .to_string()
+    };
+    let path_text = normalize(path);
+    let old_text = normalize(old_root);
+    if old_text.is_empty() {
+        return None;
+    }
+    let prefix = format!("{}/", old_text.to_lowercase());
+    if !path_text.to_lowercase().starts_with(&prefix) {
+        return None;
+    }
+    let rest = path_text.get(old_text.len() + 1..)?;
+    Some(new_root.join(rest))
+}
 /// Preserves identity and listening history when a track is relinked.
 pub fn relinked(old: &Track, mut new: Track) -> Track {
     new.id = old.id;
@@ -108,6 +131,14 @@ mod tests {
         }
     }
 
+    #[test]
+    fn relink_path_maps_under_new_root() {
+        let old = Path::new(r"D:\Music\Old");
+        let new = Path::new(r"E:\Library");
+        let mapped = relink_path(Path::new(r"D:\Music\Old\Album\a.flac"), old, new);
+        assert_eq!(mapped, Some(PathBuf::from(r"E:\Library\Album\a.flac")));
+        assert!(relink_path(Path::new(r"D:\Other\a.flac"), old, new).is_none());
+    }
     #[test]
     fn relink_preserves_identity_and_clears_cue() {
         let old = track(7, "Old", "Artist", "Album", 100.0);

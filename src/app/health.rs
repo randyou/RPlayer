@@ -41,6 +41,58 @@ impl RPlayerApp {
         }
     }
 
+    fn relink_missing_root(&mut self) {
+        let Some(old_root) = rfd::FileDialog::new()
+            .set_title("选择缺失文件原来的根目录")
+            .pick_folder()
+        else {
+            return;
+        };
+        let Some(new_root) = rfd::FileDialog::new()
+            .set_title("选择新的根目录")
+            .pick_folder()
+        else {
+            return;
+        };
+        let missing = self
+            .health_report
+            .as_ref()
+            .map(|report| report.missing.clone())
+            .unwrap_or_default();
+        let mut ok = 0usize;
+        for id in missing {
+            let Some(old) = self.library.track(id).cloned() else {
+                continue;
+            };
+            let Some(candidate) = crate::health::relink_path(&old.path, &old_root, &new_root)
+            else {
+                continue;
+            };
+            if !candidate.exists() {
+                continue;
+            }
+            if let Ok(track) = crate::model::Track::from_path(&candidate) {
+                let track = crate::health::relinked(&old, track);
+                if let Some(slot) = self.library.tracks.iter_mut().find(|track| track.id == id) {
+                    *slot = track;
+                }
+                ok += 1;
+            }
+        }
+        self.persist();
+        if let Some(report) = &mut self.health_report {
+            report.missing.retain(|id| {
+                self.library
+                    .track(*id)
+                    .is_some_and(|track| !track.path.exists())
+            });
+        }
+        self.toast(
+            format!("批量重新定位完成：{ok} 首"),
+            if ok > 0 { ToastKind::Success } else { ToastKind::Error },
+        );
+    }
+
     fn relink_missing_track(&mut self, id: u64) {
         let Some(old) = self.library.track(id).cloned() else {
             return;
@@ -77,6 +129,7 @@ impl RPlayerApp {
         let mut close = false;
         let mut remove_missing = false;
         let mut relink_id: Option<u64> = None;
+        let mut relink_root = false;
 
         egui::Window::new("rplayer-health")
             .title_bar(false)
@@ -185,6 +238,9 @@ impl RPlayerApp {
                 ui.add_space(10.0);
                 ui.horizontal(|ui| {
                     if !report.missing.is_empty() {
+                        if widgets::secondary_button(ui, "批量替换根目录…").clicked() {
+                            relink_root = true;
+                        }
                         if widgets::danger_button(
                             ui,
                             &format!("移除 {} 条失效记录", report.missing.len()),
@@ -223,6 +279,9 @@ impl RPlayerApp {
         }
         if let Some(id) = relink_id {
             self.relink_missing_track(id);
+        }
+        if relink_root {
+            self.relink_missing_root();
         }
         if close {
             self.health_report = None;
