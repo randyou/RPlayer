@@ -2,6 +2,10 @@
 
 RPlayer 是一个用 **Rust** 编写的本地桌面音乐播放器。它不依赖账号、云服务或网页技术栈，启动即用：选择音乐文件夹，扫描标签与封面，然后在清爽的浅色或深色界面里听歌。
 
+v2.0 “Listening Room” 是一次完整的界面重构：暖纸色内容区、深森林绿侧栏、衬线标题、四列曲库、全高队列抽屉与可缩放的正在播放页。它保留 v0.13.5 的全部曲库、歌词、标签、CUE、备份与播放能力，只重做视觉、布局、交互与动效。两套主题“纸张 / 夜幕”、无边框标题栏、236px 侧栏、54px 顶栏、92px 播放条与 300px 右栏构成新的桌面骨架。
+
+![RPlayer v2 本地曲库](docs/qa/v0.2/v2-library.png)
+
 v0.5 参考 Spotify 桌面端“左侧曲库 + 右侧 Now Playing”和 Apple Music 的全屏歌词，把播放页做成真正的第二界面：曲库右侧常驻封面、歌词与队列，按 `F` 进入沉浸式歌词页。同时加入 MusicBrainz / Cover Art Archive 在线封面、播放会话恢复、队列拖动排序、文件夹监听，以及本地/在线封面优先级与缓存。
 
 v0.6 已完成：底栏三段布局、Windows exe/helper 图标、评分与播放统计、专辑/艺术家浏览、多选与拖拽、智能歌单、六套主题、AccessKit/Ctrl+K、单曲与批量标签编辑、曲库健康检查、M3U、ReplayGain、歌词偏移与桌面歌词设置、系统托盘、SMTC 封面与应用名。
@@ -10,41 +14,19 @@ v0.7 已完成：桌面歌词面板透明度与歌词文字透明度独立调节
 
 v0.8–v0.13 已完成：DirectComposition 桌面歌词、歌词逐句编辑与时间轴编辑、歌词重新匹配与候选选择、CUE 虚拟曲目与分段播放、重复歌曲清理、曲库健康检查、批量标签撤销、数据备份与恢复、页面与控件动效、键盘焦点与快捷键帮助、项目路线图。
 
-![RPlayer 浅色音乐库](docs/screenshot.png)
+v2.0 已完成：Listening Room 视觉系统、纸张 / 夜幕双主题、无边框标题栏与原生边缘缩放、四列曲库、五列专辑与艺术家墙、全高队列抽屉、六页签设置、分组命令面板、深色均衡器与迷你播放器、衬线桌面歌词；`cargo test --release` 70 passed。
 
-![RPlayer 专辑封面网格](docs/screenshot-albums.png)
+![RPlayer v2 正在播放](docs/qa/v0.2/v2-now.png)
 
-![RPlayer 艺术家浏览](docs/screenshot-artists.png)
+![RPlayer v2 设置](docs/qa/v0.2/v2-settings.png)
 
-![RPlayer 批量多选](docs/screenshot-multiselect.png)
+![RPlayer v2 命令面板](docs/qa/v0.2/v2-palette.png)
 
-![RPlayer 暖沙主题](docs/screenshot-theme-sand.png)
+![RPlayer v2 播放队列](docs/qa/v0.2/v2-queue.png)
 
-![RPlayer 午夜主题](docs/screenshot-theme-midnight.png)
+![RPlayer v2 迷你播放器](docs/qa/v0.2/v2-mini.png)
 
-![RPlayer Ctrl+K 命令面板](docs/screenshot-command.png)
-
-![RPlayer 智能歌单规则](docs/screenshot-smart-builder.png)
-
-![RPlayer 智能歌单结果](docs/screenshot-smart.png)
-
-![RPlayer 曲库健康检查](docs/screenshot-health.png)
-
-![RPlayer 深色正在播放](docs/screenshot-dark.png)
-
-![RPlayer 正在播放](docs/screenshot-playing.png)
-
-![RPlayer 桌面歌词](docs/screenshot-lyrics.png)
-
-![RPlayer 设置](docs/screenshot-settings.png)
-
-![RPlayer 键盘快捷键](docs/screenshot-shortcuts.png)
-
-![RPlayer 歌曲列表键盘导航](docs/screenshot-table-nav.png)
-
-![RPlayer 迷你播放器](docs/screenshot-mini.png)
-
-![RPlayer 均衡器](docs/screenshot-eq.png)
+![RPlayer v2 桌面歌词](docs/qa/v0.2/v2-desktop.png)
 
 ## 特性
 
@@ -54,9 +36,10 @@ v0.8–v0.13 已完成：DirectComposition 桌面歌词、歌词逐句编辑与�
 - **我的收藏 / 最近播放**：点歌曲右侧的心形即可收藏，最近播放自动记录最近 100 首，均可作为独立视图浏览。
 - **批量操作**：进入批量模式后勾选歌曲，可批量加入歌单，或从当前歌单/收藏中移除；批量标签保存后可用命令面板的「撤销上次批量标签」恢复。
 - **键盘与焦点**：侧栏、歌曲行、播放栏和弹窗按钮都显示 2px 主题色焦点环；Tab/Shift+Tab 移动焦点，Space/Enter 激活；歌曲行内用 `↑/↓` 逐行、`Home/End` 首尾、`PageUp/PageDown` 翻页，焦点行自动滚入视口；进度条与音量条获得焦点后可用方向键微调，`F1` 打开完整快捷键表。
-- **浅色默认 / 深色可选**：首次启动为浅色纸张主题，图标或 `Ctrl + T` 秒切，标题栏、弹窗、播放栏与自绘控件同步换色；主题会记住。
-- **LPlayer 风格曲库**：白色圆角曲库卡片、顶部工具组、绿色主按钮与轻量表格行，浅色下更接近 LPlayer 的信息层次。
-- **常驻正在播放侧栏**：窗口宽度 ≥1200px 时，曲库右侧显示封面、来源、歌词预览和“接下来”；可随时收起。
+- **纸张 / 夜幕双主题**：纸张为暖纸色内容区 + 深色侧栏，夜幕为深绿黑界面；`Ctrl + T` 秒切，标题栏、弹窗、播放栏与自绘控件同步换色，偏好会记住。
+- **聆听室曲库**：236px 深色侧栏、54px 自绘顶栏、42px 衬线页头与四列 56px 曲库；当前行用 2px 左侧色条与柔和绿底强调，格式以单色小标签贴在标题后。
+- **无边框窗口**：自绘最小化 / 最大化 / 关闭按钮；拖拽面包屑移动窗口，左右与底边可原生缩放，顶部保留拖动热区。
+- **常驻正在播放侧栏**：窗口宽度 ≥1280px 时，曲库右侧显示 300px 封面、来源、歌词预览和“接下来”；可随时收起。
 - **全屏歌词页**：按 `F`、点侧栏「正在播放」或底栏封面/标题进入；大封面、当前行居中高亮、相邻行弱化，点击任意歌词行可跳转。
 - **播放会话恢复**：重启后恢复上次歌曲、进度、队列、当前视图与音量；文件失效时自动跳过。
 - **无缝播放**：在曲目结束前把下一首解码源追加到同一音频链，专辑曲目之间不再停掉 Sink；随机/循环/单曲循环同样适用。
@@ -261,6 +244,18 @@ v0.5 的页面设计、在线封面方案、验收标准与后续增量见 [docs
 v0.6 的曲库深度规划、专辑/艺术家视图、评分与统计、智能歌单、标签编辑、M3U、ReplayGain 与版本拆分见 [docs/V0.6_PLAN.md](docs/V0.6_PLAN.md)。
 
 ## 版本记录
+
+### v2.0.0
+
+- 全新 Listening Room 视觉系统：暖纸 / 墨色 / 森林绿、衬线标题、等宽元数据。
+- 纸张 / 夜幕两套主题替代旧六套主题；旧主题 id 自动折叠到两套新主题。
+- 无边框 1440×900 窗口，最小 1120×720；自绘窗口按钮、拖动区与侧底原生缩放。
+- 236px 深色侧栏、54px 顶栏、四列 56px 曲库、92px 播放条、300px 右栏（≥1280px）。
+- 五列专辑墙 / 艺术家墙、专辑与艺术家详情、歌单拼块头。
+- 沉浸页改为 430px 封面、56px 衬线标题、7 行歌词与当前行砖红强调。
+- 六页签设置、主题卡片与预览、640×430 分组命令面板、360px 全高队列抽屉。
+- 深色均衡器与迷你播放器；桌面歌词改为衬线字体与浅色文字。
+- `cargo test --release`：70 passed。
 
 ### v0.13.5
 

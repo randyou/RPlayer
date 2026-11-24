@@ -368,12 +368,14 @@ impl RPlayerApp {
     }
 
     fn sidebar_footer(&mut self, ui: &mut Ui) {
-        Frame::NONE
-            .fill(egui::Color32::from_rgba_unmultiplied(255, 255, 255, 8))
-            .stroke(Stroke::new(1.0_f32, theme::sidebar_line()))
-            .corner_radius(egui::CornerRadius::same(8))
-            .inner_margin(Margin::same(11))
-            .show(ui, |ui| {
+        let compact = ui.available_height() < 140.0;
+        if !compact {
+            Frame::NONE
+                .fill(egui::Color32::from_rgba_unmultiplied(255, 255, 255, 8))
+                .stroke(Stroke::new(1.0_f32, theme::sidebar_line()))
+                .corner_radius(egui::CornerRadius::same(8))
+                .inner_margin(Margin::same(11))
+                .show(ui, |ui| {
                 ui.set_min_width(ui.available_width());
                 if self.scanning {
                     ui.horizontal(|ui| {
@@ -440,6 +442,7 @@ impl RPlayerApp {
                     }
                 }
             });
+        }
 
         ui.add_space(2.0);
         ui.horizontal(|ui| {

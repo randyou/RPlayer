@@ -33,3 +33,38 @@ pub fn serif(size: f32) -> FontId {
 pub fn mono(size: f32) -> FontId {
     crate::theme::mono(size)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn shell_tokens_match_the_design_grid() {
+        assert_eq!(SIDEBAR_WIDTH, 236.0);
+        assert_eq!(TOPBAR_HEIGHT, 54.0);
+        assert_eq!(PLAYER_HEIGHT, 92.0);
+        assert_eq!(RAIL_WIDTH, 300.0);
+        assert_eq!(RAIL_BREAKPOINT, 1280.0);
+    }
+
+    #[test]
+    fn window_tokens_keep_the_designed_minimum() {
+        assert_eq!(WINDOW_DEFAULT, Vec2::new(1440.0, 900.0));
+        assert_eq!(WINDOW_MIN, Vec2::new(1120.0, 720.0));
+    }
+
+    #[test]
+    fn type_scale_keeps_title_larger_than_track_text() {
+        assert!(PAGE_TITLE > BODY);
+        assert!(BODY >= TRACK_TITLE);
+        assert!(TRACK_TITLE > TRACK_ARTIST);
+        assert!(LYRIC > LYRIC_ACTIVE);
+    }
+
+    #[test]
+    fn row_geometry_keeps_cover_inside_the_row() {
+        assert!(COVER_ROW < ROW_HEIGHT);
+        assert!(RADIUS_COVER < RADIUS_CONTROL);
+        assert!(RADIUS_CONTROL < RADIUS_CARD);
+    }
+}

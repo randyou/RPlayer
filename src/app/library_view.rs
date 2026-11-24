@@ -1333,7 +1333,20 @@ fn table_scroll_offset(index: usize, viewport: f32, row_height: f32) -> f32 {
 
 #[cfg(test)]
 mod tests {
-    use super::{table_scroll_offset, table_target, TableMove};
+    use super::{table_scroll_offset, table_target, Columns, TableMove};
+
+    #[test]
+    fn table_columns_clamp_album_to_design_bounds() {
+        assert_eq!(Columns::for_width(400.0).album, 180.0);
+        assert!((Columns::for_width(800.0).album - 216.0).abs() < 0.01);
+        assert_eq!(Columns::for_width(1600.0).album, 360.0);
+    }
+
+    #[test]
+    fn table_columns_keep_a_readable_title() {
+        assert!(Columns::for_width(800.0).title >= 180.0);
+        assert!(Columns::for_width(1600.0).title >= 180.0);
+    }
 
     #[test]
     fn table_navigation_clamps_at_edges() {

@@ -454,4 +454,26 @@ mod tests {
             assert!(ids.insert(item.id), "duplicate command id: {}", item.id);
         }
     }
+
+    #[test]
+    fn command_groups_are_ordered_jump_play_action() {
+        use super::Command;
+        assert_eq!(Command::LibraryView.group(), 0);
+        assert_eq!(Command::PlayPause.group(), 1);
+        assert_eq!(Command::Settings.group(), 2);
+        assert_eq!(Command::Search.group(), 1);
+    }
+
+    #[test]
+    fn command_group_labels_are_distinct() {
+        use super::Command;
+        let labels = [
+            Command::LibraryView.group_label(),
+            Command::PlayPause.group_label(),
+            Command::Settings.group_label(),
+        ];
+        assert_eq!(labels[0], "跳转");
+        assert_eq!(labels[1], "播放与搜索");
+        assert_eq!(labels[2], "操作");
+    }
 }

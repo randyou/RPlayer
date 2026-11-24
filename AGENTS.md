@@ -29,6 +29,8 @@ src/main.rs          eframe entry, viewport and renderer
 src/app/             app state, views, panels, dialogs
   mod.rs             RPlayerApp, view switching, playback orchestration
   library_view.rs    main library/album/artist pages
+  topbar.rs          borderless window chrome, breadcrumb, search, window controls
+  browse.rs          album/artist walls and detail pages
   sidebar.rs         navigation and playlists
   now_playing.rs     full-screen lyrics page
   overlay.rs         desktop lyrics + mini player viewports
@@ -49,7 +51,9 @@ src/cover.rs         embedded -> sidecar -> cache cover priority
 src/cover_fetch.rs   manual online cover lookup
 src/lyrics_fetch.rs  manual LRCLIB lyrics lookup
 src/platform.rs      Windows-specific window/SMTC/tray integration
-src/theme.rs         palettes; all colors come from here
+src/theme.rs         Paper / Nocturne palettes, serif + mono font families
+src/ui/tokens.rs     v2 layout, type, radius and window tokens
+src/ui/components.rs shared eyebrow, page header, keycap and surface helpers
 src/ui/widgets.rs    shared controls and animations
 src/ui/motion.rs     motion tokens and reduced-motion switch
 src/ui/focus.rs      2px focus rings for custom controls
@@ -95,10 +99,15 @@ src/ui/focus.rs      2px focus rings for custom controls
 
 ## UI conventions
 
-- Spacing: 4/8/12/16 px; radius 10 for controls, 12 for cards, 18 for lyrics.
-- Primary buttons use accent; secondary use card + border; danger uses danger.
-- Page switches fade in via `view_fade` (0.18s ease-out). Keep animations
-  subtle and respect reduced-motion if added later.
+- Spacing: 4/8/12/16 px; radius 8 for controls, 10 for cards, 2 for covers.
+- Layout tokens live in `src/ui/tokens.rs`: 236 sidebar, 54 topbar, 92 player,
+  300 rail, 1280 rail breakpoint, 1440×900 default, 1120×720 minimum.
+- Visible themes are only Paper / Nocturne. Old preset ids alias into those two.
+- Primary buttons use accent; secondary use card + border; danger uses signal.
+- Window chrome is borderless: `src/app/topbar.rs` draws window buttons and the
+  drag handle; side/bottom resize uses native `SetWindowPos`, never
+  `ViewportCommand::BeginResize`.
+- Page headers use `tokens::serif(42.0)` with a mono eyebrow; body text is 13.
 - Buttons scale to 0.975 while pressed via `animate_bool_with_time`.
 - Custom controls draw focus with `src/ui/focus.rs`: `ring` for rounded
   rectangles, `ring_round` for circles, `ring_rect` for table rows/sliders.
@@ -109,7 +118,9 @@ src/ui/focus.rs      2px focus rings for custom controls
 
 ## Verification
 
-- Unit tests: `cargo test --release` (currently 59+).
+- Unit tests: `cargo test --release` (currently 70).
+- `cargo test` does **not** rebuild `target/release/rplayer.exe`; always run
+  `cargo build --release` before UI screenshots.
 - Windows UI automation: `agent-desktop snapshot --window-id <id>`, then click
   by `ref_id`; prefer AccessKit names over pixel coordinates.
 - Screenshots must be checked after UI changes; avoid leaving test images in

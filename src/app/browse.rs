@@ -16,6 +16,12 @@ use crate::theme;
 use crate::ui::icons::{self, Icon};
 use crate::ui::widgets;
 
+pub(super) fn grid_columns(available: f32) -> usize {
+    const GAP: f32 = 24.0;
+    const MIN_CARD: f32 = 188.0;
+    (((available + GAP) / (MIN_CARD + GAP)).floor() as usize).clamp(3, 5)
+}
+
 #[derive(Debug, Clone)]
 pub(super) struct AlbumGroup {
     pub key: String,
@@ -218,7 +224,7 @@ impl RPlayerApp {
         }
         let available = ui.available_width();
         let gap = 24.0;
-        let columns = (((available + gap) / (188.0 + gap)).floor() as usize).clamp(3, 5);
+        let columns = grid_columns(available);
         let card_width = ((available - gap * (columns.saturating_sub(1) as f32)) / columns as f32)
             .clamp(140.0, 232.0);
         egui::ScrollArea::vertical()
@@ -255,7 +261,7 @@ impl RPlayerApp {
         }
         let available = ui.available_width();
         let gap = 24.0;
-        let columns = (((available + gap) / (188.0 + gap)).floor() as usize).clamp(3, 5);
+        let columns = grid_columns(available);
         let card_width = ((available - gap * (columns.saturating_sub(1) as f32)) / columns as f32)
             .clamp(140.0, 232.0);
         egui::ScrollArea::vertical()
@@ -760,5 +766,17 @@ fn truncate(text: &str, max: usize) -> String {
         format!("{value}…")
     } else {
         value
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::grid_columns;
+
+    #[test]
+    fn album_grid_uses_five_columns_at_desktop_widths() {
+        assert_eq!(grid_columns(1200.0), 5);
+        assert_eq!(grid_columns(860.0), 4);
+        assert_eq!(grid_columns(520.0), 3);
     }
 }
