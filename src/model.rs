@@ -454,6 +454,13 @@ pub fn stable_id(path: &Path) -> u64 {
 }
 
 /// Normalized key used for de-duplicating paths in the library.
+pub fn scan_key(track: &Track) -> String {
+    match (&track.cue_source, track.track_number) {
+        (Some(cue), Some(number)) => format!("cue:{}#{number}", path_key(cue)),
+        _ => path_key(&track.path),
+    }
+}
+
 pub fn path_key(path: &Path) -> String {
     let mut s = path.to_string_lossy().replace('\\', "/");
     #[cfg(windows)]

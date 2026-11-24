@@ -308,6 +308,33 @@ FILE "album.flac" WAVE
     }
 
     #[test]
+    fn loads_gbk_encoded_cue() {
+        let dir = std::env::temp_dir().join(format!(
+            "rplayer-cue-gbk-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("gbk.cue");
+        let text = r#"PERFORMER "周杰伦"
+TITLE "叶惠美"
+FILE "album.flac" WAVE
+  TRACK 01 AUDIO
+    TITLE "以父之名"
+    INDEX 01 00:00:00
+"#;
+        let (encoded, _, _) = encoding_rs::GBK.encode(text);
+        std::fs::write(&path, encoded.as_ref()).unwrap();
+        let sheet = load(&path).expect("gbk cue");
+        let _ = std::fs::remove_dir_all(&dir);
+        assert_eq!(sheet.title, "叶惠美");
+        assert_eq!(sheet.tracks[0].title, "以父之名");
+    }
+
+    #[test]
     fn rejects_sheet_without_tracks() {
         let error = parse("FILE \"x.flac\" WAVE
 ", Path::new("x.cue")).unwrap_err();

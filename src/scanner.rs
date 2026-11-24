@@ -112,13 +112,27 @@ fn scan_worker(
                 continue;
             }
         };
-        let modified = std::fs::metadata(&cue_path)
-            .and_then(|meta| meta.modified())
-            .ok()
-            .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
-            .map(|duration| duration.as_millis() as u64)
-            .unwrap_or(0);
+        let file_time = |path: &std::path::Path| {
+            std::fs::metadata(path)
+                .and_then(|meta| meta.modified())
+                .ok()
+                .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
+                .map(|duration| duration.as_millis() as u64)
+                .unwrap_or(0)
+        };
+        let modified = file_time(&cue_path).max(file_time(&sheet.file));
         for track in crate::cue::virtual_tracks(&sheet, &cue_path, &base, modified) {
+            let key = crate::model::scan_key(&track);
+            if let Some((id, known_modified)) = known.get(&key) {
+                scanned += 1;
+                if *known_modified == modified {
+                    if tx.send(ScanEvent::Unchanged(*id)).is_err() {
+                        return;
+                    }
+                    let _ = tx.send(ScanEvent::Progress { scanned, total });
+                    continue;
+                }
+            }
             scanned += 1;
             if tx.send(ScanEvent::Track(Box::new(track))).is_err() {
                 return;
@@ -254,6 +268,53 @@ FILE "album.wav" WAVE
         assert_eq!(tracks[0].cue_start, Some(0.0));
         assert!(tracks[0].cue_source.is_some());
         assert_ne!(tracks[0].id, tracks[1].id);
+    }
+
+    #[test]
+    fn cue_tracks_are_reused_on_rescan() {
+        let dir = std::env::temp_dir().join(format!(
+            "rplayer-cue-rescan-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        write_wav(&dir.join("album.wav"));
+        std::fs::write(
+            dir.join("album.cue"),
+            r#"PERFORMER "Artist"
+TITLE "Album"
+FILE "album.wav" WAVE
+  TRACK 01 AUDIO
+    TITLE "One"
+    INDEX 01 00:00:00
+  TRACK 02 AUDIO
+    TITLE "Two"
+    INDEX 01 00:00:01
+"#,
+        )
+        .unwrap();
+        let first = scan_folder(&dir);
+        let known = first
+            .iter()
+            .map(|track| (crate::model::scan_key(track), (track.id, track.modified)))
+            .collect();
+        let rx = start_scan(vec![dir.clone()], known);
+        let mut unchanged = 0;
+        let mut tracks = 0;
+        while let Ok(event) = rx.recv() {
+            match event {
+                ScanEvent::Track(_) => tracks += 1,
+                ScanEvent::Unchanged(_) => unchanged += 1,
+                ScanEvent::Finished { .. } => break,
+                _ => {}
+            }
+        }
+        let _ = std::fs::remove_dir_all(&dir);
+        assert_eq!(tracks, 0, "second scan should reuse CUE tracks");
+        assert_eq!(unchanged, 2);
     }
 
     #[test]
