@@ -238,6 +238,149 @@
     border: 1px solid var(--accent); padding: 7px 10px;
   }
 
+  /* system appendix */
+  .sys-atlas {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 17px 14px;
+    margin-top: 26px;
+  }
+  .sys-atlas figure { margin: 0; }
+  .sys-atlas img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+    border: 1px solid rgba(29,27,22,.2);
+    box-shadow: 0 12px 34px rgba(24,20,13,.12);
+  }
+  .sys-atlas figcaption {
+    margin-top: 7px;
+    font-family: var(--mono);
+    font-size: 7.5px;
+    letter-spacing: .1em;
+    color: var(--faint);
+  }
+  .sys-note {
+    border: 1px solid var(--line);
+    background: rgba(250,246,237,.55);
+    padding: 20px 18px;
+    display: flex;
+    flex-direction: column;
+  }
+  .sys-note .big-count {
+    font-family: var(--serif);
+    font-size: 54px;
+    font-weight: 500;
+    line-height: 1;
+    color: var(--accent);
+  }
+  .sys-note b { display: block; margin-top: 4px; font-size: 12px; font-weight: 500; }
+  .sys-note p { margin-top: 10px; font-size: 10px; line-height: 1.8; color: var(--muted); }
+  .sys-note .tiny { margin-top: auto; font-family: var(--mono); font-size: 7.5px; letter-spacing: .08em; color: var(--faint); }
+
+  .surface-rules {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 28px;
+    margin-top: 30px;
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+  }
+  .surface-rules span {
+    display: block;
+    font-family: var(--mono);
+    font-size: 7.5px;
+    letter-spacing: .1em;
+    color: var(--faint);
+  }
+  .surface-rules b {
+    display: block;
+    margin-top: 5px;
+    font-family: var(--serif);
+    font-size: 17px;
+    font-weight: 500;
+  }
+  .surface-rules p {
+    margin-top: 5px;
+    font-size: 9.5px;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+
+  .closing-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 40px;
+    margin-top: 128px;
+    border-top: 2px solid var(--ink);
+    padding-top: 22px;
+  }
+  .closing-line p {
+    font-family: var(--serif);
+    font-size: 38px;
+    line-height: 1.3;
+    font-weight: 500;
+  }
+  .closing-line .end {
+    font-family: var(--mono);
+    font-size: 8px;
+    letter-spacing: .12em;
+    line-height: 1.9;
+    color: var(--faint);
+    text-align: right;
+  }
+
+  .coverage {
+    display: grid;
+    grid-template-columns: 250px 1fr;
+    gap: 54px;
+    margin-top: 34px;
+  }
+  .coverage-total {
+    border-top: 2px solid var(--ink);
+    padding-top: 16px;
+  }
+  .coverage-total b {
+    display: block;
+    font-family: var(--serif);
+    font-size: 118px;
+    font-weight: 500;
+    line-height: .9;
+    letter-spacing: -.05em;
+  }
+  .coverage-total span {
+    display: block;
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .coverage-total em {
+    display: block;
+    margin-top: 26px;
+    font-family: var(--mono);
+    font-size: 8.5px;
+    font-style: normal;
+    line-height: 1.9;
+    letter-spacing: .08em;
+    color: var(--faint);
+  }
+  .cov-table { border-top: 1px solid var(--line); }
+  .cov-row {
+    display: grid;
+    grid-template-columns: 210px 52px 1fr 80px;
+    gap: 18px;
+    align-items: baseline;
+    padding: 13px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .cov-row h3 { font-family: var(--serif); font-size: 20px; font-weight: 500; }
+  .cov-row .count { font-family: var(--mono); font-size: 11px; color: var(--accent); }
+  .cov-row p { font-size: 10.5px; line-height: 1.65; color: var(--muted); }
+  .cov-row .ref { font-family: var(--mono); font-size: 7.5px; letter-spacing: .08em; color: var(--faint); text-align: right; }
+
   /* capture mode for per-slide PNGs */
   body.capture { background: var(--bg); }
   body.capture .deck { padding: 0; gap: 0; display: block; }
@@ -411,13 +554,13 @@
       </div>
       <div class="dialog-side">
         <figure><img class="shot" src="shots/05-queue.png" alt="播放队列抽屉"><div class="caption">QUEUE DRAWER / Q</div></figure>
-        <figure><img class="shot" src="shots/06-settings.png" alt="设置面板"><div class="caption">SETTINGS / 6 ENTRIES</div></figure>
+        <figure><img class="shot" src="shots/06-settings.png" alt="设置面板"><div class="caption">SETTINGS / APPEARANCE</div></figure>
       </div>
     </div>
     <div class="dialog-copy">
       <div><b>ONE ENTRY</b><p>Ctrl K 统一入口：曲目、专辑、页面、设置。输入即筛选，↑↓ 选择，Enter 执行，Esc 退出。</p></div>
       <div><b>ONE SURFACE</b><p>队列是抽屉，不是第二套页面。当前曲、来源、播放模式在同一视线内；不打断主界面。</p></div>
-      <div><b>ONE DECISION</b><p>设置收成 6 个入口；主题只留两张卡；所有开关即时生效，不再有“应用 / 取消”。</p></div>
+      <div><b>ONE DECISION</b><p>设置按场景分组：外观与歌词先落地，最终 9 组；所有开关即时生效，不再有“应用 / 取消”。</p></div>
     </div>
     <div class="folio">RPLAYER V2 · 07</div>
   </section>
@@ -437,8 +580,10 @@
         <ul>
           <li><code>design/rplayer-v2/index.html</code> 可交互原型</li>
           <li><code>tokens.css</code> 颜色 / 字体 / 间距变量</li>
-          <li><code>shots/</code> 10 张 1440 × 900 截图</li>
-          <li>本设计稿 PDF + 说明文档</li>
+          <li><code>system.html</code> 系统界面 7 图版</li>
+          <li><code>shots/</code> 10 主界面 + 7 系统图版</li>
+          <li>主设计稿 PDF（10 页）</li>
+          <li>系统界面稿 PDF（7 页）</li>
         </ul>
         <h3>工程映射</h3>
         <ul>
@@ -457,6 +602,116 @@
       </div>
     </div>
     <div class="folio">RPLAYER V2 · 08</div>
+  </section>
+
+  <!-- 09 SYSTEM SURFACES -->
+  <section class="slide" id="s9">
+    <div class="eyebrow">08 · SYSTEM SURFACES / 7 PLATES</div>
+    <h2 style="margin-top:18px;font-size:48px;">其余界面，<span style="color:var(--accent)">同一套秩序。</span></h2>
+    <p class="kicker" style="margin-top:12px;max-width:1060px;">桌面上的迷你播放器与歌词、右键菜单、11 个对话框、4 个工具窗口、9 组设置，以及浏览与状态页。不是补丁，是把同一套字体、间距和动作语法铺到每一个角落。</p>
+
+    <div class="sys-atlas">
+      <figure>
+        <img src="shots/sys-01-desktop.png" alt="桌面歌词、迷你播放器与系统托盘">
+        <figcaption>01 / DESKTOP · MINI ×2 · LYRICS ×4 · TRAY</figcaption>
+      </figure>
+      <figure>
+        <img src="shots/sys-02-menus.png" alt="右键菜单与状态">
+        <figcaption>02 / CONTEXT · 6 MENUS + 6 STATES</figcaption>
+      </figure>
+      <figure>
+        <img src="shots/sys-03-dialogs.png" alt="对话框系统">
+        <figcaption>03 / DIALOGS · 11 VARIANTS</figcaption>
+      </figure>
+      <figure>
+        <img src="shots/sys-04-tools.png" alt="工具窗口">
+        <figcaption>04 / TOOLS · EQ / SMART / HEALTH / LYRICS</figcaption>
+      </figure>
+      <figure>
+        <img src="shots/sys-05-settings.png" alt="设置窗口">
+        <figcaption>05 / SETTINGS · APPEARANCE + LYRICS</figcaption>
+      </figure>
+      <figure>
+        <img src="shots/sys-06-states.png" alt="浏览与状态">
+        <figcaption>06 / STATES · ARTISTS / ALBUM / SMART / SEARCH / SELECT / DROP</figcaption>
+      </figure>
+      <figure>
+        <img src="shots/sys-07-settings-map.png" alt="设置信息架构">
+        <figcaption>07 / SETTINGS MAP · REMAINING 7 TABS</figcaption>
+      </figure>
+      <div class="sys-note">
+        <span class="mono" style="font-size:8px;letter-spacing:.12em;color:var(--faint);">COVERAGE</span>
+        <span class="big-count">43</span>
+        <b>个可操作表面</b>
+        <p>从托盘的一行菜单到歌词编辑的每一行时间戳，共用 4 / 8 / 12 间距、8px 控件圆角、同一套中文文案语法。</p>
+        <span class="tiny">7 PLATES · 1600 × 1000 · SEE PDF</span>
+      </div>
+    </div>
+
+    <div class="surface-rules">
+      <div><span>01 / SURFACE</span><b>先定尺寸，再定内容</b><p>菜单 30px 行高，对话框 180px 基准，设置 720×640；其余内容在这个骨架里生长。</p></div>
+      <div><span>02 / DANGER</span><b>破坏性动作单独置底</b><p>红字、分隔、二次确认；永远不和常用动作挤在同一视线里。</p></div>
+      <div><span>03 / KEYBOARD</span><b>每一层都能用键盘退出</b><p>Esc 关闭，Enter 执行主操作，↑↓ 在菜单和列表里移动；不要求鼠标。</p></div>
+      <div><span>04 / NATIVE</span><b>托盘保留 Win32 语义</b><p>只换视觉与分组，不改系统菜单行为；自绘方案作为可选增强，不作为前提。</p></div>
+    </div>
+    <div class="folio">RPLAYER V2 · 09</div>
+  </section>
+
+  <!-- 10 COVERAGE -->
+  <section class="slide" id="s10">
+    <div class="eyebrow">09 · COVERAGE / NO ORPHANS</div>
+    <h2 style="margin-top:18px;">没有漏掉的角落。</h2>
+    <p class="kicker" style="margin-top:12px;max-width:980px;">先把真实存在的界面列完，再谈风格。以下 43 个表面全部来自当前 0.13.5 的代码路径，没有为设计稿虚构功能。</p>
+
+    <div class="coverage">
+      <div class="coverage-total">
+        <b>43</b>
+        <span>个可操作表面</span>
+        <em>SYS-01 … SYS-07<br>7 PLATES · 1600 × 1000<br>DESIGN ONLY · 0.13.5</em>
+      </div>
+      <div class="cov-table">
+        <div class="cov-row">
+          <h3>桌面外设</h3><span class="count">07</span>
+          <p>迷你播放器标准 / 紧凑；桌面歌词默认 / 悬停 / 无歌词 / 锁定；系统托盘。</p>
+          <span class="ref">SYS-01</span>
+        </div>
+        <div class="cov-row">
+          <h3>右键菜单</h3><span class="count">06</span>
+          <p>曲目、专辑、艺术家、播放列表、智能歌单、桌面歌词。无文件夹菜单，不虚构。</p>
+          <span class="ref">SYS-02</span>
+        </div>
+        <div class="cov-row">
+          <h3>对话框</h3><span class="count">11</span>
+          <p>新建 / 重命名 / 删除歌单、移除曲目、编辑 / 批量标签、重复歌曲、歌词匹配、文件夹、快捷键、关于。</p>
+          <span class="ref">SYS-03</span>
+        </div>
+        <div class="cov-row">
+          <h3>工具窗口</h3><span class="count">04</span>
+          <p>均衡器、智能歌单规则、曲库健康检查、歌词编辑器。</p>
+          <span class="ref">SYS-04</span>
+        </div>
+        <div class="cov-row">
+          <h3>设置</h3><span class="count">09</span>
+          <p>资料库、外观、播放、歌词、迷你播放器、离线与在线、数据、快捷键、关于。</p>
+          <span class="ref">SYS-05/07</span>
+        </div>
+        <div class="cov-row">
+          <h3>浏览与状态</h3><span class="count">06</span>
+          <p>艺术家、专辑详情、智能歌单、搜索空态、多选、拖入目标。</p>
+          <span class="ref">SYS-06</span>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:28px;border-top:1px solid var(--line);padding-top:16px;">
+      <p style="font-size:11px;line-height:1.7;color:var(--muted);max-width:980px;">统一规则：菜单 30px 行高；对话框 180px 基准；危险动作单独置底；所有设置即时生效；键盘 Esc / Enter / ↑↓ 在每一层可用。</p>
+      <span class="mono" style="font-size:8px;letter-spacing:.1em;color:var(--faint);">APPENDIX / 10</span>
+    </div>
+
+    <div class="closing-line">
+      <p>没有“其他”。<br>所有界面，都是主界面的一部分。</p>
+      <span class="end">END OF SYSTEM APPENDIX<br>RPLAYER V2 · 2026.11.24</span>
+    </div>
+    <div class="folio">RPLAYER V2 · 10</div>
   </section>
 
 </div>
