@@ -3,7 +3,11 @@
 //! This module only parses metadata and INDEX positions. Scanner/playback
 //! integration is deliberately separate so the parser can be tested alone.
 
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
+
+use crate::model::Track;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct CueTrack {
@@ -181,6 +185,52 @@ pub fn parse(text: &str, cue_path: &Path) -> Result<CueSheet, String> {
     })
 }
 
+/// Builds stable virtual tracks for one CUE sheet.
+pub fn virtual_tracks(
+    sheet: &CueSheet,
+    cue_path: &Path,
+    base: &Track,
+    modified: u64,
+) -> Vec<Track> {
+    let mut output = Vec::new();
+    for (index, entry) in sheet.tracks.iter().enumerate() {
+        let mut hasher = DefaultHasher::new();
+        cue_path.hash(&mut hasher);
+        entry.number.hash(&mut hasher);
+        let id = hasher.finish() & 0x7FFF_FFFF_FFFF_FFFF;
+        let end = entry
+            .end
+            .unwrap_or(base.duration)
+            .max(entry.start + 0.05)
+            .min(base.duration.max(entry.start + 0.05));
+        let mut track = base.clone();
+        track.id = id | 1;
+        track.title = if entry.title.is_empty() {
+            format!("{} {:02}", sheet.title, entry.number)
+        } else {
+            entry.title.clone()
+        };
+        track.artist = if entry.performer.is_empty() {
+            base.artist.clone()
+        } else {
+            entry.performer.clone()
+        };
+        track.album = sheet.title.clone();
+        track.track_number = Some(entry.number);
+        track.duration = (end - entry.start).max(0.05);
+        track.cue_source = Some(cue_path.to_path_buf());
+        track.cue_start = Some(entry.start);
+        track.cue_end = Some(end);
+        track.modified = modified;
+        if index + 1 == sheet.tracks.len() {
+            track.cue_end = Some(base.duration.max(end));
+            track.duration = (track.cue_end.unwrap_or(end) - entry.start).max(0.05);
+        }
+        output.push(track);
+    }
+    output
+}
+
 fn unquote(value: &str) -> String {
     value
         .strip_prefix('"')
@@ -227,6 +277,34 @@ FILE "album.flac" WAVE
         assert_eq!(sheet.tracks.len(), 2);
         assert_eq!(sheet.tracks[0].title, "以父之名");
         assert_eq!(sheet.tracks[0].end, Some(5.0 * 60.0 + 41.0 + 50.0 / 75.0));
+    }
+
+    #[test]
+    fn builds_virtual_tracks_with_bounds() {
+        let sheet = parse(SHEET, Path::new(r"D:\Music\album.cue")).expect("sheet");
+        let base = Track {
+            id: 9,
+            path: PathBuf::from(r"D:\Music\album.flac"),
+            title: "album".to_string(),
+            artist: "周杰伦".to_string(),
+            album: "叶惠美".to_string(),
+            genre: String::new(),
+            year: None,
+            track_number: None,
+            duration: 400.0,
+            added_at: 1,
+            modified: 2,
+            cue_source: None,
+            cue_start: None,
+            cue_end: None,
+        };
+        let tracks = virtual_tracks(&sheet, Path::new(r"D:\Music\album.cue"), &base, 7);
+        assert_eq!(tracks.len(), 2);
+        assert_ne!(tracks[0].id, tracks[1].id);
+        assert_eq!(tracks[0].cue_start, Some(0.0));
+        assert_eq!(tracks[0].cue_end, Some(5.0 * 60.0 + 41.0 + 50.0 / 75.0));
+        assert_eq!(tracks[1].cue_end, Some(400.0));
+        assert_eq!(tracks[0].modified, 7);
     }
 
     #[test]

@@ -251,6 +251,15 @@ v0.6 的曲库深度规划、专辑/艺术家视图、评分与统计、智能�
 
 ## 版本记录
 
+### v0.12.2
+
+- CUE Sheet 接入扫描：`.cue` 自动替换对应单文件音频为虚拟曲目。
+- Track 新增 `cue_source`、`cue_start`、`cue_end`，SQLite 自动迁移。
+- 播放从 CUE 起点开始，并在 CUE 终点切到下一首。
+- 最后一轨以音频实际时长作为结束点。
+- 新增 CUE 虚拟曲目与扫描替换测试。
+- 生产构建 `cargo test --release`：35 passed。
+
 ### v0.12.1
 
 - 新增 CUE Sheet 解析基础：FILE、TRACK、TITLE、PERFORMER、INDEX 01。

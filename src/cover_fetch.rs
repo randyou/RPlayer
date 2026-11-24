@@ -245,6 +245,9 @@ mod tests {
             duration: 269.0,
             added_at: 0,
             modified: 0,
+            cue_source: None,
+            cue_start: None,
+            cue_end: None,
         }
     }
 

@@ -25,6 +25,15 @@ pub struct Track {
     /// File modification time in milliseconds since the Unix epoch.
     #[serde(default)]
     pub modified: u64,
+    /// CUE file that describes this virtual track, if any.
+    #[serde(default)]
+    pub cue_source: Option<PathBuf>,
+    /// Start offset inside the audio file for a CUE track.
+    #[serde(default)]
+    pub cue_start: Option<f64>,
+    /// End offset inside the audio file for a CUE track.
+    #[serde(default)]
+    pub cue_end: Option<f64>,
 }
 
 impl Track {
@@ -86,6 +95,9 @@ impl Track {
             duration: props.duration().as_secs_f64(),
             added_at: now_millis(),
             modified,
+            cue_source: None,
+            cue_start: None,
+            cue_end: None,
         })
     }
 
@@ -552,6 +564,9 @@ mod tests {
             duration: 10.0,
             added_at: 1,
             modified: 0,
+            cue_source: None,
+            cue_start: None,
+            cue_end: None,
         };
         lib.tracks.push(track);
         let pid = lib.create_playlist("Road trip");

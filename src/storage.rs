@@ -180,7 +180,10 @@ fn open_library_db() -> Result<rusqlite::Connection> {
             track_number INTEGER,
             duration REAL NOT NULL,
             added_at INTEGER NOT NULL,
-            modified INTEGER NOT NULL DEFAULT 0
+            modified INTEGER NOT NULL DEFAULT 0,
+            cue_source TEXT,
+            cue_start REAL,
+            cue_end REAL
          );",
     )?;
     // Older databases predate the incremental-scan timestamp.
@@ -188,13 +191,16 @@ fn open_library_db() -> Result<rusqlite::Connection> {
         "ALTER TABLE tracks ADD COLUMN modified INTEGER NOT NULL DEFAULT 0",
         [],
     );
+    let _ = conn.execute("ALTER TABLE tracks ADD COLUMN cue_source TEXT", []);
+    let _ = conn.execute("ALTER TABLE tracks ADD COLUMN cue_start REAL", []);
+    let _ = conn.execute("ALTER TABLE tracks ADD COLUMN cue_end REAL", []);
     Ok(conn)
 }
 
 fn load_tracks_from_db() -> Result<Vec<Track>> {
     let conn = open_library_db()?;
     let mut stmt = conn.prepare(
-        "SELECT id,path,title,artist,album,genre,year,track_number,duration,added_at,modified
+        "SELECT id,path,title,artist,album,genre,year,track_number,duration,added_at,modified,cue_source,cue_start,cue_end
          FROM tracks ORDER BY id",
     )?;
     let rows = stmt.query_map([], |row| {
@@ -210,6 +216,9 @@ fn load_tracks_from_db() -> Result<Vec<Track>> {
             duration: row.get(8)?,
             added_at: row.get::<_, i64>(9)? as u64,
             modified: row.get::<_, i64>(10)? as u64,
+            cue_source: row.get::<_, Option<String>>(11)?.map(PathBuf::from),
+            cue_start: row.get(12)?,
+            cue_end: row.get(13)?,
         })
     })?;
     let mut tracks = Vec::new();
@@ -226,8 +235,8 @@ fn save_tracks_to_db(tracks: &[Track]) -> Result<()> {
     {
         let mut stmt = tx.prepare(
             "INSERT INTO tracks
-             (id,path,title,artist,album,genre,year,track_number,duration,added_at,modified)
-             VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11)",
+             (id,path,title,artist,album,genre,year,track_number,duration,added_at,modified,cue_source,cue_start,cue_end)
+             VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14)",
         )?;
         for track in tracks {
             stmt.execute(rusqlite::params![
@@ -242,6 +251,9 @@ fn save_tracks_to_db(tracks: &[Track]) -> Result<()> {
                 track.duration,
                 track.added_at as i64,
                 track.modified as i64,
+                track.cue_source.as_ref().map(|path| path.to_string_lossy().to_string()),
+                track.cue_start,
+                track.cue_end,
             ])?;
         }
     }

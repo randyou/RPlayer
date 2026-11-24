@@ -38,7 +38,8 @@ fn scan_worker(
     known: HashMap<String, (u64, u64)>,
     tx: Sender<ScanEvent>,
 ) {
-    let mut files = Vec::new();
+    let mut audio_files = Vec::new();
+    let mut cue_files = Vec::new();
     let mut seen = HashSet::new();
 
     for folder in &folders {
@@ -50,27 +51,87 @@ fn scan_worker(
             .into_iter()
             .filter_entry(should_enter);
         for entry in walker.filter_map(Result::ok) {
-            if !entry.file_type().is_file() || !is_audio_file(entry.path()) {
+            if !entry.file_type().is_file() {
                 continue;
             }
-            let key = path_key(entry.path());
-            if seen.insert(key) {
-                files.push(entry.path().to_path_buf());
+            let path = entry.path();
+            if path
+                .extension()
+                .is_some_and(|extension| extension.eq_ignore_ascii_case("cue"))
+            {
+                let key = path_key(path);
+                if seen.insert(format!("cue:{key}")) {
+                    cue_files.push(path.to_path_buf());
+                }
+            } else if is_audio_file(path) {
+                let key = path_key(path);
+                if seen.insert(key) {
+                    audio_files.push(path.to_path_buf());
+                }
             }
         }
     }
 
-    files.sort();
-    let total = files.len();
+    audio_files.sort();
+    cue_files.sort();
+    let mut errors = Vec::new();
+    let mut cue_jobs = Vec::new();
+    let mut cue_audio = HashSet::new();
+    for path in cue_files {
+        match crate::cue::load(&path) {
+            Ok(sheet) => {
+                if !sheet.file.exists() {
+                    errors.push(format!("{}: 音频文件不存在", sheet.file.display()));
+                    continue;
+                }
+                let key = path_key(&sheet.file);
+                if cue_audio.insert(key) {
+                    cue_jobs.push((path, sheet));
+                }
+            }
+            Err(error) => errors.push(format!("{}: {error}", path.display())),
+        }
+    }
+
+    let cue_track_total: usize = cue_jobs.iter().map(|(_, sheet)| sheet.tracks.len()).sum();
+    let plain_audio = audio_files
+        .iter()
+        .filter(|path| !cue_audio.contains(&path_key(path)))
+        .count();
+    let total = plain_audio + cue_track_total;
     if tx.send(ScanEvent::Started { total }).is_err() {
         return;
     }
-
-    let mut errors = Vec::new();
     let mut scanned = 0usize;
 
-    for path in files {
+    for (cue_path, sheet) in cue_jobs {
+        let base = match Track::from_path(&sheet.file) {
+            Ok(track) => track,
+            Err(error) => {
+                errors.push(format!("{}: {error}", sheet.file.display()));
+                continue;
+            }
+        };
+        let modified = std::fs::metadata(&cue_path)
+            .and_then(|meta| meta.modified())
+            .ok()
+            .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|duration| duration.as_millis() as u64)
+            .unwrap_or(0);
+        for track in crate::cue::virtual_tracks(&sheet, &cue_path, &base, modified) {
+            scanned += 1;
+            if tx.send(ScanEvent::Track(Box::new(track))).is_err() {
+                return;
+            }
+            let _ = tx.send(ScanEvent::Progress { scanned, total });
+        }
+    }
+
+    for path in audio_files {
         let key = path_key(&path);
+        if cue_audio.contains(&key) {
+            continue;
+        }
         let modified = std::fs::metadata(&path)
             .and_then(|meta| meta.modified())
             .ok()
@@ -108,7 +169,6 @@ fn scan_worker(
 
     let _ = tx.send(ScanEvent::Finished { errors });
 }
-
 fn should_enter(entry: &DirEntry) -> bool {
     if entry.depth() == 0 {
         return true;
@@ -159,6 +219,41 @@ mod tests {
         }
         let mut file = std::fs::File::create(path).unwrap();
         file.write_all(&bytes).unwrap();
+    }
+
+    #[test]
+    fn cue_replaces_audio_file_with_virtual_tracks() {
+        let dir = std::env::temp_dir().join(format!(
+            "rplayer-cue-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        write_wav(&dir.join("album.wav"));
+        std::fs::write(
+            dir.join("album.cue"),
+            r#"PERFORMER "Artist"
+TITLE "Album"
+FILE "album.wav" WAVE
+  TRACK 01 AUDIO
+    TITLE "One"
+    INDEX 01 00:00:00
+  TRACK 02 AUDIO
+    TITLE "Two"
+    INDEX 01 00:00:01
+"#,
+        )
+        .unwrap();
+        let tracks = scan_folder(&dir);
+        let _ = std::fs::remove_dir_all(&dir);
+        assert_eq!(tracks.len(), 2, "plain audio must be replaced by CUE tracks");
+        assert_eq!(tracks[0].title, "One");
+        assert_eq!(tracks[0].cue_start, Some(0.0));
+        assert!(tracks[0].cue_source.is_some());
+        assert_ne!(tracks[0].id, tracks[1].id);
     }
 
     #[test]

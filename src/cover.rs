@@ -237,6 +237,9 @@ mod tests {
             duration: 200.0,
             added_at: 0,
             modified: 0,
+            cue_source: None,
+            cue_start: None,
+            cue_end: None,
         };
         let first = make("One", "Album");
         let second = make("Two", "Album");

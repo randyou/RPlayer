@@ -82,6 +82,9 @@ mod tests {
             duration: 0.0,
             added_at: 0,
             modified: 0,
+            cue_source: None,
+            cue_start: None,
+            cue_end: None,
         };
         track.title = title.to_string();
         track.artist = artist.to_string();
