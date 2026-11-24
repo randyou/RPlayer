@@ -557,6 +557,10 @@ pub fn show_mini(
         let snapshot = state.lock().map(|state| state.clone()).unwrap_or_default();
         let mut close = false;
         let mut open_main = false;
+        let previous_theme = theme::preset();
+        if previous_theme != theme::ThemePreset::Forest {
+            theme::set_preset(theme::ThemePreset::Forest);
+        }
         egui::CentralPanel::default()
             .frame(Frame::NONE)
             .show(ctx, |ui| {
@@ -802,6 +806,10 @@ pub fn show_mini(
                     snap_and_store_mini(ctx, &snapshot, &commands, pos, card.size());
                 }
             });
+
+        if previous_theme != theme::ThemePreset::Forest {
+            theme::set_preset(previous_theme);
+        }
 
         if close {
             if let Ok(mut queue) = commands.lock() {
