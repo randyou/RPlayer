@@ -2,10 +2,10 @@
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
-pub const PRESS: f32 = 0.08;
-pub const FAST: f32 = 0.12;
-pub const PAGE: f32 = 0.18;
-pub const SLOW: f32 = 0.25;
+pub const PRESS: f32 = 0.09;
+pub const FAST: f32 = 0.14;
+pub const PAGE: f32 = 0.28;
+pub const SLOW: f32 = 0.52;
 
 static REDUCED: AtomicBool = AtomicBool::new(false);
 

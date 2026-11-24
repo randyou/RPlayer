@@ -136,7 +136,7 @@ impl RPlayerApp {
                         ui.add_space(7.0);
                         ui.horizontal_wrapped(|ui| {
                             ui.spacing_mut().item_spacing.x = 6.0;
-                            for preset in ThemePreset::ALL {
+                            for preset in ThemePreset::VISIBLE {
                                 if widgets::chip(
                                     ui,
                                     preset.label(),

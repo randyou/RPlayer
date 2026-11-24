@@ -39,3 +39,21 @@ M0 只记录 100% 缩放。125% / 150% 需要改变系统显示缩放并重启�
 - [x] 1440×900 与 1120×720 曲库基线；1440×900 正在播放基线。
 - [x] 标题栏策略：M2 先做无边框 spike，失败回退原生标题栏。
 - [ ] 125% / 150% DPI 基线（M5）。
+
+## M1 主题与字体
+
+| 文件 | 主题 | 说明 |
+| --- | --- | --- |
+| `m1-paper.png` | 纸张 · Paper | 暖纸底、森林绿、42px 衬线标题链已加载 |
+| `m1-nocturne.png` | 夜幕 · Nocturne | 深色画布与低饱和绿强调 |
+| `m1-settings.png` | 夜幕 | 设置中只显示两张主题卡 |
+
+M1 完成项：
+
+- [x] `src/theme.rs` 收敛为 Paper / Nocturne 两套可见主题；旧 id 自动归一。
+- [x] 旧四套 palette 保留在代码中，不再暴露。
+- [x] 新增 `src/ui/tokens.rs` 与 `src/ui/components.rs`。
+- [x] 加载 `NotoSerifSC-VF.ttf` 为 `rplayer-serif`，失败时回退系统中文字体。
+- [x] 动效 token 调整为 90 / 140 / 280 / 520ms。
+- [x] 61 个测试通过；`Cargo.toml` / exe 元数据为 2.0.0。
+- [ ] 页面实际使用 42px 衬线页头与深色侧栏（M2）。
