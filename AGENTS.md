@@ -16,8 +16,9 @@ cargo test --release --manifest-path D:\Workspace\RPlayer\Cargo.toml
 - Do not create `D:\Workspace\Cargo.toml`; the workspace root is `D:\Workspace\RPlayer`.
 - Release profile uses `lto = "off"`, `codegen-units = 16` because this machine's
   commit limit cannot handle thin LTO with the media dependency tree.
-- Version lives in `Cargo.toml`, `build.rs`, `src/app/sidebar.rs`,
-  `src/app/settings.rs`, `src/app/dialogs.rs`; update all together.
+- Version lives in `Cargo.toml`; the UI reads it with `env!("CARGO_PKG_VERSION")`
+  and `build.rs` derives the exe `FileVersion`/`ProductVersion` from the same
+  value. Do not hardcode a version string in source.
 
 ## Architecture
 
@@ -31,10 +32,16 @@ src/app/             app state, views, panels, dialogs
   overlay.rs         desktop lyrics + mini player viewports
   settings.rs        settings window
 src/audio.rs         rodio playback, gapless queue, EQ chain
+src/playback.rs      CUE segment <-> whole-file position mapping
 src/model.rs         Library/Track/Playlist data types
+src/cue.rs           CUE Sheet parsing and virtual track creation
+src/duplicates.rs    duplicate group detection
+src/health.rs        missing-file and CUE relink helpers
+src/tag_edit.rs      tag write and undo snapshots
 src/storage.rs       local JSON settings + SQLite tracks
 src/scanner.rs       background scanning and incremental reuse
-src/lyrics.rs        LRC parsing and local/embedded/cache loading
+src/session.rs       playback session persistence
+src/lyrics.rs        LRC parsing and local/custom/cache loading
 src/cover.rs         embedded -> sidecar -> cache cover priority
 src/cover_fetch.rs   manual online cover lookup
 src/lyrics_fetch.rs  manual LRCLIB lyrics lookup
@@ -55,8 +62,8 @@ src/ui/motion.rs     motion tokens and reduced-motion switch
   backup path.
 - Write storage atomically: `.tmp` then rename, keep `.json.bak`.
 - Do not reintroduce JSON as the only track store.
-- Lyrics priority: embedded -> sidecar `.lrc` -> local cache. Online cache is
-  only a fallback.
+- Lyrics priority: user-edited custom cache -> sidecar `.lrc` -> embedded
+  lyrics -> downloaded cache. Online cache is only a fallback.
 - Cover priority: embedded -> sidecar -> cache -> manual online.
 - `Track.modified` is Unix milliseconds and drives incremental scan reuse.
 - UI code must use `theme::c()`; no hard-coded colors except color-key values
@@ -93,7 +100,7 @@ src/ui/motion.rs     motion tokens and reduced-motion switch
 
 ## Verification
 
-- Unit tests: `cargo test --release` (currently 27+).
+- Unit tests: `cargo test --release` (currently 43+).
 - Windows UI automation: `agent-desktop snapshot --window-id <id>`, then click
   by `ref_id`; prefer AccessKit names over pixel coordinates.
 - Screenshots must be checked after UI changes; avoid leaving test images in

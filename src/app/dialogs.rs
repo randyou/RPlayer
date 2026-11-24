@@ -551,9 +551,12 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                                 .color(theme::c().text),
                         );
                         ui.label(
-                            RichText::new("0.12.9 · 本地音乐播放器")
-                                .size(11.0)
-                                .color(theme::c().muted),
+                            RichText::new(format!(
+                                "{} · 本地音乐播放器",
+                                env!("CARGO_PKG_VERSION")
+                            ))
+                            .size(11.0)
+                            .color(theme::c().muted),
                         );
                         ui.add_space(12.0);
                         ui.add(
