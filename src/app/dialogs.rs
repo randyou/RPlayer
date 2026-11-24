@@ -270,6 +270,74 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                     }
                 }
 
+                Dialog::Duplicates { groups } => {
+                    dialog_header(
+                        ui,
+                        "重复歌曲",
+                        "同名、同艺术家且时长相差不超过 2 秒的歌曲。",
+                    );
+                    ui.add_space(12.0);
+                    if groups.is_empty() {
+                        ui.label(
+                            RichText::new("没有发现重复歌曲")
+                                .size(12.0)
+                                .color(theme::c().muted),
+                        );
+                    } else {
+                        ui.label(
+                            RichText::new(format!("找到 {} 组重复歌曲", groups.len()))
+                                .size(10.5)
+                                .color(theme::c().muted),
+                        );
+                        ui.add_space(6.0);
+                        ScrollArea::vertical().max_height(320.0).show(ui, |ui| {
+                            for group in groups.iter() {
+                                Frame::NONE
+                                    .fill(theme::c().card)
+                                    .stroke(Stroke::new(1.0_f32, theme::c().border_soft))
+                                    .corner_radius(CornerRadius::same(10))
+                                    .inner_margin(Margin::symmetric(10, 8))
+                                    .show(ui, |ui| {
+                                        for id in &group.track_ids {
+                                            let Some(track) = app.library.track(*id) else { continue; };
+                                            ui.horizontal(|ui| {
+                                                ui.vertical(|ui| {
+                                                    ui.label(
+                                                        RichText::new(&track.title)
+                                                            .size(12.0)
+                                                            .strong()
+                                                            .color(theme::c().text),
+                                                    );
+                                                    ui.label(
+                                                        RichText::new(format!(
+                                                            "{} · {} · {:.0}s",
+                                                            track.artist,
+                                                            track.album,
+                                                            track.duration
+                                                        ))
+                                                        .size(9.5)
+                                                        .color(theme::c().muted),
+                                                    );
+                                                });
+                                                ui.label(
+                                                    RichText::new(track.path.display().to_string())
+                                                        .size(9.0)
+                                                        .color(theme::c().faint),
+                                                );
+                                            });
+                                        }
+                                    });
+                                ui.add_space(5.0);
+                            }
+                        });
+                    }
+                    ui.add_space(12.0);
+                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                        if widgets::primary_button(ui, "关闭").clicked() {
+                            outcome = Outcome::Close;
+                        }
+                    });
+                }
                 Dialog::LyricsMatch {
                     id,
                     title,
@@ -483,7 +551,7 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                                 .color(theme::c().text),
                         );
                         ui.label(
-                            RichText::new("0.11.5 · 本地音乐播放器")
+                            RichText::new("0.12.0 · 本地音乐播放器")
                                 .size(11.0)
                                 .color(theme::c().muted),
                         );

@@ -935,6 +935,10 @@ impl RPlayerApp {
                         }
 
                         ui.separator();
+                        if widgets::text_button(ui, "查找重复歌曲…").clicked() {
+                            self.open_duplicates();
+                            ui.close_menu();
+                        }
                         if widgets::text_button(ui, "编辑歌词…").clicked() {
                             self.current = Some(id);
                             self.load_lyrics_for(&track, id);

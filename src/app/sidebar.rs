@@ -416,7 +416,7 @@ impl RPlayerApp {
         ui.add_space(2.0);
         ui.horizontal(|ui| {
             ui.add_space(((ui.available_width() - 150.0) * 0.5).max(0.0));
-            ui.label(RichText::new("v0.11.5").size(10.0).color(theme::c().faint));
+            ui.label(RichText::new("v0.12.0").size(10.0).color(theme::c().faint));
             ui.add_space(10.0);
             let about = ui
                 .add(

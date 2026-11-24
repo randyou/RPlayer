@@ -6,6 +6,7 @@ mod app;
 mod audio;
 mod cover;
 mod cover_fetch;
+mod duplicates;
 mod eq;
 mod health;
 mod lyrics;

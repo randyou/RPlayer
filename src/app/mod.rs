@@ -145,6 +145,9 @@ pub(super) enum Dialog {
         genre: String,
         year: String,
     },
+    Duplicates {
+        groups: Vec<crate::duplicates::DuplicateGroup>,
+    },
     LyricsMatch {
         id: u64,
         title: String,
@@ -1183,6 +1186,12 @@ impl RPlayerApp {
         self.play_mode = self.play_mode.next();
         self.shuffle_bag.clear();
         self.shuffle_exhausted = false;
+    }
+
+    fn open_duplicates(&mut self) {
+        self.dialog = Dialog::Duplicates {
+            groups: crate::duplicates::find(&self.library.tracks),
+        };
     }
 
     fn open_lyrics_match(&mut self, id: u64) {
