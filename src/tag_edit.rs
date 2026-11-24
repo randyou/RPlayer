@@ -8,7 +8,7 @@ use anyhow::{Context, Result};
 use lofty::config::WriteOptions;
 use lofty::file::TaggedFileExt;
 use lofty::tag::{ItemKey, TagExt};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::model::Track;
 
@@ -23,7 +23,7 @@ pub struct TagBackup {
     pub saved_at: u64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TagEdit {
     pub id: u64,
     pub path: PathBuf,

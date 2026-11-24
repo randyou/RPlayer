@@ -551,7 +551,7 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                                 .color(theme::c().text),
                         );
                         ui.label(
-                            RichText::new("0.12.7 · 本地音乐播放器")
+                            RichText::new("0.12.8 · 本地音乐播放器")
                                 .size(11.0)
                                 .color(theme::c().muted),
                         );
@@ -650,6 +650,7 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
         } => {
             let mut ok = 0usize;
             let mut failed = 0usize;
+            let mut saved = Vec::new();
             for id in ids {
                 let Some(track) = app.library.track(id).cloned() else {
                     continue;
@@ -673,10 +674,15 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                 match crate::tag_edit::save(&edit) {
                     Ok(updated) => {
                         app.replace_track(updated);
+                        saved.push(edit);
                         ok += 1;
                     }
                     Err(_) => failed += 1,
                 }
+            }
+            if !saved.is_empty() {
+                app.library.last_tag_batch = Some(saved);
+                app.persist();
             }
             app.toast(
                 format!("批量标签：成功 {ok} 首，失败 {failed} 首"),

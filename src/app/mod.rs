@@ -257,7 +257,6 @@ pub struct RPlayerApp {
     dialog: Dialog,
     last_dialog: Dialog,
     dialog_anim_start: std::time::Instant,
-    last_tag_batch: Option<Vec<crate::tag_edit::TagEdit>>,
     focus_pending: bool,
     focus_search: bool,
     command_open: bool,
@@ -399,7 +398,6 @@ impl RPlayerApp {
             dialog: Dialog::None,
             last_dialog: Dialog::None,
             dialog_anim_start: std::time::Instant::now(),
-            last_tag_batch: None,
             focus_pending: false,
             focus_search: false,
             command_open: false,
@@ -1191,12 +1189,12 @@ impl RPlayerApp {
     }
 
     fn undo_last_tag_batch(&mut self) {
-        let Some(batch) = self.last_tag_batch.take() else {
+        let Some(batch) = self.library.last_tag_batch.take() else {
             self.toast("没有可撤销的批量标签修改", ToastKind::Info);
             return;
         };
         let mut ok = 0usize;
-        let mut failed = 0usize;
+        let mut retry = Vec::new();
         for edit in batch {
             let restore = crate::tag_edit::TagEdit::from_track(&edit.original);
             match crate::tag_edit::save(&restore) {
@@ -1204,9 +1202,15 @@ impl RPlayerApp {
                     self.replace_track(updated);
                     ok += 1;
                 }
-                Err(_) => failed += 1,
+                Err(_) => retry.push(edit),
             }
         }
+        let failed = retry.len();
+        self.library.last_tag_batch = if retry.is_empty() {
+            None
+        } else {
+            Some(retry)
+        };
         self.persist();
         self.toast(
             format!("已撤销批量标签：成功 {ok} 首，失败 {failed} 首"),

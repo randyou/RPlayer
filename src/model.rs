@@ -241,6 +241,9 @@ pub struct Library {
     pub replaygain: String,
     /// Ten-band equalizer settings.
     pub eq: crate::eq::EqSettings,
+    /// Originals from the most recent successful batch tag edit.
+    #[serde(default)]
+    pub last_tag_batch: Option<Vec<crate::tag_edit::TagEdit>>,
 }
 
 impl Default for Library {
@@ -272,6 +275,7 @@ impl Default for Library {
             auto_cover: true,
             replaygain: "off".to_string(),
             eq: crate::eq::EqSettings::default(),
+            last_tag_batch: None,
         }
     }
 }
@@ -583,5 +587,34 @@ mod tests {
         lib.tracks.clear();
         lib.prune_playlists();
         assert_eq!(lib.track_count_for_playlist(pid), 0);
+    }
+
+    #[test]
+    fn last_tag_batch_survives_json_round_trip() {
+        let track = Track {
+            id: 7,
+            path: PathBuf::from("seven.mp3"),
+            title: "Seven".into(),
+            artist: "A".into(),
+            album: "B".into(),
+            genre: String::new(),
+            year: None,
+            track_number: None,
+            duration: 10.0,
+            added_at: 1,
+            modified: 0,
+            cue_source: None,
+            cue_start: None,
+            cue_end: None,
+        };
+        let edit = crate::tag_edit::TagEdit::from_track(&track);
+        let mut lib = Library::default();
+        lib.last_tag_batch = Some(vec![edit]);
+        let json = serde_json::to_string(&lib).unwrap();
+        let restored: Library = serde_json::from_str(&json).unwrap();
+        let batch = restored.last_tag_batch.expect("batch should persist");
+        assert_eq!(batch.len(), 1);
+        assert_eq!(batch[0].id, 7);
+        assert_eq!(batch[0].original.title, "Seven");
     }
 }
