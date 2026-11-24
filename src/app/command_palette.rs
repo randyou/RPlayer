@@ -26,6 +26,7 @@ enum Command {
     MiniPlayer,
     Theme,
     Scan,
+    HealthCheck,
     FindDuplicates,
     ClearQueue,
 }
@@ -37,7 +38,7 @@ struct Item {
     keywords: &'static str,
 }
 
-const ITEMS: [Item; 17] = [
+const ITEMS: [Item; 18] = [
     Item {
         command: Command::PlayPause,
         id: "player.play_pause",
@@ -127,6 +128,12 @@ const ITEMS: [Item; 17] = [
         id: "library.scan",
         label: "重新扫描音乐库",
         keywords: "scan refresh 扫描 刷新",
+    },
+    Item {
+        command: Command::HealthCheck,
+        id: "library.health",
+        label: "曲库健康检查",
+        keywords: "health missing 健康 缺失 检查",
     },
     Item {
         command: Command::FindDuplicates,
@@ -314,6 +321,7 @@ impl RPlayerApp {
             Command::MiniPlayer => self.toggle_mini(ctx),
             Command::Theme => self.toggle_theme(ctx),
             Command::Scan => self.start_scan(),
+            Command::HealthCheck => self.start_health_check(),
             Command::FindDuplicates => self.open_duplicates(),
             Command::ClearQueue => self.clear_queue(),
         }

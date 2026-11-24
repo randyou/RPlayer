@@ -41,12 +41,42 @@ impl RPlayerApp {
         }
     }
 
+    fn relink_missing_track(&mut self, id: u64) {
+        let Some(old) = self.library.track(id).cloned() else {
+            return;
+        };
+        let Some(path) = rfd::FileDialog::new()
+            .set_title("重新定位音频文件")
+            .add_filter("音频文件", crate::model::SUPPORTED_EXTENSIONS)
+            .pick_file()
+        else {
+            return;
+        };
+        match crate::model::Track::from_path(&path) {
+            Ok(track) => {
+                let track = crate::health::relinked(&old, track);
+                if let Some(slot) = self.library.tracks.iter_mut().find(|track| track.id == id) {
+                    *slot = track;
+                }
+                if let Some(report) = &mut self.health_report {
+                    report.missing.retain(|missing| *missing != id);
+                }
+                self.persist();
+                self.toast("已重新定位文件", ToastKind::Success);
+            }
+            Err(error) => {
+                self.toast(format!("无法读取新文件：{error}"), ToastKind::Error);
+            }
+        }
+    }
+
     pub(super) fn health_window(&mut self, ctx: &egui::Context) {
         let Some(report) = self.health_report.clone() else {
             return;
         };
         let mut close = false;
         let mut remove_missing = false;
+        let mut relink_id: Option<u64> = None;
 
         egui::Window::new("rplayer-health")
             .title_bar(false)
@@ -100,7 +130,30 @@ impl RPlayerApp {
                         section(ui, "缺失文件", report.missing.len());
                         for id in &report.missing {
                             if let Some(track) = self.library.track(*id) {
-                                row(ui, &track.title, &track.path.to_string_lossy());
+                                ui.horizontal(|ui| {
+                                    ui.vertical(|ui| {
+                                        ui.label(
+                                            RichText::new(&track.title)
+                                                .size(11.5)
+                                                .color(theme::c().text),
+                                        );
+                                        ui.label(
+                                            RichText::new(track.path.to_string_lossy())
+                                                .size(9.5)
+                                                .color(theme::c().faint),
+                                        );
+                                    });
+                                    ui.with_layout(
+                                        Layout::right_to_left(Align::Center),
+                                        |ui| {
+                                            if track.cue_source.is_none()
+                                                && widgets::text_button(ui, "重新定位…").clicked()
+                                            {
+                                                relink_id = Some(*id);
+                                            }
+                                        },
+                                    );
+                                });
                             }
                         }
                         section(ui, "空标签", report.empty_tags.len());
@@ -167,6 +220,9 @@ impl RPlayerApp {
             if let Some(current) = &mut self.health_report {
                 current.missing.clear();
             }
+        }
+        if let Some(id) = relink_id {
+            self.relink_missing_track(id);
         }
         if close {
             self.health_report = None;

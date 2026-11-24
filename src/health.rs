@@ -26,6 +26,16 @@ impl HealthReport {
     }
 }
 
+/// Preserves identity and listening history when a track is relinked.
+pub fn relinked(old: &Track, mut new: Track) -> Track {
+    new.id = old.id;
+    new.added_at = old.added_at;
+    new.cue_source = None;
+    new.cue_start = None;
+    new.cue_end = None;
+    new
+}
+
 /// Fast checks that are safe to run on a background thread.
 pub fn scan(tracks: &[Track]) -> HealthReport {
     let mut report = HealthReport {
@@ -96,6 +106,21 @@ mod tests {
             cue_start: None,
             cue_end: None,
         }
+    }
+
+    #[test]
+    fn relink_preserves_identity_and_clears_cue() {
+        let old = track(7, "Old", "Artist", "Album", 100.0);
+        let mut new = track(99, "New", "Artist", "Album", 120.0);
+        new.added_at = 42;
+        new.cue_source = Some(PathBuf::from("x.cue"));
+        new.cue_start = Some(1.0);
+        new.cue_end = Some(2.0);
+        let relinked = relinked(&old, new);
+        assert_eq!(relinked.id, 7);
+        assert_eq!(relinked.added_at, old.added_at);
+        assert!(relinked.cue_source.is_none());
+        assert!(relinked.cue_start.is_none());
     }
 
     #[test]
