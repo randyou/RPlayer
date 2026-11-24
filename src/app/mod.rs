@@ -2098,6 +2098,7 @@ impl RPlayerApp {
             self.album_focus = None;
             self.artist_focus = None;
             self.selected = None;
+            self.view_fade = 0.0;
             return;
         }
         let restore_focus = self.table_focus.or(self.selected);
@@ -2111,6 +2112,7 @@ impl RPlayerApp {
         self.selection_anchor = None;
         self.album_focus = None;
         self.artist_focus = None;
+        self.view_fade = 0.0;
     }
 
     fn set_theme_mode(&mut self, ctx: &egui::Context, mode: ThemeMode) {
