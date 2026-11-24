@@ -125,17 +125,17 @@ impl RPlayerApp {
             .title_bar(false)
             .resizable(false)
             .collapsible(false)
-            .fixed_size(Vec2::new(540.0, 470.0))
+            .fixed_size(Vec2::new(620.0, 470.0))
             .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
             .frame(
                 Frame::NONE
                     .fill(theme::c().panel)
-                    .stroke(Stroke::new(1.0_f32, theme::c().border))
-                    .corner_radius(egui::CornerRadius::same(16))
-                    .inner_margin(Margin::same(18))
+                    .stroke(Stroke::new(1.0_f32, theme::c().border_soft))
+                    .corner_radius(egui::CornerRadius::same(10))
+                    .inner_margin(Margin::same(20))
                     .shadow(egui::epaint::Shadow {
-                        offset: [0, 16],
-                        blur: 36,
+                        offset: [0, 12],
+                        blur: 30,
                         spread: 0,
                         color: theme::c().shadow,
                     }),

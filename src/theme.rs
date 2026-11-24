@@ -532,9 +532,9 @@ fn visuals_for(palette: &Palette) -> Visuals {
     visuals.extreme_bg_color = palette.bg;
     visuals.faint_bg_color = palette.card;
     visuals.code_bg_color = palette.panel;
-    visuals.window_corner_radius = CornerRadius::same(16);
-    visuals.menu_corner_radius = CornerRadius::same(12);
-    visuals.window_stroke = Stroke::new(1.0_f32, palette.border);
+    visuals.window_corner_radius = CornerRadius::same(10);
+    visuals.menu_corner_radius = CornerRadius::same(8);
+    visuals.window_stroke = Stroke::new(1.0_f32, palette.border_soft);
     visuals.window_shadow = Shadow {
         offset: [0, 12],
         blur: 32,
