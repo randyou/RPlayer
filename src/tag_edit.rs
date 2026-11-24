@@ -142,6 +142,10 @@ mod tests {
         let reread = Track::from_path(&target).unwrap();
         assert_eq!(reread.title, "RPlayer Tag Test");
         assert_eq!(reread.artist, "RPlayer");
+        let restore = TagEdit::from_track(&edit.original);
+        let restored = save(&restore).unwrap();
+        assert_eq!(restored.title, edit.original.title);
+        assert_eq!(restored.artist, edit.original.artist);
         let _ = std::fs::remove_file(target);
     }
 

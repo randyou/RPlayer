@@ -27,6 +27,7 @@ enum Command {
     Theme,
     Scan,
     HealthCheck,
+    UndoBatchTags,
     FindDuplicates,
     ClearQueue,
 }
@@ -38,7 +39,7 @@ struct Item {
     keywords: &'static str,
 }
 
-const ITEMS: [Item; 18] = [
+const ITEMS: [Item; 19] = [
     Item {
         command: Command::PlayPause,
         id: "player.play_pause",
@@ -134,6 +135,12 @@ const ITEMS: [Item; 18] = [
         id: "library.health",
         label: "曲库健康检查",
         keywords: "health missing 健康 缺失 检查",
+    },
+    Item {
+        command: Command::UndoBatchTags,
+        id: "library.undo_tags",
+        label: "撤销上次批量标签",
+        keywords: "undo tags batch 撤销 标签 批量",
     },
     Item {
         command: Command::FindDuplicates,
@@ -322,6 +329,7 @@ impl RPlayerApp {
             Command::Theme => self.toggle_theme(ctx),
             Command::Scan => self.start_scan(),
             Command::HealthCheck => self.start_health_check(),
+            Command::UndoBatchTags => self.undo_last_tag_batch(),
             Command::FindDuplicates => self.open_duplicates(),
             Command::ClearQueue => self.clear_queue(),
         }
