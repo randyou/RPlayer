@@ -15,6 +15,15 @@ use crate::ui::widgets;
 
 const FORM_FIELD_WIDTH: f32 = 300.0;
 
+fn fade(color: Color32, alpha: f32) -> Color32 {
+    Color32::from_rgba_unmultiplied(
+        color.r(),
+        color.g(),
+        color.b(),
+        (f32::from(color.a()) * alpha.clamp(0.0, 1.0)) as u8,
+    )
+}
+
 enum Outcome {
     None,
     Close,
@@ -51,24 +60,38 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
         return;
     }
 
+    if app.dialog != app.last_dialog {
+        app.dialog_anim_start = std::time::Instant::now();
+        app.last_dialog = app.dialog.clone();
+    }
+    let enter = if crate::ui::motion::reduced() {
+        1.0
+    } else {
+        (app.dialog_anim_start.elapsed().as_secs_f32() / crate::ui::motion::FAST).clamp(0.0, 1.0)
+    };
+    if enter < 1.0 {
+        ctx.request_repaint();
+    }
+
     let mut outcome = Outcome::None;
 
     let modal = egui::Modal::new(Id::new("rplayer-modal"))
-        .backdrop_color(Color32::from_black_alpha(175))
+        .backdrop_color(Color32::from_black_alpha((175.0 * enter) as u8))
         .frame(
             Frame::NONE
-                .fill(theme::c().panel)
-                .stroke(Stroke::new(1.0_f32, theme::c().border))
+                .fill(fade(theme::c().panel, enter))
+                .stroke(Stroke::new(1.0_f32, fade(theme::c().border, enter)))
                 .corner_radius(CornerRadius::same(18))
                 .inner_margin(Margin::same(22))
                 .shadow(egui::epaint::Shadow {
                     offset: [0, 20],
                     blur: 60,
                     spread: 0,
-                    color: Color32::from_black_alpha(180),
+                    color: Color32::from_black_alpha((180.0 * enter) as u8),
                 }),
         )
         .show(ctx, |ui| {
+            ui.multiply_opacity(enter);
             ui.set_width(404.0);
             match &mut app.dialog {
                 Dialog::None => {}
@@ -460,7 +483,7 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                                 .color(theme::c().text),
                         );
                         ui.label(
-                            RichText::new("0.11.2 · 本地音乐播放器")
+                            RichText::new("0.11.3 · 本地音乐播放器")
                                 .size(11.0)
                                 .color(theme::c().muted),
                         );
