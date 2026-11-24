@@ -13,6 +13,8 @@ use crate::theme;
 use crate::ui::icons::{self, Icon};
 use crate::ui::widgets;
 
+const FORM_FIELD_WIDTH: f32 = 300.0;
+
 enum Outcome {
     None,
     Close,
@@ -458,7 +460,7 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                                 .color(theme::c().text),
                         );
                         ui.label(
-                            RichText::new("0.10.18 · 本地音乐播放器")
+                            RichText::new("0.10.19 · 本地音乐播放器")
                                 .size(11.0)
                                 .color(theme::c().muted),
                         );
@@ -627,50 +629,63 @@ fn dialog_header(ui: &mut Ui, title: &str, subtitle: &str) {
 fn tag_field(ui: &mut Ui, label: &str, value: &mut String) {
     ui.horizontal(|ui| {
         ui.allocate_ui_with_layout(
-            Vec2::new(44.0, 26.0),
+            Vec2::new(44.0, 34.0),
             Layout::left_to_right(Align::Center),
             |ui| {
                 ui.label(RichText::new(label).size(11.0).color(theme::c().muted));
             },
         );
-        // Fill the remaining row width so every field has the same right edge.
-        let width = ui.available_width().max(120.0);
-        Frame::NONE
-            .fill(theme::c().card)
-            .stroke(Stroke::new(1.0_f32, theme::c().border))
-            .corner_radius(CornerRadius::same(8))
-            .inner_margin(Margin::symmetric(8, 5))
-            .show(ui, |ui| {
-                ui.set_width(width - 16.0);
-                ui.add_sized(
-                    [width - 16.0, 22.0],
-                    TextEdit::singleline(value)
-                        .frame(false)
-                        .text_color(theme::c().text),
-                );
-            });
+        let width = FORM_FIELD_WIDTH.min(ui.available_width().max(120.0));
+        ui.add_space((ui.available_width() - width).max(0.0));
+        let (rect, _) = ui.allocate_exact_size(Vec2::new(width, 34.0), Sense::hover());
+        ui.painter()
+            .rect_filled(rect, CornerRadius::same(8), theme::c().card);
+        ui.painter().rect_stroke(
+            rect,
+            CornerRadius::same(8),
+            Stroke::new(1.0_f32, theme::c().border),
+            egui::StrokeKind::Inside,
+        );
+        let edit_rect = rect.shrink2(Vec2::new(8.0, 6.0));
+        ui.put(
+            edit_rect,
+            TextEdit::singleline(value)
+                .frame(false)
+                .text_color(theme::c().text)
+                .desired_width(edit_rect.width())
+                .clip_text(true),
+        );
     });
     ui.add_space(3.0);
 }
 
 fn name_field(ui: &mut Ui, name: &mut String, hint: &str) -> egui::Response {
-    Frame::NONE
-        .fill(theme::c().card)
-        .stroke(Stroke::new(1.0_f32, theme::c().border))
-        .corner_radius(CornerRadius::same(10))
-        .inner_margin(Margin::symmetric(10, 2))
-        .show(ui, |ui| {
-            ui.add(
-                TextEdit::singleline(name)
-                    .hint_text(RichText::new(hint).size(12.5).color(theme::c().faint))
-                    .font(FontId::proportional(13.5))
-                    .text_color(theme::c().text)
-                    .frame(false)
-                    .desired_width(f32::INFINITY)
-                    .margin(Margin::symmetric(2, 9)),
-            )
-        })
-        .inner
+    ui.horizontal(|ui| {
+        let width = FORM_FIELD_WIDTH.min(ui.available_width().max(120.0));
+        ui.add_space((ui.available_width() - width).max(0.0));
+        let (rect, _) = ui.allocate_exact_size(Vec2::new(width, 38.0), Sense::hover());
+        ui.painter()
+            .rect_filled(rect, CornerRadius::same(10), theme::c().card);
+        ui.painter().rect_stroke(
+            rect,
+            CornerRadius::same(10),
+            Stroke::new(1.0_f32, theme::c().border),
+            egui::StrokeKind::Inside,
+        );
+        let edit_rect = rect.shrink2(Vec2::new(10.0, 6.0));
+        ui.put(
+            edit_rect,
+            TextEdit::singleline(name)
+                .hint_text(RichText::new(hint).size(12.5).color(theme::c().faint))
+                .font(FontId::proportional(13.5))
+                .text_color(theme::c().text)
+                .frame(false)
+                .desired_width(edit_rect.width())
+                .clip_text(true)
+                .margin(Margin::symmetric(2, 2)),
+        )
+    })
+    .inner
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
