@@ -1,0 +1,180 @@
+//! Shared context-menu rows.
+//!
+//! egui's stock menu buttons are dense and mostly text-only. The redesign
+//! uses 30px rows, a small leading glyph, optional shortcut hint and a single
+//! dangerous action at the end of the menu.
+
+use eframe::egui::{
+    self, Align2, Color32, CornerRadius, CursorIcon, FontId, Pos2, Response, RichText, Sense,
+    Stroke, Ui, Vec2, WidgetInfo, WidgetType,
+};
+
+use crate::theme;
+
+use super::focus;
+use super::icons::{self, Icon};
+
+pub const ROW_HEIGHT: f32 = 30.0;
+pub const MIN_WIDTH: f32 = 268.0;
+pub const MAX_WIDTH: f32 = 300.0;
+
+/// Prepare a context-menu body.
+pub fn begin(ui: &mut Ui) {
+    ui.set_width(MAX_WIDTH);
+    ui.spacing_mut().item_spacing.y = 2.0;
+    ui.spacing_mut().button_padding = Vec2::new(10.0, 6.0);
+}
+
+/// A menu section label in mono caps.
+pub fn heading(ui: &mut Ui, text: &str) {
+    if ui.available_height() > 0.0 {
+        ui.add_space(2.0);
+    }
+    ui.label(
+        RichText::new(text)
+            .font(FontId::monospace(8.2))
+            .color(theme::c().faint),
+    );
+}
+
+/// A single actionable row.
+pub fn item(
+    ui: &mut Ui,
+    icon: Option<Icon>,
+    label: &str,
+    shortcut: Option<&str>,
+    danger: bool,
+) -> Response {
+    item_impl(ui, icon, label, shortcut, danger)
+}
+
+fn item_impl(
+    ui: &mut Ui,
+    icon: Option<Icon>,
+    label: &str,
+    shortcut: Option<&str>,
+    danger: bool,
+) -> Response {
+    let width = MAX_WIDTH;
+    let (rect, _) = ui.allocate_exact_size(Vec2::new(width, ROW_HEIGHT), Sense::hover());
+    let id = ui.id().with(("menu-item", label));
+    let response = ui.interact(rect, id, Sense::click());
+
+    if response.hovered() {
+        ui.painter().rect_filled(
+            rect,
+            CornerRadius::same(6),
+            if danger {
+                theme::signal_soft()
+            } else {
+                theme::accent_soft()
+            },
+        );
+    }
+
+    let fg = if danger {
+        theme::signal()
+    } else {
+        theme::c().text
+    };
+    let left = rect.left() + if icon.is_some() { 34.0 } else { 12.0 };
+    if let Some(icon) = icon {
+        icons::paint(
+            ui.painter(),
+            egui::Rect::from_center_size(
+                Pos2::new(rect.left() + 19.0, rect.center().y),
+                Vec2::splat(14.0),
+            ),
+            icon,
+            if danger {
+                theme::signal()
+            } else {
+                theme::c().muted
+            },
+        );
+    }
+    ui.painter().text(
+        Pos2::new(left, rect.center().y),
+        Align2::LEFT_CENTER,
+        label,
+        FontId::proportional(12.0),
+        fg,
+    );
+    if let Some(shortcut) = shortcut {
+        ui.painter().text(
+            Pos2::new(rect.right() - 12.0, rect.center().y),
+            Align2::RIGHT_CENTER,
+            shortcut,
+            FontId::monospace(9.0),
+            theme::c().faint,
+        );
+    }
+
+    response.widget_info(|| {
+        WidgetInfo::labeled(
+            WidgetType::Button,
+            ui.is_enabled(),
+            if danger {
+                format!("{label}（危险操作）")
+            } else {
+                label.to_owned()
+            },
+        )
+    });
+    if response.has_focus() {
+        focus::ring_rect(ui, rect, 6);
+    }
+    response.on_hover_cursor(CursorIcon::PointingHand)
+}
+
+/// A submenu row. The nested menu keeps egui's navigation model, but the
+/// trigger row uses the same spacing and typography as other menu actions.
+pub fn submenu<R>(
+    ui: &mut Ui,
+    _icon: Option<Icon>,
+    label: &str,
+    add_contents: impl FnOnce(&mut Ui) -> R,
+) {
+    ui.scope(|ui| {
+        ui.spacing_mut().button_padding = Vec2::new(10.0, 6.0);
+        ui.set_width(230.0);
+        ui.menu_button(RichText::new(label).size(12.0), add_contents);
+    });
+}
+
+/// A hairline divider with breathing room.
+pub fn separator(ui: &mut Ui) {
+    ui.add_space(4.0);
+    let (rect, _) =
+        ui.allocate_exact_size(Vec2::new(MAX_WIDTH, 1.0), Sense::hover());
+    ui.painter().hline(
+        rect.x_range(),
+        rect.center().y,
+        Stroke::new(1.0_f32, theme::c().border_soft),
+    );
+    ui.add_space(4.0);
+}
+
+/// Small right-aligned value shown at the end of a settings-like menu row.
+pub fn value(ui: &mut Ui, text: &str) {
+    ui.label(
+        RichText::new(text)
+            .font(FontId::monospace(9.0))
+            .color(theme::c().faint),
+    );
+}
+
+/// Muted helper text inside a menu.
+pub fn hint(ui: &mut Ui, text: &str) {
+    ui.label(
+        RichText::new(text)
+            .size(10.5)
+            .color(theme::c().faint),
+    );
+}
+
+/// A dot used by toggle rows.
+pub fn dot(ui: &mut Ui, color: Color32) {
+    let (rect, _) = ui.allocate_exact_size(Vec2::splat(6.0), Sense::hover());
+    ui.painter().circle_filled(rect.center(), 3.0, color);
+}

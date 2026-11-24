@@ -14,6 +14,7 @@ use crate::cover;
 use crate::model::Track;
 use crate::theme;
 use crate::ui::icons::{self, Icon};
+use crate::ui::menu;
 use crate::ui::widgets;
 
 pub(super) fn grid_columns(available: f32) -> usize {
@@ -394,16 +395,19 @@ impl RPlayerApp {
             self.album_focus = Some(group.key.clone());
         }
         response.context_menu(|ui| {
-            if widgets::text_button(ui, "查看专辑").clicked() {
+            menu::begin(ui);
+            menu::heading(ui, "专辑");
+            if menu::item(ui, Some(Icon::Album), "查看专辑", None, false).clicked() {
                 self.album_focus = Some(group.key.clone());
                 ui.close_menu();
             }
-            if widgets::text_button(ui, "播放专辑").clicked() {
+            if menu::item(ui, Some(Icon::Play), "播放专辑", None, false).clicked() {
                 let ids = group.ids.clone();
                 self.play_queue(ui.ctx(), ids, 0);
                 ui.close_menu();
             }
-            if widgets::text_button(ui, "加入播放队列").clicked() {
+            menu::separator(ui);
+            if menu::item(ui, Some(Icon::Plus), "加入播放队列", None, false).clicked() {
                 self.enqueue_ids(&group.ids);
                 ui.close_menu();
             }
@@ -473,16 +477,19 @@ impl RPlayerApp {
             self.artist_focus = Some(group.name.clone());
         }
         response.context_menu(|ui| {
-            if widgets::text_button(ui, "查看艺术家").clicked() {
+            menu::begin(ui);
+            menu::heading(ui, "艺术家");
+            if menu::item(ui, Some(Icon::Artist), "查看艺术家", None, false).clicked() {
                 self.artist_focus = Some(group.name.clone());
                 ui.close_menu();
             }
-            if widgets::text_button(ui, "播放全部").clicked() {
+            if menu::item(ui, Some(Icon::Play), "播放全部", None, false).clicked() {
                 let ids = group.ids.clone();
                 self.play_queue(ui.ctx(), ids, 0);
                 ui.close_menu();
             }
-            if widgets::text_button(ui, "加入播放队列").clicked() {
+            menu::separator(ui);
+            if menu::item(ui, Some(Icon::Plus), "加入播放队列", None, false).clicked() {
                 self.enqueue_ids(&group.ids);
                 ui.close_menu();
             }

@@ -497,6 +497,7 @@ pub fn apply_style(ctx: &egui::Context) {
     style.spacing.button_padding = egui::vec2(16.0, 9.0);
     style.spacing.interact_size = egui::vec2(40.0, 36.0);
     style.spacing.menu_margin = Margin::same(6);
+    style.spacing.menu_width = 280.0;
     let mut scroll = egui::style::ScrollStyle::floating();
     scroll.foreground_color = false;
     scroll.bar_width = 9.0;

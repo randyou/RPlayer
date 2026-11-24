@@ -14,6 +14,7 @@ use egui::{
 
 use crate::theme;
 use crate::ui::icons::{self, Icon};
+use crate::ui::menu;
 use crate::ui::widgets;
 
 const LYRICS_SIZE: Vec2 = Vec2::new(860.0, 158.0);
@@ -324,6 +325,8 @@ pub fn show_lyrics(
                     egui::CursorIcon::Grab
                 })
                     .context_menu(|ui| {
+                        menu::begin(ui);
+                        menu::heading(ui, "桌面歌词");
                         ui.label(
                             RichText::new("面板不透明度")
                                 .size(11.0)
@@ -345,6 +348,7 @@ pub fn show_lyrics(
                             }
                         }
                         ui.add_space(4.0);
+                        menu::separator(ui);
                         ui.label(
                             RichText::new("歌词文字不透明度")
                                 .size(11.0)
@@ -383,13 +387,15 @@ pub fn show_lyrics(
                                 queue.push(OverlayCommand::SetLyricsFont(font));
                             }
                         }
+                        menu::separator(ui);
                         if ui.checkbox(&mut locked, "锁定位置").changed() {
                             if let Ok(mut queue) = commands.lock() {
                                 queue.push(OverlayCommand::SetLyricsLocked(locked));
                             }
                         }
-                        ui.separator();
-                        if ui.button("关闭桌面歌词").clicked() {
+                        menu::separator(ui);
+                        if menu::item(ui, Some(Icon::Close), "关闭桌面歌词", None, true).clicked()
+                        {
                             close = true;
                             ui.close_menu();
                         }

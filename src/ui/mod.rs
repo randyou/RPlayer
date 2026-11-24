@@ -3,6 +3,7 @@
 pub mod components;
 pub mod focus;
 pub mod icons;
+pub mod menu;
 pub mod motion;
 pub mod tokens;
 pub mod widgets;

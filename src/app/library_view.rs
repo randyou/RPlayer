@@ -11,6 +11,7 @@ use super::{Dialog, RPlayerApp, View};
 use crate::model::{self, SortField, SortState};
 use crate::theme;
 use crate::ui::icons::{self, Icon};
+use crate::ui::menu;
 use crate::ui::widgets;
 
 const ROW_HEIGHT: f32 = 56.0;
@@ -839,23 +840,27 @@ impl RPlayerApp {
                     response.dnd_set_drag_payload(drag_ids);
 
                     response.context_menu(|ui| {
-                        if widgets::text_button(ui, "播放").clicked() {
+                        menu::begin(ui);
+                        menu::heading(ui, "曲目");
+                        if menu::item(ui, Some(Icon::Play), "播放", Some("Enter"), false).clicked() {
                             self.play_track(ui.ctx(), id);
                             ui.close_menu();
                         }
-                        if ui
-                            .button(if self.library.is_favorite(id) {
-                                "取消收藏"
-                            } else {
-                                "添加到我的收藏"
-                            })
-                            .clicked()
+                        let favorite = self.library.is_favorite(id);
+                        if menu::item(
+                            ui,
+                            Some(if favorite { Icon::HeartFilled } else { Icon::Heart }),
+                            if favorite { "取消收藏" } else { "添加到我的收藏" },
+                            None,
+                            false,
+                        )
+                        .clicked()
                         {
                             self.toggle_favorite(id);
                             ui.close_menu();
                         }
 
-                        ui.menu_button("评分", |ui| {
+                        menu::submenu(ui, Some(Icon::Star), "评分", |ui| {
                             let current = self.rating(id);
                             for value in 1..=5u8 {
                                 let label = if value == current {
@@ -863,18 +868,35 @@ impl RPlayerApp {
                                 } else {
                                     format!("{value} 星")
                                 };
-                                if widgets::text_button(ui, label).clicked() {
+                                if menu::item(
+                                    ui,
+                                    Some(if value <= current {
+                                        Icon::StarFilled
+                                    } else {
+                                        Icon::Star
+                                    }),
+                                    &label,
+                                    None,
+                                    false,
+                                )
+                                .clicked()
+                                {
                                     self.set_rating(id, value);
                                     ui.close_menu();
                                 }
                             }
-                            if current > 0 && widgets::text_button(ui, "清除评分").clicked() {
-                                self.set_rating(id, 0);
-                                ui.close_menu();
+                            if current > 0 {
+                                menu::separator(ui);
+                                if menu::item(ui, Some(Icon::Trash), "清除评分", None, false)
+                                    .clicked()
+                                {
+                                    self.set_rating(id, 0);
+                                    ui.close_menu();
+                                }
                             }
                         });
 
-                        ui.menu_button("添加到播放列表", |ui| {
+                        menu::submenu(ui, Some(Icon::Plus), "添加到播放列表", |ui| {
                             let playlists: Vec<(u64, String)> = self
                                 .library
                                 .playlists
@@ -882,12 +904,10 @@ impl RPlayerApp {
                                 .map(|playlist| (playlist.id, playlist.name.clone()))
                                 .collect();
                             if playlists.is_empty() {
-                                ui.label(
-                                    RichText::new("还没有播放列表")
-                                        .size(11.5)
-                                        .color(theme::c().faint),
-                                );
-                                if widgets::text_button(ui, "新建播放列表…").clicked() {
+                                menu::hint(ui, "还没有播放列表");
+                                if menu::item(ui, Some(Icon::Plus), "新建播放列表…", None, false)
+                                    .clicked()
+                                {
                                     self.dialog = Dialog::NewPlaylist {
                                         name: String::new(),
                                     };
@@ -896,7 +916,8 @@ impl RPlayerApp {
                                 }
                             } else {
                                 for (playlist_id, name) in playlists {
-                                    if widgets::text_button(ui, name).clicked() {
+                                    if menu::item(ui, Some(Icon::List), &name, None, false).clicked()
+                                    {
                                         self.add_track_to_playlist(playlist_id, id);
                                         ui.close_menu();
                                     }
@@ -905,36 +926,48 @@ impl RPlayerApp {
                         });
 
                         if matches!(self.view, View::Playlist(_))
-                            && widgets::text_button(ui, "从此播放列表移除").clicked()
+                            && menu::item(ui, Some(Icon::List), "从此播放列表移除", None, false)
+                                .clicked()
                         {
                             self.remove_track_from_view_playlist(id);
                             ui.close_menu();
                         }
 
-                        ui.separator();
-                        if widgets::text_button(ui, "查找重复歌曲…").clicked() {
+                        menu::separator(ui);
+                        menu::heading(ui, "查找与歌词");
+                        if menu::item(ui, Some(Icon::Search), "查找重复歌曲…", None, false)
+                            .clicked()
+                        {
                             self.open_duplicates();
                             ui.close_menu();
                         }
-                        if widgets::text_button(ui, "编辑歌词…").clicked() {
+                        if menu::item(ui, Some(Icon::Edit), "编辑歌词…", None, false).clicked() {
                             self.current = Some(id);
                             self.load_lyrics_for(&track, id);
                             super::lyrics_edit::open(self);
                             ui.close_menu();
                         }
-                        if widgets::text_button(ui, "重新匹配歌词…").clicked() {
+                        if menu::item(ui, Some(Icon::Refresh), "重新匹配歌词…", None, false)
+                            .clicked()
+                        {
                             self.open_lyrics_match(id);
                             ui.close_menu();
                         }
-                        if widgets::text_button(ui, "从 LRCLIB 下载歌词").clicked() {
+                        if menu::item(ui, Some(Icon::Download), "从 LRCLIB 下载歌词", None, false)
+                            .clicked()
+                        {
                             self.request_lyrics(ui.ctx(), id, true);
                             ui.close_menu();
                         }
-                        if widgets::text_button(ui, "在文件夹中显示").clicked() {
+
+                        menu::separator(ui);
+                        if menu::item(ui, Some(Icon::Folder), "在文件夹中显示", None, false)
+                            .clicked()
+                        {
                             self.reveal_in_file_manager(&track.path);
                             ui.close_menu();
                         }
-                        if widgets::text_button(ui, "编辑标签…").clicked() {
+                        if menu::item(ui, Some(Icon::Edit), "编辑标签…", None, false).clicked() {
                             if let Some(track) = self.library.track(id) {
                                 self.dialog = Dialog::EditTags {
                                     edit: crate::tag_edit::TagEdit::from_track(track),
@@ -943,7 +976,17 @@ impl RPlayerApp {
                             }
                             ui.close_menu();
                         }
-                        if widgets::text_button(ui, "从音乐库移除…").clicked() {
+
+                        menu::separator(ui);
+                        if menu::item(
+                            ui,
+                            Some(Icon::Trash),
+                            "从音乐库移除…",
+                            None,
+                            true,
+                        )
+                        .clicked()
+                        {
                             self.dialog = Dialog::ConfirmRemoveTrack { id };
                             ui.close_menu();
                         }
