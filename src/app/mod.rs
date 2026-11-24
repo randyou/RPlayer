@@ -925,9 +925,11 @@ impl RPlayerApp {
             return false;
         };
 
-        let play_result = match start {
-            Some(position) => audio.play_path_at(&track.path, position),
-            None => audio.play_path(&track.path),
+        let target = crate::playback::start(&track, start);
+        let play_result = if target > 0.001 {
+            audio.play_path_at(&track.path, target)
+        } else {
+            audio.play_path(&track.path)
         };
         match play_result {
             Ok(()) => {
@@ -1138,15 +1140,16 @@ impl RPlayerApp {
     }
 
     fn seek_to(&mut self, seconds: f64) {
+        let Some(track) = self.current.and_then(|id| self.library.track(id)).cloned() else {
+            return;
+        };
+        let target = crate::playback::absolute(&track, seconds);
         if self.queued_next.is_some() {
             // A gapless source is already appended; reopening is the only way
             // to guarantee that a backward seek does not hit the next track.
-            let Some(track) = self.current.and_then(|id| self.library.track(id)).cloned() else {
-                return;
-            };
             if let Some(audio) = &mut self.audio {
                 let paused = audio.is_paused();
-                if audio.play_path_at(&track.path, seconds).is_ok() && paused {
+                if audio.play_path_at(&track.path, target).is_ok() && paused {
                     audio.set_paused(true);
                 }
             }
@@ -1155,7 +1158,7 @@ impl RPlayerApp {
             return;
         }
         if let Some(audio) = &mut self.audio {
-            audio.seek(seconds);
+            audio.seek(target);
         }
     }
 
@@ -2418,6 +2421,9 @@ impl RPlayerApp {
         let Some(track) = self.library.track(current_id).cloned() else {
             return;
         };
+        if track.cue_end.is_some() {
+            return;
+        }
         let Some(audio) = self.audio.as_ref() else {
             return;
         };
@@ -2440,6 +2446,9 @@ impl RPlayerApp {
             return;
         };
         if next_id == current_id && self.play_mode == PlayMode::Sequential {
+            return;
+        }
+        if next_track.cue_end.is_some() {
             return;
         }
         if let Some(audio) = &mut self.audio {
@@ -2475,7 +2484,26 @@ impl RPlayerApp {
         }
     }
 
+    fn cue_boundary_reached(&self) -> bool {
+        let Some(track) = self.current.and_then(|id| self.library.track(id)) else {
+            return false;
+        };
+        let Some(audio) = self.audio.as_ref() else {
+            return false;
+        };
+        audio.has_source()
+            && audio.is_playing()
+            && crate::playback::reached_end(track, audio.position())
+    }
+
     fn poll_audio(&mut self, ctx: &egui::Context) {
+        // CUE virtual tracks share one decoder; stop at this track's CUE end
+        // instead of waiting for the whole file to finish.
+        if self.cue_boundary_reached() {
+            self.next_track(ctx, true);
+            return;
+        }
+
         let boundary = self
             .audio
             .as_ref()
@@ -2658,10 +2686,14 @@ impl RPlayerApp {
     }
 
     fn current_position(&self) -> f64 {
-        self.audio
-            .as_ref()
-            .map(AudioEngine::position)
-            .unwrap_or(0.0)
+        let Some(audio) = self.audio.as_ref() else {
+            return 0.0;
+        };
+        let absolute = audio.position();
+        match self.current.and_then(|id| self.library.track(id)) {
+            Some(track) => crate::playback::relative(track, absolute),
+            None => absolute,
+        }
     }
 
     fn current_duration(&self) -> f64 {

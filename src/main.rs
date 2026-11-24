@@ -16,6 +16,7 @@ mod m3u;
 mod model;
 mod overlay;
 mod platform;
+mod playback;
 mod scanner;
 mod session;
 mod stats;

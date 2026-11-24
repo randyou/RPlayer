@@ -30,7 +30,14 @@ impl RPlayerApp {
             }
             self.queue_index = index;
             self.current = Some(id);
-            self.pending_resume = Some(session.position.max(0.0));
+            let raw = session.position.max(0.0);
+            let resume = match self.library.track(id) {
+                Some(track) if session.schema < 2 && track.cue_start.is_some() => {
+                    crate::playback::relative(track, raw)
+                }
+                _ => raw,
+            };
+            self.pending_resume = Some(resume);
         } else {
             self.queue.clear();
             self.queue_index = 0;
@@ -76,13 +83,9 @@ impl RPlayerApp {
 
     pub(super) fn save_session(&self) {
         let session = Session {
-            schema: 1,
+            schema: 2,
             current: self.current,
-            position: self
-                .audio
-                .as_ref()
-                .map(|audio| audio.position())
-                .unwrap_or(0.0),
+            position: self.current_position(),
             queue: self.queue.clone(),
             queue_index: self.queue_index,
             view: self.view_key(),
