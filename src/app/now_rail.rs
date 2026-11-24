@@ -16,7 +16,7 @@ use crate::ui::widgets;
 
 impl RPlayerApp {
     pub(super) fn rail_available(ctx: &egui::Context) -> bool {
-        ctx.screen_rect().width() >= 1200.0
+        ctx.screen_rect().width() >= 1280.0
     }
 
     pub(super) fn now_rail_panel(&mut self, ctx: &egui::Context) {
@@ -25,7 +25,7 @@ impl RPlayerApp {
         }
 
         egui::SidePanel::right("rplayer-now-rail")
-            .exact_width(318.0)
+            .exact_width(300.0)
             .resizable(false)
             .show_separator_line(false)
             .frame(
@@ -44,8 +44,7 @@ impl RPlayerApp {
                 } else {
                     "正在播放"
                 })
-                .size(15.0)
-                .strong()
+                .font(crate::ui::tokens::serif(19.0))
                 .color(theme::c().text),
             );
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {

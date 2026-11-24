@@ -31,6 +31,68 @@ pub fn icon_button(ui: &mut Ui, icon: Icon, size: f32, tooltip: &str) -> Respons
     response
 }
 
+/// Small icon button for the dark sidebar, using sidebar-specific colors.
+pub fn sidebar_icon_button(ui: &mut Ui, icon: Icon, size: f32, tooltip: &str) -> Response {
+    let (rect, response) = ui.allocate_exact_size(Vec2::splat(size), Sense::click());
+    if response.hovered() {
+        ui.painter().rect_filled(
+            rect,
+            CornerRadius::same(6),
+            Color32::from_rgba_unmultiplied(255, 255, 255, 14),
+        );
+    }
+    icons::paint(
+        ui.painter(),
+        rect.shrink(size * 0.27),
+        icon,
+        if response.hovered() {
+            theme::sidebar_text()
+        } else {
+            theme::sidebar_muted()
+        },
+    );
+    let response = response
+        .on_hover_cursor(CursorIcon::PointingHand)
+        .on_hover_text(tooltip);
+    mark(&response, WidgetType::Button, tooltip, None);
+    crate::ui::focus::focus_on_click(&response);
+    crate::ui::focus::ring(ui, &response);
+    response
+}
+
+/// Tinted toggle button for the dark player bar / sidebar.
+pub fn sidebar_icon_button_tinted(
+    ui: &mut Ui,
+    icon: Icon,
+    size: f32,
+    active: bool,
+    tooltip: &str,
+) -> Response {
+    let (rect, response) = ui.allocate_exact_size(Vec2::splat(size), Sense::click());
+    if active || response.hovered() {
+        ui.painter().rect_filled(
+            rect,
+            CornerRadius::same(7),
+            Color32::from_rgba_unmultiplied(255, 255, 255, 12),
+        );
+    }
+    let color = if active {
+        theme::c().accent
+    } else if response.hovered() {
+        theme::sidebar_text()
+    } else {
+        theme::sidebar_muted()
+    };
+    icons::paint(ui.painter(), rect.shrink(size * 0.27), icon, color);
+    let response = response
+        .on_hover_cursor(CursorIcon::PointingHand)
+        .on_hover_text(tooltip);
+    mark(&response, WidgetType::Button, tooltip, Some(active));
+    crate::ui::focus::focus_on_click(&response);
+    crate::ui::focus::ring(ui, &response);
+    response
+}
+
 pub fn icon_button_tinted(
     ui: &mut Ui,
     icon: Icon,
@@ -52,6 +114,44 @@ pub fn icon_button_tinted(
         tint
     };
     icons::paint(ui.painter(), rect.shrink(size * 0.27), icon, color);
+    let response = response
+        .on_hover_cursor(CursorIcon::PointingHand)
+        .on_hover_text(tooltip);
+    mark(&response, WidgetType::Button, tooltip, Some(active));
+    crate::ui::focus::focus_on_click(&response);
+    crate::ui::focus::ring(ui, &response);
+    response
+}
+
+/// Compact glyph toggle for the dark player bar.
+pub fn sidebar_glyph_button(
+    ui: &mut Ui,
+    glyph: &str,
+    size: f32,
+    active: bool,
+    tooltip: &str,
+) -> Response {
+    let (rect, response) = ui.allocate_exact_size(Vec2::splat(size), Sense::click());
+    if active || response.hovered() {
+        ui.painter().rect_filled(
+            rect,
+            CornerRadius::same(7),
+            Color32::from_rgba_unmultiplied(255, 255, 255, 12),
+        );
+    }
+    ui.painter().text(
+        rect.center(),
+        Align2::CENTER_CENTER,
+        glyph,
+        FontId::proportional(size * 0.46),
+        if active {
+            theme::c().accent
+        } else if response.hovered() {
+            theme::sidebar_text()
+        } else {
+            theme::sidebar_muted()
+        },
+    );
     let response = response
         .on_hover_cursor(CursorIcon::PointingHand)
         .on_hover_text(tooltip);
@@ -194,30 +294,24 @@ pub fn nav_item(
         crate::ui::motion::duration(crate::ui::motion::FAST),
     );
     if hover_t > 0.001 {
-        let fill = theme::c().hover;
         painter.rect_filled(
             rect,
-            CornerRadius::same(10),
-            Color32::from_rgba_unmultiplied(
-                fill.r(),
-                fill.g(),
-                fill.b(),
-                (255.0 * hover_t) as u8,
-            ),
+            CornerRadius::same(8),
+            Color32::from_rgba_unmultiplied(255, 255, 255, (14.0 * hover_t) as u8),
         );
     }
     if selected {
-        painter.rect_filled(rect, CornerRadius::same(10), theme::accent_alpha(0.10));
+        painter.rect_filled(rect, CornerRadius::same(8), theme::sidebar_selected());
         let bar = Rect::from_center_size(
-            Pos2::new(rect.left() + 2.0, rect.center().y),
-            Vec2::new(3.0, 18.0),
+            Pos2::new(rect.left() + 1.5, rect.center().y),
+            Vec2::new(2.0, 18.0),
         );
-        painter.rect_filled(bar, CornerRadius::same(2), theme::c().accent);
+        painter.rect_filled(bar, CornerRadius::same(1), theme::sidebar_accent());
     }
 
     let icon_rect = Rect::from_center_size(
-        Pos2::new(rect.left() + 25.0, rect.center().y),
-        Vec2::splat(19.0),
+        Pos2::new(rect.left() + 22.0, rect.center().y),
+        Vec2::splat(17.0),
     );
     icons::paint(
         painter,
@@ -226,25 +320,29 @@ pub fn nav_item(
         if selected {
             theme::c().accent
         } else {
-            theme::c().muted
+            theme::sidebar_muted()
         },
     );
 
     painter.text(
-        Pos2::new(rect.left() + 44.0, rect.center().y),
+        Pos2::new(rect.left() + 39.0, rect.center().y),
         Align2::LEFT_CENTER,
         label,
-        FontId::proportional(14.0),
-        if selected { theme::c().text } else { theme::c().muted },
+        FontId::proportional(12.5),
+        if selected {
+            theme::sidebar_text()
+        } else {
+            theme::sidebar_muted()
+        },
     );
 
     if let Some(count) = count {
         painter.text(
-            Pos2::new(rect.right() - 12.0, rect.center().y),
+            Pos2::new(rect.right() - 10.0, rect.center().y),
             Align2::RIGHT_CENTER,
             count.to_string(),
-            FontId::proportional(11.0),
-            theme::c().faint,
+            FontId::proportional(10.0),
+            theme::sidebar_faint(),
         );
     }
 
@@ -265,23 +363,17 @@ pub fn playlist_item(ui: &mut Ui, name: &str, selected: bool) -> Response {
         crate::ui::motion::duration(crate::ui::motion::FAST),
     );
     if hover_t > 0.001 {
-        let fill = theme::c().hover;
         painter.rect_filled(
             rect,
-            CornerRadius::same(9),
-            Color32::from_rgba_unmultiplied(
-                fill.r(),
-                fill.g(),
-                fill.b(),
-                (255.0 * hover_t) as u8,
-            ),
+            CornerRadius::same(7),
+            Color32::from_rgba_unmultiplied(255, 255, 255, (12.0 * hover_t) as u8),
         );
     }
     if selected {
-        painter.rect_filled(rect, CornerRadius::same(9), theme::accent_alpha(0.10));
+        painter.rect_filled(rect, CornerRadius::same(7), theme::sidebar_selected());
     }
     let dot = Rect::from_center_size(
-        Pos2::new(rect.left() + 25.0, rect.center().y),
+        Pos2::new(rect.left() + 22.0, rect.center().y),
         Vec2::splat(13.0),
     );
     icons::paint(
@@ -289,17 +381,21 @@ pub fn playlist_item(ui: &mut Ui, name: &str, selected: bool) -> Response {
         dot,
         Icon::Music,
         if selected {
-            theme::c().accent
+            theme::sidebar_accent()
         } else {
-            theme::c().faint
+            theme::sidebar_faint()
         },
     );
     painter.text(
-        Pos2::new(rect.left() + 44.0, rect.center().y),
+        Pos2::new(rect.left() + 38.0, rect.center().y),
         Align2::LEFT_CENTER,
         name,
-        FontId::proportional(13.0),
-        if selected { theme::c().text } else { theme::c().muted },
+        FontId::proportional(11.5),
+        if selected {
+            theme::sidebar_text()
+        } else {
+            theme::sidebar_muted()
+        },
     );
     let response = response.on_hover_cursor(CursorIcon::PointingHand);
     mark(&response, WidgetType::Button, name, Some(selected));

@@ -15,12 +15,11 @@ use crate::ui::widgets;
 impl RPlayerApp {
     pub(super) fn player_bar(&mut self, ctx: &egui::Context) {
         egui::TopBottomPanel::bottom("rplayer-player-bar")
-            .exact_height(104.0)
+            .exact_height(92.0)
             .frame(
                 Frame::NONE
-                    .fill(theme::c().sidebar)
-                    .stroke(Stroke::new(1.0_f32, theme::divider()))
-                    .inner_margin(Margin::symmetric(20, 10)),
+                    .fill(theme::sidebar_deep())
+                    .inner_margin(Margin::symmetric(16, 6)),
             )
             .show(ctx, |ui| {
                 let screen = ui.ctx().screen_rect();
@@ -78,7 +77,7 @@ impl RPlayerApp {
     }
 
     fn player_info(&mut self, ui: &mut Ui) {
-        let cover_size = 56.0;
+        let cover_size = 48.0;
         let (cover_rect, cover_response) =
             ui.allocate_exact_size(Vec2::splat(cover_size), Sense::click());
         if let Some(texture) = self.cover_for_current() {
@@ -90,18 +89,12 @@ impl RPlayerApp {
             ));
         } else {
             let painter = ui.painter();
-            painter.rect_filled(cover_rect, CornerRadius::same(9), theme::c().card);
-            painter.rect_stroke(
-                cover_rect,
-                CornerRadius::same(9),
-                Stroke::new(1.0_f32, theme::c().border_soft),
-                egui::StrokeKind::Inside,
-            );
+            painter.rect_filled(cover_rect, CornerRadius::same(2), theme::sidebar_line());
             icons::paint(
                 painter,
-                cover_rect.shrink(17.0),
+                cover_rect.shrink(14.0),
                 Icon::Music,
-                theme::c().faint,
+                theme::sidebar_faint(),
             );
         }
         if cover_response
@@ -117,37 +110,41 @@ impl RPlayerApp {
         ui.add_space(12.0);
         let track = self.current.and_then(|id| self.library.track(id)).cloned();
         let info = ui.allocate_ui_with_layout(
-            Vec2::new((ui.available_width()).max(80.0), 56.0),
+            Vec2::new((ui.available_width()).max(80.0), 48.0),
             Layout::top_down(Align::LEFT),
             |ui| {
                 ui.set_max_width(ui.available_width());
-                ui.spacing_mut().item_spacing.y = 2.0;
+                ui.spacing_mut().item_spacing.y = 1.0;
                 match &track {
                     Some(track) => {
                         ui.add(
                             Label::new(
                                 RichText::new(&track.title)
-                                    .size(13.5)
+                                    .size(12.5)
                                     .strong()
-                                    .color(theme::c().text),
+                                    .color(theme::sidebar_text()),
                             )
                             .truncate(),
                         );
                         ui.add(
-                            Label::new(RichText::new(&track.artist).size(11.5).color(theme::c().muted))
-                                .truncate(),
-                        );
-                        ui.add(
-                            Label::new(RichText::new(&track.album).size(10.5).color(theme::c().faint))
-                                .truncate(),
+                            Label::new(
+                                RichText::new(&track.artist)
+                                    .size(10.0)
+                                    .color(theme::sidebar_muted()),
+                            )
+                            .truncate(),
                         );
                     }
                     None => {
-                        ui.label(RichText::new("未在播放").size(13.0).color(theme::c().muted));
+                        ui.label(
+                            RichText::new("未在播放")
+                                .size(12.5)
+                                .color(theme::sidebar_muted()),
+                        );
                         ui.label(
                             RichText::new("从音乐库中选择一首歌")
-                                .size(10.5)
-                                .color(theme::c().faint),
+                                .size(9.5)
+                                .color(theme::sidebar_faint()),
                         );
                     }
                 }
@@ -176,7 +173,7 @@ impl RPlayerApp {
                 ui.spacing_mut().item_spacing.x = 6.0;
                 ui.add_space(((width - controls_width) / 2.0).max(0.0));
 
-                if widgets::icon_button(ui, Icon::Prev, 30.0, "上一首").clicked() {
+                if widgets::sidebar_icon_button(ui, Icon::Prev, 30.0, "上一首").clicked() {
                     self.previous_track(ctx);
                 }
 
@@ -185,15 +182,14 @@ impl RPlayerApp {
                     self.toggle_play(ctx);
                 }
 
-                if widgets::icon_button(ui, Icon::Next, 30.0, "下一首").clicked() {
+                if widgets::sidebar_icon_button(ui, Icon::Next, 30.0, "下一首").clicked() {
                     self.next_track(ctx, false);
                 }
 
-                if widgets::icon_button_tinted(
+                if widgets::sidebar_icon_button_tinted(
                     ui,
                     self.play_mode.icon(),
                     30.0,
-                    theme::c().muted,
                     self.play_mode.active(),
                     self.play_mode.tooltip(),
                 )
@@ -242,11 +238,10 @@ impl RPlayerApp {
         // The panel toggle also exists in the header; drop it first when the
         // right column gets tight, keeping volume + equalizer + lyrics usable.
         if !compact
-            && widgets::icon_button_tinted(
+            && widgets::sidebar_icon_button_tinted(
                 ui,
                 Icon::PanelRight,
                 34.0,
-                theme::c().muted,
                 rail_ready && self.now_rail_open,
                 "显示 / 收起正在播放侧栏",
             )
@@ -265,14 +260,7 @@ impl RPlayerApp {
 
         let queue_active = self.queue_open
             || (rail_ready && self.now_rail_open && self.rail_queue);
-        if widgets::icon_button_tinted(
-            ui,
-            Icon::Queue,
-            icon_size,
-            theme::c().muted,
-            queue_active,
-            "播放队列",
-        )
+        if widgets::sidebar_icon_button_tinted(ui, Icon::Queue, icon_size, queue_active, "播放队列")
         .clicked()
         {
             if rail_ready {
@@ -288,11 +276,10 @@ impl RPlayerApp {
             }
         }
 
-        if widgets::glyph_button_tinted(
+        if widgets::sidebar_glyph_button(
             ui,
             "词",
             icon_size,
-            theme::c().muted,
             self.desktop_lyrics_open,
             "显示 / 隐藏桌面歌词",
         )
@@ -301,27 +288,13 @@ impl RPlayerApp {
             self.toggle_desktop_lyrics(ui.ctx());
         }
 
-        if widgets::icon_button_tinted(
-            ui,
-            Icon::Equalizer,
-            icon_size,
-            theme::c().muted,
-            self.eq_open,
-            "均衡器",
-        )
+        if widgets::sidebar_icon_button_tinted(ui, Icon::Equalizer, icon_size, self.eq_open, "均衡器")
         .clicked()
         {
             self.toggle_eq();
         }
 
-        if widgets::icon_button_tinted(
-            ui,
-            Icon::MiniPlayer,
-            icon_size,
-            theme::c().muted,
-            self.mini_open,
-            "迷你播放器",
-        )
+        if widgets::sidebar_icon_button_tinted(ui, Icon::MiniPlayer, icon_size, self.mini_open, "迷你播放器")
         .clicked()
         {
             self.toggle_mini(ui.ctx());
@@ -339,12 +312,12 @@ impl RPlayerApp {
         } else {
             Icon::VolumeHigh
         };
-        if widgets::icon_button(ui, icon, icon_size, if muted { "取消静音" } else { "静音" }).clicked()
+        if widgets::sidebar_icon_button(ui, icon, icon_size, if muted { "取消静音" } else { "静音" }).clicked()
         {
             self.toggle_mute();
         }
 
-        if widgets::icon_button(ui, Icon::ChevronUp, icon_size, "打开正在播放").clicked()
+        if widgets::sidebar_icon_button(ui, Icon::ChevronUp, icon_size, "打开正在播放").clicked()
             && self.current.is_some()
         {
             self.queue_open = false;

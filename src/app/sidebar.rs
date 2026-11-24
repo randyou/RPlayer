@@ -11,13 +11,13 @@ use crate::ui::widgets;
 impl RPlayerApp {
     pub(super) fn sidebar_panel(&mut self, ctx: &egui::Context) {
         egui::SidePanel::left("rplayer-sidebar")
-            .exact_width(252.0)
+            .exact_width(236.0)
             .resizable(false)
             .show_separator_line(false)
             .frame(
                 Frame::NONE
-                    .fill(theme::c().sidebar)
-                    .inner_margin(Margin::symmetric(14, 16)),
+                    .fill(theme::sidebar_deep())
+                    .inner_margin(Margin::symmetric(12, 16)),
             )
             .show(ctx, |ui| self.sidebar_contents(ui));
     }
@@ -25,30 +25,26 @@ impl RPlayerApp {
     fn sidebar_contents(&mut self, ui: &mut Ui) {
         // Brand
         ui.horizontal(|ui| {
-            let (rect, _) = ui.allocate_exact_size(Vec2::splat(36.0), Sense::hover());
+            let (rect, _) = ui.allocate_exact_size(Vec2::splat(40.0), Sense::hover());
             icons::logo(ui.painter(), rect);
-            ui.add_space(4.0);
+            ui.add_space(6.0);
             ui.vertical(|ui| {
                 ui.spacing_mut().item_spacing.y = 0.0;
                 ui.label(
                     RichText::new("RPlayer")
-                        .size(17.0)
-                        .strong()
-                        .color(theme::c().text),
+                        .font(crate::ui::tokens::serif(20.0))
+                        .color(theme::sidebar_text()),
                 );
                 ui.label(
-                    RichText::new("本地音乐播放器")
-                        .size(10.5)
-                        .color(theme::c().faint),
+                    RichText::new("LOCAL LISTENING · 本地音乐")
+                        .font(crate::ui::tokens::mono(7.2))
+                        .color(theme::sidebar_faint()),
                 );
             });
         });
 
-        ui.add_space(16.0);
-        if widgets::primary_button_full_icon(ui, crate::ui::icons::Icon::Folder, "添加音乐文件夹").clicked() {
-            self.open_folder_picker();
-        }
-        ui.add_space(14.0);
+        ui.add_space(26.0);
+        ui.spacing_mut().item_spacing.y = 3.0;
 
         // Primary views
         if widgets::nav_item(
@@ -119,6 +115,10 @@ impl RPlayerApp {
         let rail_ready = Self::rail_available(ui.ctx()) && self.current.is_some();
         let queue_active = self.queue_open
             || (rail_ready && self.now_rail_open && self.rail_queue);
+        let old_inactive = ui.visuals().widgets.inactive.bg_fill;
+        let old_active = ui.visuals().widgets.active.bg_fill;
+        ui.visuals_mut().widgets.inactive.bg_fill = egui::Color32::TRANSPARENT;
+        ui.visuals_mut().widgets.active.bg_fill = egui::Color32::TRANSPARENT;
         let (queue_zone, dropped) = ui.dnd_drop_zone::<Vec<u64>, _>(
             Frame::NONE,
             |ui| {
@@ -131,6 +131,8 @@ impl RPlayerApp {
                 )
             },
         );
+        ui.visuals_mut().widgets.inactive.bg_fill = old_inactive;
+        ui.visuals_mut().widgets.active.bg_fill = old_active;
         let queue_response = queue_zone.inner;
         if let Some(payload) = dropped {
             let added = self.append_to_queue(payload.as_slice());
@@ -186,24 +188,23 @@ impl RPlayerApp {
         ui.horizontal(|ui| {
             ui.label(
                 RichText::new("播放列表")
-                    .size(11.0)
-                    .strong()
-                    .color(theme::c().faint),
+                    .font(crate::ui::tokens::mono(8.5))
+                    .color(theme::sidebar_faint()),
             );
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                if widgets::icon_button(ui, Icon::Plus, 22.0, "新建播放列表").clicked() {
+                if widgets::sidebar_icon_button(ui, Icon::Plus, 22.0, "新建播放列表").clicked() {
                     self.dialog = Dialog::NewPlaylist {
                         name: String::new(),
                     };
                     self.focus_pending = true;
                 }
-                if widgets::icon_button(ui, Icon::Star, 22.0, "新建智能歌单").clicked() {
+                if widgets::sidebar_icon_button(ui, Icon::Star, 22.0, "新建智能歌单").clicked() {
                     self.open_smart_builder();
                 }
-                if widgets::icon_button(ui, Icon::Download, 22.0, "导入 M3U").clicked() {
+                if widgets::sidebar_icon_button(ui, Icon::Download, 22.0, "导入 M3U").clicked() {
                     self.import_m3u();
                 }
-                if widgets::icon_button(ui, Icon::List, 22.0, "导出当前视图为 M3U").clicked() {
+                if widgets::sidebar_icon_button(ui, Icon::List, 22.0, "导出当前视图为 M3U").clicked() {
                     self.export_m3u();
                 }
             });
@@ -233,12 +234,12 @@ impl RPlayerApp {
                     ui.label(
                         RichText::new("还没有播放列表")
                             .size(11.5)
-                            .color(theme::c().faint),
+                            .color(theme::sidebar_faint()),
                     );
                     ui.label(
                         RichText::new("点击 + 创建第一个")
                             .size(10.5)
-                            .color(theme::c().faint.gamma_multiply(0.75)),
+                            .color(theme::sidebar_faint().gamma_multiply(0.75)),
                     );
                 }
                 self.smart_playlist_items(ui, &smart_playlists);
@@ -302,7 +303,7 @@ impl RPlayerApp {
             RichText::new("智能歌单")
                 .size(10.0)
                 .strong()
-                .color(theme::c().faint),
+                .color(theme::sidebar_faint()),
         );
         ui.add_space(3.0);
         for (id, name) in lists {
@@ -341,9 +342,9 @@ impl RPlayerApp {
 
     fn sidebar_footer(&mut self, ui: &mut Ui) {
         Frame::NONE
-            .fill(theme::c().card)
-            .stroke(Stroke::new(1.0_f32, theme::c().border_soft))
-            .corner_radius(egui::CornerRadius::same(12))
+            .fill(egui::Color32::from_rgba_unmultiplied(255, 255, 255, 8))
+            .stroke(Stroke::new(1.0_f32, theme::sidebar_line()))
+            .corner_radius(egui::CornerRadius::same(8))
             .inner_margin(Margin::same(11))
             .show(ui, |ui| {
                 ui.set_min_width(ui.available_width());
@@ -359,7 +360,7 @@ impl RPlayerApp {
                             ui.label(
                                 RichText::new(format!("{} / {}", self.scan_done, self.scan_total))
                                     .size(10.0)
-                                    .color(theme::c().faint),
+                                    .color(theme::sidebar_faint()),
                             );
                         });
                     });
@@ -374,16 +375,16 @@ impl RPlayerApp {
                     ui.label(
                         RichText::new("正在读取标签与封面…")
                             .size(10.0)
-                            .color(theme::c().faint),
+                            .color(theme::sidebar_faint()),
                     );
                 } else {
                     ui.horizontal(|ui| {
                         let (rect, _) = ui.allocate_exact_size(Vec2::splat(16.0), Sense::hover());
-                        icons::paint(ui.painter(), rect, Icon::Folder, theme::c().muted);
+                        icons::paint(ui.painter(), rect, Icon::Folder, theme::sidebar_muted());
                         ui.label(
                             RichText::new(format!("{} 个音乐文件夹", self.library.folders.len()))
                                 .size(11.5)
-                                .color(theme::c().text),
+                                .color(theme::sidebar_text()),
                         );
                     });
                     ui.label(
@@ -393,18 +394,18 @@ impl RPlayerApp {
                             crate::model::format_duration(self.library.total_duration())
                         ))
                         .size(10.0)
-                        .color(theme::c().faint),
+                        .color(theme::sidebar_faint()),
                     );
                     ui.add_space(4.0);
                     if ui
                         .add_sized(
                             [ui.available_width(), 26.0],
                             egui::Button::new(
-                                RichText::new("管理文件夹").size(11.0).color(theme::c().text),
+                                RichText::new("管理文件夹").size(11.0).color(theme::sidebar_text()),
                             )
-                            .fill(theme::c().hover)
-                            .stroke(Stroke::new(1.0_f32, theme::c().border))
-                            .corner_radius(7),
+                            .fill(egui::Color32::from_rgba_unmultiplied(255, 255, 255, 8))
+                            .stroke(Stroke::new(1.0_f32, theme::sidebar_line()))
+                            .corner_radius(6),
                         )
                         .clicked()
                     {
@@ -419,13 +420,13 @@ impl RPlayerApp {
             ui.label(
                 RichText::new(format!("v{}", env!("CARGO_PKG_VERSION")))
                     .size(10.0)
-                    .color(theme::c().faint),
+                    .color(theme::sidebar_faint()),
             );
             ui.add_space(9.0);
             let shortcuts = ui
                 .add(
                     egui::Label::new(
-                        RichText::new("快捷键").size(10.0).color(theme::c().muted),
+                        RichText::new("快捷键").size(10.0).color(theme::sidebar_muted()),
                     )
                     .sense(Sense::click()),
                 )
@@ -439,7 +440,7 @@ impl RPlayerApp {
             let about = ui
                 .add(
                     egui::Label::new(
-                        RichText::new("关于 RPlayer").size(10.0).color(theme::c().muted),
+                        RichText::new("关于 RPlayer").size(10.0).color(theme::sidebar_muted()),
                     )
                     .sense(Sense::click()),
                 )
@@ -456,7 +457,7 @@ impl RPlayerApp {
 fn scan_progress(ui: &mut Ui, fraction: f32) {
     let (rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 4.0), Sense::hover());
     ui.painter()
-        .rect_filled(rect, egui::CornerRadius::same(2), theme::c().border);
+        .rect_filled(rect, egui::CornerRadius::same(2), theme::sidebar_line());
     let fraction = fraction.clamp(0.0, 1.0);
     if fraction > 0.0 {
         let filled =

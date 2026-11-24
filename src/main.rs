@@ -36,8 +36,9 @@ fn main() -> eframe::Result<()> {
 
     let mut viewport = egui::ViewportBuilder::default()
         .with_title("RPlayer")
-        .with_inner_size([1200.0, 780.0])
-        .with_min_inner_size([940.0, 640.0])
+        .with_inner_size([1440.0, 900.0])
+        .with_min_inner_size([1120.0, 720.0])
+        .with_decorations(false)
         // The GL context needs alpha support for the transparent desktop
         // lyrics overlay, even though the main panels paint every pixel.
         .with_transparent(true);

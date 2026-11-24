@@ -15,6 +15,7 @@ mod settings;
 mod smart;
 mod stats;
 mod sidebar;
+mod topbar;
 mod tray;
 
 use std::collections::HashSet;
@@ -3031,6 +3032,8 @@ impl eframe::App for RPlayerApp {
             self.titlebar_dark = Some(dark);
         }
 
+        self.window_resize_edges(ctx);
+
         self.handle_overlay_commands(ctx);
         self.poll_lyrics_candidates();
         if self.lyrics_candidates_rx.is_some() {
@@ -3104,6 +3107,7 @@ impl eframe::App for RPlayerApp {
             && Self::rail_available(ctx);
         self.player_bar(ctx);
         self.sidebar_panel(ctx);
+        self.topbar_panel(ctx);
         self.now_rail_panel(ctx);
         self.central_panel(ctx, &ids, total_seconds);
         if !rail_visible {

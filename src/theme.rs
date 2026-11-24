@@ -367,6 +367,17 @@ pub fn sidebar_line() -> Color32 {
     }
 }
 
+pub fn sidebar_selected() -> Color32 {
+    match preset() {
+        ThemePreset::Paper => Color32::from_rgb(0x26, 0x32, 0x29),
+        _ => Color32::from_rgb(0x23, 0x33, 0x28),
+    }
+}
+
+pub fn sidebar_accent() -> Color32 {
+    Color32::from_rgb(0x8F, 0xB7, 0x9A)
+}
+
 pub fn accent_soft() -> Color32 {
     match preset() {
         ThemePreset::Paper => Color32::from_rgb(0xE2, 0xEA, 0xDF),
