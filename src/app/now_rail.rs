@@ -27,10 +27,10 @@ impl RPlayerApp {
         egui::SidePanel::right("rplayer-now-rail")
             .exact_width(318.0)
             .resizable(false)
+            .show_separator_line(false)
             .frame(
                 Frame::NONE
-                    .fill(theme::c().sidebar)
-                    .stroke(Stroke::new(1.0_f32, theme::divider()))
+                    .fill(theme::c().bg)
                     .inner_margin(Margin::symmetric(16, 14)),
             )
             .show(ctx, |ui| self.rail_contents(ui));
