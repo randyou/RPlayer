@@ -1646,3 +1646,9 @@ body.queue-open .queue-drawer { transform: none; }
   .now-cover { width: 100%; }
   .now-title { font-size: 40px; }
 }
+@media (max-height: 860px) {
+  .now-rail .rail-next,
+  .now-rail .rail-foot { display: none; }
+  .rail-cover { width: 224px; height: 224px; }
+  .now-rail { padding-bottom: 18px; }
+}
