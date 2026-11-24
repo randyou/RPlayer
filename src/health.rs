@@ -49,6 +49,35 @@ pub fn relink_path(path: &Path, old_root: &Path, new_root: &Path) -> Option<Path
     let rest = path_text.get(old_text.len() + 1..)?;
     Some(new_root.join(rest))
 }
+/// Repoints every virtual track from one CUE sheet to a new audio file.
+pub fn relink_cue_tracks(
+    tracks: &mut [Track],
+    cue_source: &Path,
+    new_audio: &Path,
+    new_duration: f64,
+) -> usize {
+    let last_number = tracks
+        .iter()
+        .filter(|track| track.cue_source.as_deref() == Some(cue_source))
+        .filter_map(|track| track.track_number)
+        .max();
+    let mut changed = 0;
+    for track in tracks.iter_mut() {
+        if track.cue_source.as_deref() != Some(cue_source) {
+            continue;
+        }
+        track.path = new_audio.to_path_buf();
+        if last_number.is_some() && track.track_number == last_number {
+            track.cue_end = Some(new_duration);
+            if let Some(start) = track.cue_start {
+                track.duration = (new_duration - start).max(0.05);
+            }
+        }
+        changed += 1;
+    }
+    changed
+}
+
 /// Preserves identity and listening history when a track is relinked.
 pub fn relinked(old: &Track, mut new: Track) -> Track {
     new.id = old.id;
@@ -139,6 +168,28 @@ mod tests {
         assert_eq!(mapped, Some(PathBuf::from(r"E:\Library\Album\a.flac")));
         assert!(relink_path(Path::new(r"D:\Other\a.flac"), old, new).is_none());
     }
+    #[test]
+    fn relink_cue_updates_all_tracks_and_last_end() {
+        let mut tracks = vec![
+            track(1, "A", "X", "Y", 100.0),
+            track(2, "B", "X", "Y", 100.0),
+        ];
+        let cue = PathBuf::from("album.cue");
+        tracks[0].track_number = Some(1);
+        tracks[0].cue_source = Some(cue.clone());
+        tracks[0].cue_start = Some(0.0);
+        tracks[0].cue_end = Some(100.0);
+        tracks[1].track_number = Some(2);
+        tracks[1].cue_source = Some(cue.clone());
+        tracks[1].cue_start = Some(100.0);
+        tracks[1].cue_end = Some(200.0);
+        let changed = relink_cue_tracks(&mut tracks, &cue, Path::new(r"E:\New\album.flac"), 260.0);
+        assert_eq!(changed, 2);
+        assert_eq!(tracks[0].path, PathBuf::from(r"E:\New\album.flac"));
+        assert_eq!(tracks[1].cue_end, Some(260.0));
+        assert_eq!(tracks[1].duration, 160.0);
+    }
+
     #[test]
     fn relink_preserves_identity_and_clears_cue() {
         let old = track(7, "Old", "Artist", "Album", 100.0);

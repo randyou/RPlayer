@@ -64,6 +64,9 @@ impl RPlayerApp {
             let Some(old) = self.library.track(id).cloned() else {
                 continue;
             };
+            if old.path.exists() {
+                continue;
+            }
             let Some(candidate) = crate::health::relink_path(&old.path, &old_root, &new_root)
             else {
                 continue;
@@ -72,11 +75,22 @@ impl RPlayerApp {
                 continue;
             }
             if let Ok(track) = crate::model::Track::from_path(&candidate) {
-                let track = crate::health::relinked(&old, track);
-                if let Some(slot) = self.library.tracks.iter_mut().find(|track| track.id == id) {
-                    *slot = track;
+                if let Some(cue) = old.cue_source.clone() {
+                    ok += crate::health::relink_cue_tracks(
+                        &mut self.library.tracks,
+                        &cue,
+                        &candidate,
+                        track.duration,
+                    );
+                } else {
+                    let track = crate::health::relinked(&old, track);
+                    if let Some(slot) =
+                        self.library.tracks.iter_mut().find(|track| track.id == id)
+                    {
+                        *slot = track;
+                    }
+                    ok += 1;
                 }
-                ok += 1;
             }
         }
         self.persist();
@@ -105,16 +119,39 @@ impl RPlayerApp {
             return;
         };
         match crate::model::Track::from_path(&path) {
-            Ok(track) => {
-                let track = crate::health::relinked(&old, track);
-                if let Some(slot) = self.library.tracks.iter_mut().find(|track| track.id == id) {
-                    *slot = track;
+            Ok(new_track) => {
+                if let Some(cue) = old.cue_source.clone() {
+                    let changed = crate::health::relink_cue_tracks(
+                        &mut self.library.tracks,
+                        &cue,
+                        &path,
+                        new_track.duration,
+                    );
+                    if let Some(report) = &mut self.health_report {
+                        report.missing.retain(|missing| {
+                            self.library
+                                .track(*missing)
+                                .is_some_and(|track| !track.path.exists())
+                        });
+                    }
+                    self.persist();
+                    self.toast(
+                        format!("已重新定位 CUE 整轨：{changed} 首曲目"),
+                        ToastKind::Success,
+                    );
+                } else {
+                    let track = crate::health::relinked(&old, new_track);
+                    if let Some(slot) =
+                        self.library.tracks.iter_mut().find(|track| track.id == id)
+                    {
+                        *slot = track;
+                    }
+                    if let Some(report) = &mut self.health_report {
+                        report.missing.retain(|missing| *missing != id);
+                    }
+                    self.persist();
+                    self.toast("已重新定位文件", ToastKind::Success);
                 }
-                if let Some(report) = &mut self.health_report {
-                    report.missing.retain(|missing| *missing != id);
-                }
-                self.persist();
-                self.toast("已重新定位文件", ToastKind::Success);
             }
             Err(error) => {
                 self.toast(format!("无法读取新文件：{error}"), ToastKind::Error);
@@ -199,9 +236,7 @@ impl RPlayerApp {
                                     ui.with_layout(
                                         Layout::right_to_left(Align::Center),
                                         |ui| {
-                                            if track.cue_source.is_none()
-                                                && widgets::text_button(ui, "重新定位…").clicked()
-                                            {
+                                            if widgets::text_button(ui, "重新定位…").clicked() {
                                                 relink_id = Some(*id);
                                             }
                                         },
