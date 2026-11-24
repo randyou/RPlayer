@@ -177,6 +177,24 @@ pub fn nav_item(
     let width = ui.available_width();
     let (rect, response) = ui.allocate_exact_size(Vec2::new(width, 38.0), Sense::click());
     let painter = ui.painter();
+    let hover_t = ui.ctx().animate_bool_with_time(
+        ui.id().with(("nav-hover", label)),
+        response.hovered() && !selected,
+        crate::ui::motion::duration(crate::ui::motion::FAST),
+    );
+    if hover_t > 0.001 {
+        let fill = theme::c().hover;
+        painter.rect_filled(
+            rect,
+            CornerRadius::same(10),
+            Color32::from_rgba_unmultiplied(
+                fill.r(),
+                fill.g(),
+                fill.b(),
+                (255.0 * hover_t) as u8,
+            ),
+        );
+    }
     if selected {
         painter.rect_filled(rect, CornerRadius::same(10), theme::accent_alpha(0.10));
         let bar = Rect::from_center_size(
@@ -184,8 +202,6 @@ pub fn nav_item(
             Vec2::new(3.0, 18.0),
         );
         painter.rect_filled(bar, CornerRadius::same(2), theme::c().accent);
-    } else if response.hovered() {
-        painter.rect_filled(rect, CornerRadius::same(10), theme::c().hover);
     }
 
     let icon_rect = Rect::from_center_size(
@@ -230,10 +246,26 @@ pub fn playlist_item(ui: &mut Ui, name: &str, selected: bool) -> Response {
     let width = ui.available_width();
     let (rect, response) = ui.allocate_exact_size(Vec2::new(width, 32.0), Sense::click());
     let painter = ui.painter();
+    let hover_t = ui.ctx().animate_bool_with_time(
+        ui.id().with(("playlist-hover", name)),
+        response.hovered() && !selected,
+        crate::ui::motion::duration(crate::ui::motion::FAST),
+    );
+    if hover_t > 0.001 {
+        let fill = theme::c().hover;
+        painter.rect_filled(
+            rect,
+            CornerRadius::same(9),
+            Color32::from_rgba_unmultiplied(
+                fill.r(),
+                fill.g(),
+                fill.b(),
+                (255.0 * hover_t) as u8,
+            ),
+        );
+    }
     if selected {
         painter.rect_filled(rect, CornerRadius::same(9), theme::accent_alpha(0.10));
-    } else if response.hovered() {
-        painter.rect_filled(rect, CornerRadius::same(9), theme::c().hover);
     }
     let dot = Rect::from_center_size(
         Pos2::new(rect.left() + 25.0, rect.center().y),
