@@ -260,7 +260,8 @@ impl RPlayerApp {
                                 .stroke(Stroke::NONE)
                                 .corner_radius(8)
                                 .min_size(Vec2::new(ui.available_width(), 30.0)),
-                            );
+                            )
+                            .on_hover_cursor(egui::CursorIcon::PointingHand);
                             if response.clicked() {
                                 execute = Some(item.command);
                             }

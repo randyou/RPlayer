@@ -491,6 +491,7 @@ impl RPlayerApp {
                                 .corner_radius(9)
                                 .min_size(Vec2::new(0.0, 32.0)),
                             )
+                            .on_hover_cursor(egui::CursorIcon::PointingHand)
                             .clicked()
                         {
                             self.open_lyrics_match(track.id);
@@ -507,6 +508,7 @@ impl RPlayerApp {
                                 .corner_radius(9)
                                 .min_size(Vec2::new(0.0, 32.0)),
                             )
+                            .on_hover_cursor(egui::CursorIcon::PointingHand)
                             .clicked()
                         {
                             if let Some(id) = self.current { self.open_lyrics_match(id); }
@@ -523,6 +525,7 @@ impl RPlayerApp {
                                 .corner_radius(9)
                                 .min_size(Vec2::new(0.0, 32.0)),
                             )
+                            .on_hover_cursor(egui::CursorIcon::PointingHand)
                             .clicked()
                         {
                             super::lyrics_edit::open(self);
