@@ -100,7 +100,7 @@ src/ui/motion.rs     motion tokens and reduced-motion switch
 
 ## Verification
 
-- Unit tests: `cargo test --release` (currently 43+).
+- Unit tests: `cargo test --release` (currently 46+).
 - Windows UI automation: `agent-desktop snapshot --window-id <id>`, then click
   by `ref_id`; prefer AccessKit names over pixel coordinates.
 - Screenshots must be checked after UI changes; avoid leaving test images in

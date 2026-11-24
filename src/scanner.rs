@@ -212,8 +212,10 @@ mod tests {
     use super::*;
     use std::io::Write;
 
-    fn write_wav(path: &Path) {
-        let samples: Vec<i16> = (0..200).map(|i| ((i * 37) % 1000) as i16).collect();
+    fn write_wav(path: &Path, seconds: u32) {
+        let samples: Vec<i16> = (0..44_100 * seconds)
+            .map(|i| ((i * 37) % 1000) as i16)
+            .collect();
         let data_len = (samples.len() * 2) as u32;
         let mut bytes = Vec::new();
         bytes.extend_from_slice(b"RIFF");
@@ -246,28 +248,53 @@ mod tests {
                 .as_nanos()
         ));
         std::fs::create_dir_all(&dir).unwrap();
-        write_wav(&dir.join("album.wav"));
+        let audio = dir.join("专辑 音轨.wav");
+        write_wav(&audio, 12);
         std::fs::write(
             dir.join("album.cue"),
             r#"PERFORMER "Artist"
 TITLE "Album"
-FILE "album.wav" WAVE
+FILE "专辑 音轨.wav" WAVE
   TRACK 01 AUDIO
     TITLE "One"
     INDEX 01 00:00:00
   TRACK 02 AUDIO
     TITLE "Two"
-    INDEX 01 00:00:01
+    INDEX 01 00:05:00
+  TRACK 03 AUDIO
+    TITLE "Three"
+    INDEX 01 00:10:00
 "#,
         )
         .unwrap();
         let tracks = scan_folder(&dir);
         let _ = std::fs::remove_dir_all(&dir);
-        assert_eq!(tracks.len(), 2, "plain audio must be replaced by CUE tracks");
+        assert_eq!(tracks.len(), 3, "plain audio must be replaced by CUE tracks");
         assert_eq!(tracks[0].title, "One");
         assert_eq!(tracks[0].cue_start, Some(0.0));
         assert!(tracks[0].cue_source.is_some());
         assert_ne!(tracks[0].id, tracks[1].id);
+
+        for track in &tracks {
+            assert_eq!(track.path, audio, "CUE FILE with spaces/unicode must resolve");
+            assert_eq!(track.artist, "Artist");
+            assert_eq!(track.album, "Album");
+        }
+        assert!((tracks[0].duration - 5.0).abs() < 0.001);
+        assert_eq!(tracks[0].cue_end, Some(5.0));
+        assert!((tracks[1].duration - 5.0).abs() < 0.001);
+        assert_eq!(tracks[1].cue_start, Some(5.0));
+        assert_eq!(tracks[1].cue_end, Some(10.0));
+        assert!((tracks[2].duration - 2.0).abs() < 0.001);
+        assert_eq!(tracks[2].cue_start, Some(10.0));
+        assert_eq!(tracks[2].cue_end, Some(12.0));
+
+        // The same mapping the player uses: UI time is relative to the segment.
+        assert_eq!(crate::playback::start(&tracks[1], None), 5.0);
+        assert_eq!(crate::playback::absolute(&tracks[1], 1.5), 6.5);
+        assert_eq!(crate::playback::relative(&tracks[1], 6.5), 1.5);
+        assert!(crate::playback::reached_end(&tracks[1], 9.99));
+        assert!(!crate::playback::reached_end(&tracks[1], 9.0));
     }
 
     #[test]
@@ -281,7 +308,7 @@ FILE "album.wav" WAVE
                 .as_nanos()
         ));
         std::fs::create_dir_all(&dir).unwrap();
-        write_wav(&dir.join("album.wav"));
+        write_wav(&dir.join("album.wav"), 2);
         std::fs::write(
             dir.join("album.cue"),
             r#"PERFORMER "Artist"
@@ -323,7 +350,7 @@ FILE "album.wav" WAVE
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("probe.wav");
-        write_wav(&path);
+        write_wav(&path, 1);
         let track = Track::from_path(&path).unwrap();
         assert!(track.modified > 0);
         let known = HashMap::from([(

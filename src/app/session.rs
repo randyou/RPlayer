@@ -32,10 +32,8 @@ impl RPlayerApp {
             self.current = Some(id);
             let raw = session.position.max(0.0);
             let resume = match self.library.track(id) {
-                Some(track) if session.schema < 2 && track.cue_start.is_some() => {
-                    crate::playback::relative(track, raw)
-                }
-                _ => raw,
+                Some(track) => crate::playback::resume(track, raw, session.schema),
+                None => raw,
             };
             self.pending_resume = Some(resume);
         } else {

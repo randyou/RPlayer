@@ -67,6 +67,7 @@ pub fn parse(text: &str, cue_path: &Path) -> Result<CueSheet, String> {
     let mut album_title = String::new();
     let mut album_performer = String::new();
     let mut file: Option<PathBuf> = None;
+    let mut file_count = 0usize;
     let mut tracks: Vec<CueTrack> = Vec::new();
     let mut current: Option<CueTrack> = None;
     let mut current_track_title = String::new();
@@ -91,6 +92,7 @@ pub fn parse(text: &str, cue_path: &Path) -> Result<CueSheet, String> {
                     .unwrap_or("");
                 if !name.is_empty() {
                     let path = Path::new(name);
+                    file_count += 1;
                     file = Some(if path.is_absolute() {
                         path.to_path_buf()
                     } else {
@@ -139,6 +141,8 @@ pub fn parse(text: &str, cue_path: &Path) -> Result<CueSheet, String> {
                 let mut parts = rest.split_whitespace();
                 let index = parts.next().unwrap_or("");
                 let stamp = parts.next().unwrap_or("");
+                // INDEX 00 is the optional pregap. Playback starts at INDEX 01;
+                // ignoring 00 is therefore correct for these virtual tracks.
                 if index == "01" {
                     if let Some(track) = &mut current {
                         track.start = parse_stamp(stamp)
@@ -164,6 +168,9 @@ pub fn parse(text: &str, cue_path: &Path) -> Result<CueSheet, String> {
     }
     if tracks.is_empty() {
         return Err("CUE 中没有找到带 INDEX 01 的曲目".to_string());
+    }
+    if file_count > 1 {
+        return Err("暂不支持包含多个 FILE 的 CUE".to_string());
     }
     let file = file.ok_or_else(|| "CUE 缺少 FILE 声明".to_string())?;
     for index in 0..tracks.len() {
@@ -339,5 +346,35 @@ FILE "album.flac" WAVE
         let error = parse("FILE \"x.flac\" WAVE
 ", Path::new("x.cue")).unwrap_err();
         assert!(error.contains("INDEX"));
+    }
+
+    #[test]
+    fn uses_index_01_after_optional_pregap() {
+        let sheet = parse(
+            r#"FILE "album.wav" WAVE
+  TRACK 01 AUDIO
+    INDEX 00 00:00:00
+    INDEX 01 00:02:00
+"#,
+            Path::new("album.cue"),
+        )
+        .expect("sheet");
+        assert_eq!(sheet.tracks[0].start, 2.0);
+    }
+
+    #[test]
+    fn rejects_multiple_file_sheets() {
+        let error = parse(
+            r#"FILE "one.wav" WAVE
+  TRACK 01 AUDIO
+    INDEX 01 00:00:00
+FILE "two.wav" WAVE
+  TRACK 02 AUDIO
+    INDEX 01 00:00:05
+"#,
+            Path::new("album.cue"),
+        )
+        .unwrap_err();
+        assert!(error.contains("多个 FILE"));
     }
 }
