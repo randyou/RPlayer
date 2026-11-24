@@ -584,6 +584,7 @@ impl RPlayerApp {
                     let (rect, response) =
                         ui.allocate_exact_size(Vec2::new(width, ROW_HEIGHT), Sense::click_and_drag());
                     let response = response.on_hover_cursor(egui::CursorIcon::PointingHand);
+                    crate::ui::focus::focus_on_click(&response);
                     let current = self.current == Some(id);
                     let selected = self.selected == Some(id);
                     let checked = self.checked.contains(&id);
@@ -827,7 +828,11 @@ impl RPlayerApp {
                     let click_pos = response.interact_pointer_pos();
                     let heart_clicked =
                         response.clicked() && click_pos.is_some_and(|pos| heart_rect.contains(pos));
-                    if let Some(value) = rating_clicked {
+                    let keyboard_enter =
+                        response.has_focus() && ui.input(|input| input.key_pressed(egui::Key::Enter));
+                    if keyboard_enter {
+                        self.play_track(ui.ctx(), id);
+                    } else if let Some(value) = rating_clicked {
                         let next = if self.rating(id) == value { 0 } else { value };
                         self.set_rating(id, next);
                     } else if heart_clicked {
@@ -974,6 +979,10 @@ impl RPlayerApp {
                             ui.close_menu();
                         }
                     });
+
+                    if response.has_focus() {
+                        crate::ui::focus::ring_rect(ui, rect, 9);
+                    }
                 }
             });
     }

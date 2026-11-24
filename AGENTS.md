@@ -8,7 +8,9 @@ the contract for AI agents and human contributors. Keep it accurate.
 Windows GNU toolchain on this machine:
 
 ```powershell
-$env:PATH='D:\Workspace\_tools\rust\bin;C:\Users\Randy\AppData\Local\Microsoft\WinGet\Packages\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\mingw64\bin;' + $env:PATH
+$env:RUSTUP_TOOLCHAIN='stable-x86_64-pc-windows-gnu'
+$env:PATH='C:\Users\Randy\.cargo\bin;C:\Users\Randy\AppData\Local\Microsoft\WinGet\Packages\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\mingw64\bin;' + $env:PATH
+$env:CARGO_BUILD_JOBS='1'
 cargo build --release --manifest-path D:\Workspace\RPlayer\Cargo.toml --bin rplayer
 cargo test --release --manifest-path D:\Workspace\RPlayer\Cargo.toml
 ```
@@ -50,6 +52,7 @@ src/platform.rs      Windows-specific window/SMTC/tray integration
 src/theme.rs         palettes; all colors come from here
 src/ui/widgets.rs    shared controls and animations
 src/ui/motion.rs     motion tokens and reduced-motion switch
+src/ui/focus.rs      2px focus rings for custom controls
 ```
 
 ## Invariants
@@ -97,11 +100,13 @@ src/ui/motion.rs     motion tokens and reduced-motion switch
 - Page switches fade in via `view_fade` (0.18s ease-out). Keep animations
   subtle and respect reduced-motion if added later.
 - Buttons scale to 0.975 while pressed via `animate_bool_with_time`.
+- Custom controls draw focus with `src/ui/focus.rs`: `ring` for rounded
+  rectangles, `ring_round` for circles, `ring_rect` for table rows/sliders.
 - Text opacity and panel opacity are independent for desktop lyrics.
 
 ## Verification
 
-- Unit tests: `cargo test --release` (currently 54+).
+- Unit tests: `cargo test --release` (currently 55+).
 - Windows UI automation: `agent-desktop snapshot --window-id <id>`, then click
   by `ref_id`; prefer AccessKit names over pixel coordinates.
 - Screenshots must be checked after UI changes; avoid leaving test images in

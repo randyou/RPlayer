@@ -30,6 +30,7 @@ enum Command {
     UndoBatchTags,
     FindDuplicates,
     ClearQueue,
+    Shortcuts,
 }
 
 struct Item {
@@ -39,7 +40,7 @@ struct Item {
     keywords: &'static str,
 }
 
-const ITEMS: [Item; 19] = [
+const ITEMS: [Item; 20] = [
     Item {
         command: Command::PlayPause,
         id: "player.play_pause",
@@ -153,6 +154,12 @@ const ITEMS: [Item; 19] = [
         id: "queue.clear",
         label: "清空播放队列",
         keywords: "clear queue 清空 队列",
+    },
+    Item {
+        command: Command::Shortcuts,
+        id: "help.shortcuts",
+        label: "查看键盘快捷键",
+        keywords: "keyboard shortcut help 快捷键 键盘 帮助",
     },
 ];
 
@@ -332,6 +339,7 @@ impl RPlayerApp {
             Command::UndoBatchTags => self.undo_last_tag_batch(),
             Command::FindDuplicates => self.open_duplicates(),
             Command::ClearQueue => self.clear_queue(),
+            Command::Shortcuts => self.dialog = super::Dialog::Shortcuts,
         }
     }
 }
@@ -347,4 +355,18 @@ fn filtered_commands(query: &str) -> Vec<&'static Item> {
                 || item.id.contains(&query)
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ITEMS;
+    use std::collections::HashSet;
+
+    #[test]
+    fn command_ids_are_unique() {
+        let mut ids = HashSet::new();
+        for item in ITEMS {
+            assert!(ids.insert(item.id), "duplicate command id: {}", item.id);
+        }
+    }
 }

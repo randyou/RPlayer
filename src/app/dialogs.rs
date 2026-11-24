@@ -15,6 +15,43 @@ use crate::ui::widgets;
 
 const FORM_FIELD_WIDTH: f32 = 300.0;
 
+const SHORTCUTS: &[(&str, &str)] = &[
+    ("Tab / Shift+Tab", "在控件之间移动焦点"),
+    ("Space / Enter", "激活当前焦点控件"),
+    ("Esc", "关闭弹窗或面板"),
+    ("F1", "打开快捷键帮助"),
+    ("Ctrl+K", "打开命令面板"),
+    ("Ctrl+F", "聚焦搜索框"),
+    ("Ctrl+O", "添加音乐文件夹"),
+    ("Ctrl+N", "新建播放列表"),
+    ("Ctrl+A", "全选当前列表"),
+    ("Ctrl+,", "打开设置"),
+    ("Ctrl+T", "切换浅色 / 深色主题"),
+    ("Ctrl+E", "打开均衡器"),
+    ("Ctrl+L", "切换桌面歌词"),
+    ("Ctrl+M", "切换迷你播放器"),
+    ("Space", "播放 / 暂停（无焦点时）"),
+    ("← / →", "快退 / 快进 5 秒"),
+    ("↑ / ↓", "调整音量"),
+    ("Ctrl+← / →", "上一首 / 下一首"),
+    ("Delete", "移除选中的歌曲"),
+];
+
+fn shortcut_key(ui: &mut Ui, keys: &str) {
+    Frame::NONE
+        .fill(theme::c().card)
+        .stroke(Stroke::new(1.0_f32, theme::c().border_soft))
+        .corner_radius(CornerRadius::same(5))
+        .inner_margin(Margin::symmetric(7, 3))
+        .show(ui, |ui| {
+            ui.label(
+                RichText::new(keys)
+                    .font(FontId::monospace(10.5))
+                    .color(theme::c().muted),
+            );
+        });
+}
+
 fn fade(color: Color32, alpha: f32) -> Color32 {
     Color32::from_rgba_unmultiplied(
         color.r(),
@@ -628,6 +665,48 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                                 outcome = Outcome::Close;
                             }
                         });
+                    });
+                }
+
+                Dialog::Shortcuts => {
+                    ui.set_width(700.0);
+                    dialog_header(
+                        ui,
+                        "键盘快捷键",
+                        "主要操作都可以只用键盘完成，焦点所在控件会显示绿色描边。",
+                    );
+                    ui.add_space(14.0);
+                    let half = SHORTCUTS.len().div_ceil(2);
+                    egui::Grid::new("shortcut-grid")
+                        .num_columns(4)
+                        .spacing([18.0, 8.0])
+                        .show(ui, |ui| {
+                            for index in 0..half {
+                                shortcut_key(ui, SHORTCUTS[index].0);
+                                ui.label(
+                                    RichText::new(SHORTCUTS[index].1)
+                                        .size(11.5)
+                                        .color(theme::c().text),
+                                );
+                                if let Some((keys, action)) = SHORTCUTS.get(index + half) {
+                                    shortcut_key(ui, keys);
+                                    ui.label(
+                                        RichText::new(*action)
+                                            .size(11.5)
+                                            .color(theme::c().text),
+                                    );
+                                } else {
+                                    ui.label("");
+                                    ui.label("");
+                                }
+                                ui.end_row();
+                            }
+                        });
+                    ui.add_space(16.0);
+                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                        if widgets::primary_button(ui, "关闭").clicked() {
+                            outcome = Outcome::Close;
+                        }
                     });
                 }
 

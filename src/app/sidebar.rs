@@ -415,13 +415,27 @@ impl RPlayerApp {
 
         ui.add_space(2.0);
         ui.horizontal(|ui| {
-            ui.add_space(((ui.available_width() - 150.0) * 0.5).max(0.0));
+            ui.add_space(((ui.available_width() - 196.0) * 0.5).max(0.0));
             ui.label(
                 RichText::new(format!("v{}", env!("CARGO_PKG_VERSION")))
                     .size(10.0)
                     .color(theme::c().faint),
             );
-            ui.add_space(10.0);
+            ui.add_space(9.0);
+            let shortcuts = ui
+                .add(
+                    egui::Label::new(
+                        RichText::new("快捷键").size(10.0).color(theme::c().muted),
+                    )
+                    .sense(Sense::click()),
+                )
+                .on_hover_cursor(egui::CursorIcon::PointingHand);
+            crate::ui::focus::focus_on_click(&shortcuts);
+            crate::ui::focus::ring(ui, &shortcuts);
+            if shortcuts.clicked() {
+                self.dialog = Dialog::Shortcuts;
+            }
+            ui.add_space(9.0);
             let about = ui
                 .add(
                     egui::Label::new(
@@ -430,6 +444,8 @@ impl RPlayerApp {
                     .sense(Sense::click()),
                 )
                 .on_hover_cursor(egui::CursorIcon::PointingHand);
+            crate::ui::focus::focus_on_click(&about);
+            crate::ui::focus::ring(ui, &about);
             if about.clicked() {
                 self.dialog = Dialog::About;
             }

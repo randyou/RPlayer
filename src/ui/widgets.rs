@@ -26,6 +26,8 @@ pub fn icon_button(ui: &mut Ui, icon: Icon, size: f32, tooltip: &str) -> Respons
         .on_hover_cursor(CursorIcon::PointingHand)
         .on_hover_text(tooltip);
     mark(&response, WidgetType::Button, tooltip, None);
+    crate::ui::focus::focus_on_click(&response);
+    crate::ui::focus::ring(ui, &response);
     response
 }
 
@@ -54,6 +56,8 @@ pub fn icon_button_tinted(
         .on_hover_cursor(CursorIcon::PointingHand)
         .on_hover_text(tooltip);
     mark(&response, WidgetType::Button, tooltip, Some(active));
+    crate::ui::focus::focus_on_click(&response);
+    crate::ui::focus::ring(ui, &response);
     response
 }
 
@@ -89,6 +93,8 @@ pub fn glyph_button_tinted(
         .on_hover_cursor(CursorIcon::PointingHand)
         .on_hover_text(tooltip);
     mark(&response, WidgetType::Button, tooltip, Some(active));
+    crate::ui::focus::focus_on_click(&response);
+    crate::ui::focus::ring(ui, &response);
     response
 }
 
@@ -101,6 +107,7 @@ pub fn circle_button(
     tooltip: &str,
 ) -> Response {
     let (rect, response) = ui.allocate_exact_size(Vec2::splat(size), Sense::click());
+    crate::ui::focus::focus_on_click(&response);
     let hovered = response.hovered();
     let center = rect.center();
     let radius = size * 0.5;
@@ -112,14 +119,17 @@ pub fn circle_button(
             .circle_filled(center, radius * if hovered { 1.03 } else { 1.0 }, fill);
     }
     icons::paint(ui.painter(), rect.shrink(size * 0.30), icon, tint);
-    response
+    let response = response
         .on_hover_cursor(CursorIcon::PointingHand)
-        .on_hover_text(tooltip)
+        .on_hover_text(tooltip);
+    crate::ui::focus::ring_round(ui, &response);
+    response
 }
 
 pub fn play_button(ui: &mut Ui, playing: bool, enabled: bool) -> Response {
     let size = 50.0;
     let (rect, response) = ui.allocate_exact_size(Vec2::splat(size), Sense::click());
+    crate::ui::focus::focus_on_click(&response);
     let center = rect.center();
     let radius = size * 0.5;
 
@@ -164,6 +174,7 @@ pub fn play_button(ui: &mut Ui, playing: bool, enabled: bool) -> Response {
         if playing { "暂停" } else { "播放" },
         None,
     );
+    crate::ui::focus::ring_round(ui, &response);
     response
 }
 
@@ -239,6 +250,8 @@ pub fn nav_item(
 
     let response = response.on_hover_cursor(CursorIcon::PointingHand);
     mark(&response, WidgetType::Button, label, Some(selected));
+    crate::ui::focus::focus_on_click(&response);
+    crate::ui::focus::ring(ui, &response);
     response
 }
 
@@ -290,6 +303,8 @@ pub fn playlist_item(ui: &mut Ui, name: &str, selected: bool) -> Response {
     );
     let response = response.on_hover_cursor(CursorIcon::PointingHand);
     mark(&response, WidgetType::Button, name, Some(selected));
+    crate::ui::focus::focus_on_click(&response);
+    crate::ui::focus::ring(ui, &response);
     response
 }
 
@@ -326,6 +341,7 @@ pub fn search_box(ui: &mut Ui, query: &mut String, hint: &str) -> Response {
 pub fn seek_bar(ui: &mut Ui, position: f64, duration: f64) -> Option<f64> {
     let width = ui.available_width().max(80.0);
     let (rect, response) = ui.allocate_exact_size(Vec2::new(width, 18.0), Sense::click_and_drag());
+    crate::ui::focus::focus_on_click(&response);
     let hovered = response.hovered() || response.dragged();
     let fraction = if duration > 0.0 {
         (position / duration).clamp(0.0, 1.0) as f32
@@ -367,6 +383,24 @@ pub fn seek_bar(ui: &mut Ui, position: f64, duration: f64) -> Option<f64> {
         ),
         None,
     );
+    if response.has_focus() {
+        crate::ui::focus::ring_rect(ui, rect, 4);
+    }
+
+    if response.has_focus() {
+        let step = ui.input(|input| {
+            if input.key_pressed(egui::Key::ArrowLeft) {
+                Some(-5.0_f64)
+            } else if input.key_pressed(egui::Key::ArrowRight) {
+                Some(5.0_f64)
+            } else {
+                None
+            }
+        });
+        if let Some(step) = step {
+            return Some((position + step).clamp(0.0, duration.max(0.0)));
+        }
+    }
 
     let pointer = response.interact_pointer_pos()?;
     if response.clicked() || response.dragged() {
@@ -380,6 +414,7 @@ pub fn seek_bar(ui: &mut Ui, position: f64, duration: f64) -> Option<f64> {
 pub fn volume_bar(ui: &mut Ui, volume: f32) -> Option<f32> {
     let width = 84.0;
     let (rect, response) = ui.allocate_exact_size(Vec2::new(width, 18.0), Sense::click_and_drag());
+    crate::ui::focus::focus_on_click(&response);
     let rail = Rect::from_center_size(rect.center(), Vec2::new(width, 4.0));
     ui.painter()
         .rect_filled(rail, CornerRadius::same(2), theme::c().border);
@@ -402,6 +437,27 @@ pub fn volume_bar(ui: &mut Ui, volume: f32) -> Option<f32> {
     if response.hovered() {
         ui.ctx().set_cursor_icon(CursorIcon::PointingHand);
     }
+    mark(
+        &response,
+        WidgetType::Slider,
+        &format!("音量 {:.0}%", volume.clamp(0.0, 1.0) * 100.0),
+        None,
+    );
+    if response.has_focus() {
+        crate::ui::focus::ring_rect(ui, rect, 4);
+        let step = ui.input(|input| {
+            if input.key_pressed(egui::Key::ArrowUp) {
+                Some(0.05_f32)
+            } else if input.key_pressed(egui::Key::ArrowDown) {
+                Some(-0.05_f32)
+            } else {
+                None
+            }
+        });
+        if let Some(step) = step {
+            return Some((volume + step).clamp(0.0, 1.0));
+        }
+    }
     if let Some(pointer) = response.interact_pointer_pos() {
         if response.clicked() || response.dragged() {
             let t = ((pointer.x - rail.left()) / rail.width()).clamp(0.0, 1.0);
@@ -412,7 +468,10 @@ pub fn volume_bar(ui: &mut Ui, volume: f32) -> Option<f32> {
 }
 
 pub fn text_button(ui: &mut Ui, text: impl Into<egui::WidgetText>) -> Response {
-    ui.button(text).on_hover_cursor(CursorIcon::PointingHand)
+    let response = ui.button(text).on_hover_cursor(CursorIcon::PointingHand);
+    crate::ui::focus::focus_on_click(&response);
+    crate::ui::focus::ring(ui, &response);
+    response
 }
 
 pub fn primary_button(ui: &mut Ui, text: &str) -> Response {
@@ -420,7 +479,10 @@ pub fn primary_button(ui: &mut Ui, text: &str) -> Response {
         .fill(theme::c().accent)
         .corner_radius(10)
         .min_size(Vec2::new(96.0, 40.0));
-    ui.add(button).on_hover_cursor(CursorIcon::PointingHand)
+    let response = ui.add(button).on_hover_cursor(CursorIcon::PointingHand);
+    crate::ui::focus::focus_on_click(&response);
+    crate::ui::focus::ring(ui, &response);
+    response
 }
 
 pub fn primary_button_full(ui: &mut Ui, text: &str) -> Response {
@@ -441,6 +503,8 @@ pub fn primary_button_full(ui: &mut Ui, text: &str) -> Response {
     );
     let response = response.on_hover_cursor(CursorIcon::PointingHand);
     mark(&response, WidgetType::Button, text, None);
+    crate::ui::focus::focus_on_click(&response);
+    crate::ui::focus::ring(ui, &response);
     response
 }
 
@@ -450,7 +514,10 @@ pub fn secondary_button(ui: &mut Ui, text: &str) -> Response {
         .stroke(Stroke::new(1.0_f32, theme::c().border))
         .corner_radius(10)
         .min_size(Vec2::new(72.0, 38.0));
-    ui.add(button).on_hover_cursor(CursorIcon::PointingHand)
+    let response = ui.add(button).on_hover_cursor(CursorIcon::PointingHand);
+    crate::ui::focus::focus_on_click(&response);
+    crate::ui::focus::ring(ui, &response);
+    response
 }
 
 pub fn danger_button(ui: &mut Ui, text: &str) -> Response {
@@ -459,7 +526,10 @@ pub fn danger_button(ui: &mut Ui, text: &str) -> Response {
         .stroke(Stroke::new(1.0_f32, theme::c().danger.gamma_multiply(0.45)))
         .corner_radius(10)
         .min_size(Vec2::new(72.0, 38.0));
-    ui.add(button).on_hover_cursor(CursorIcon::PointingHand)
+    let response = ui.add(button).on_hover_cursor(CursorIcon::PointingHand);
+    crate::ui::focus::focus_on_click(&response);
+    crate::ui::focus::ring(ui, &response);
+    response
 }
 
 pub fn rating_stars(ui: &mut Ui, rating: u8, star_size: f32) -> Option<u8> {
@@ -506,6 +576,8 @@ pub fn rating_stars(ui: &mut Ui, rating: u8, star_size: f32) -> Option<u8> {
         &format!("评分：{rating} / 5"),
         None,
     );
+    crate::ui::focus::focus_on_click(&response);
+    crate::ui::focus::ring(ui, &response);
     result
 }
 
@@ -532,6 +604,8 @@ pub fn chip(ui: &mut Ui, text: &str, selected: bool) -> Response {
     .min_size(Vec2::new(64.0, 30.0));
     let response = ui.add(button).on_hover_cursor(CursorIcon::PointingHand);
     mark(&response, WidgetType::Button, text, Some(selected));
+    crate::ui::focus::focus_on_click(&response);
+    crate::ui::focus::ring(ui, &response);
     response
 }
 
@@ -573,6 +647,8 @@ pub fn toggle_switch(ui: &mut Ui, on: &mut bool) -> Response {
     );
     let response = response.on_hover_cursor(CursorIcon::PointingHand);
     mark(&response, WidgetType::Checkbox, "开关", Some(*on));
+    crate::ui::focus::focus_on_click(&response);
+    crate::ui::focus::ring(ui, &response);
     response
 }
 
@@ -620,6 +696,8 @@ pub fn primary_button_icon(ui: &mut Ui, icon: Icon, text: &str) -> Response {
     );
     let response = response.on_hover_cursor(CursorIcon::PointingHand);
     mark(&response, WidgetType::Button, text, None);
+    crate::ui::focus::focus_on_click(&response);
+    crate::ui::focus::ring(ui, &response);
     response
 }
 
@@ -658,6 +736,8 @@ pub fn secondary_button_icon(ui: &mut Ui, icon: Icon, text: &str) -> Response {
     );
     let response = response.on_hover_cursor(CursorIcon::PointingHand);
     mark(&response, WidgetType::Button, text, None);
+    crate::ui::focus::focus_on_click(&response);
+    crate::ui::focus::ring(ui, &response);
     response
 }
 
@@ -693,6 +773,8 @@ pub fn primary_button_full_icon(ui: &mut Ui, icon: Icon, text: &str) -> Response
     );
     let response = response.on_hover_cursor(CursorIcon::PointingHand);
     mark(&response, WidgetType::Button, text, None);
+    crate::ui::focus::focus_on_click(&response);
+    crate::ui::focus::ring(ui, &response);
     response
 }
 

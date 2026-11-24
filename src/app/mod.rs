@@ -158,6 +158,7 @@ pub(super) enum Dialog {
         error: Option<String>,
     },
     Folders,
+    Shortcuts,
     About,
 }
 
@@ -2670,6 +2671,10 @@ impl RPlayerApp {
     }
 
     fn handle_shortcuts(&mut self, ctx: &egui::Context) {
+        if ctx.input(|i| i.key_pressed(Key::F1)) {
+            self.dialog = Dialog::Shortcuts;
+        }
+
         if ctx.input(|i| i.key_pressed(Key::Escape)) {
             if self.dialog != Dialog::None {
                 self.dialog = Dialog::None;
@@ -2690,6 +2695,21 @@ impl RPlayerApp {
 
         if ctx.input(|input| input.modifiers.command && input.key_pressed(Key::K)) {
             self.toggle_command_palette();
+            return;
+        }
+
+        // These commands stay available even when a custom widget owns focus;
+        // they are the entry points a keyboard-only user needs most.
+        if ctx.input(|input| input.modifiers.command && input.key_pressed(Key::F)) {
+            self.focus_search = true;
+            return;
+        }
+        if ctx.input(|input| input.modifiers.command && input.key_pressed(Key::Comma)) {
+            self.settings_open = !self.settings_open;
+            return;
+        }
+        if ctx.input(|input| input.modifiers.command && input.key_pressed(Key::T)) {
+            self.toggle_theme(ctx);
             return;
         }
 
