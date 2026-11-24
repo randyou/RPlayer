@@ -1,0 +1,1223 @@
+{
+  "schema": "rplayer.design.inventory/1",
+  "specVersion": "1.0.0",
+  "baseline": "0.13.5",
+  "product": "RPlayer",
+  "viewport": {
+    "design": [
+      1440,
+      900
+    ],
+    "minimum": [
+      1120,
+      720
+    ],
+    "systemPlates": [
+      1600,
+      1000
+    ]
+  },
+  "counts": {
+    "designed": 52,
+    "native": 7,
+    "total": 59
+  },
+  "surfaces": [
+    {
+      "id": "VIEW.LIBRARY",
+      "category": "view",
+      "title": "本地曲库",
+      "source": "src/app/library_view.rs",
+      "states": [
+        "default",
+        "loading",
+        "empty",
+        "search-empty",
+        "multiselect",
+        "scanning"
+      ],
+      "actions": [
+        "play",
+        "select",
+        "select-all",
+        "sort",
+        "filter",
+        "search",
+        "context-menu"
+      ],
+      "motion": [
+        "table.enter",
+        "row.hover",
+        "row.select",
+        "row.playing"
+      ],
+      "a11y": "grid; rows aria-selected; Space toggles"
+    },
+    {
+      "id": "VIEW.ALBUMS",
+      "category": "view",
+      "title": "专辑",
+      "source": "src/app/browse.rs",
+      "states": [
+        "default",
+        "empty"
+      ],
+      "actions": [
+        "open-album",
+        "play",
+        "queue",
+        "context-menu"
+      ],
+      "motion": [
+        "card.hover",
+        "grid.enter"
+      ],
+      "a11y": "grid; card label includes artist/year"
+    },
+    {
+      "id": "VIEW.ALBUM_DETAIL",
+      "category": "view",
+      "title": "专辑详情",
+      "source": "src/app/browse.rs",
+      "states": [
+        "default",
+        "empty"
+      ],
+      "actions": [
+        "back",
+        "play-album",
+        "queue",
+        "open-track"
+      ],
+      "motion": [
+        "page.enter",
+        "row.hover"
+      ],
+      "a11y": "heading level 2; back button labelled"
+    },
+    {
+      "id": "VIEW.ARTISTS",
+      "category": "view",
+      "title": "艺术家",
+      "source": "src/app/browse.rs",
+      "states": [
+        "default",
+        "empty"
+      ],
+      "actions": [
+        "open-artist",
+        "play",
+        "queue",
+        "context-menu"
+      ],
+      "motion": [
+        "card.hover",
+        "grid.enter"
+      ],
+      "a11y": "grid; initials are decorative"
+    },
+    {
+      "id": "VIEW.ARTIST_DETAIL",
+      "category": "view",
+      "title": "艺术家详情",
+      "source": "src/app/browse.rs",
+      "states": [
+        "default",
+        "empty"
+      ],
+      "actions": [
+        "back",
+        "play-all",
+        "queue",
+        "open-album"
+      ],
+      "motion": [
+        "page.enter",
+        "row.hover"
+      ],
+      "a11y": "heading level 2; album group labels"
+    },
+    {
+      "id": "VIEW.FAVORITES",
+      "category": "view",
+      "title": "我的收藏",
+      "source": "src/app/library_view.rs",
+      "states": [
+        "default",
+        "empty"
+      ],
+      "actions": [
+        "play",
+        "unfavorite",
+        "context-menu"
+      ],
+      "motion": [
+        "table.enter",
+        "row.hover"
+      ],
+      "a11y": "empty state names the next action"
+    },
+    {
+      "id": "VIEW.RECENT",
+      "category": "view",
+      "title": "最近播放",
+      "source": "src/app/library_view.rs",
+      "states": [
+        "default",
+        "empty"
+      ],
+      "actions": [
+        "play",
+        "context-menu"
+      ],
+      "motion": [
+        "table.enter",
+        "row.hover"
+      ],
+      "a11y": "time labels are text, not colour only"
+    },
+    {
+      "id": "VIEW.FOLDERS",
+      "category": "view",
+      "title": "音乐目录",
+      "source": "src/app/dialogs.rs",
+      "states": [
+        "default",
+        "empty",
+        "scanning"
+      ],
+      "actions": [
+        "add-folder",
+        "rescan",
+        "remove-folder",
+        "manage"
+      ],
+      "motion": [
+        "row.hover",
+        "progress.fill"
+      ],
+      "a11y": "folder list; remove needs confirmation"
+    },
+    {
+      "id": "VIEW.PLAYLIST",
+      "category": "view",
+      "title": "播放列表详情",
+      "source": "src/app/library_view.rs",
+      "states": [
+        "default",
+        "empty"
+      ],
+      "actions": [
+        "play",
+        "shuffle",
+        "remove-track",
+        "export-m3u",
+        "context-menu"
+      ],
+      "motion": [
+        "page.enter",
+        "row.hover"
+      ],
+      "a11y": "header actions; track rows selected state"
+    },
+    {
+      "id": "VIEW.SMART",
+      "category": "view",
+      "title": "智能歌单详情",
+      "source": "src/app/smart.rs",
+      "states": [
+        "default",
+        "empty",
+        "updating"
+      ],
+      "actions": [
+        "play",
+        "edit-rules",
+        "refresh",
+        "context-menu"
+      ],
+      "motion": [
+        "page.enter",
+        "rule.update"
+      ],
+      "a11y": "rule summary readable as sentence"
+    },
+    {
+      "id": "CHROME.TITLEBAR",
+      "category": "global",
+      "title": "窗口标题栏",
+      "source": "src/app/mod.rs",
+      "states": [
+        "default",
+        "focused",
+        "maximized"
+      ],
+      "actions": [
+        "drag",
+        "minimize",
+        "maximize",
+        "close"
+      ],
+      "motion": [
+        "chrome.hover"
+      ],
+      "a11y": "window controls labelled; drag region excluded from controls"
+    },
+    {
+      "id": "CHROME.SIDEBAR",
+      "category": "global",
+      "title": "侧边导航",
+      "source": "src/app/sidebar.rs",
+      "states": [
+        "default",
+        "collapsed",
+        "scanning"
+      ],
+      "actions": [
+        "navigate",
+        "new-playlist",
+        "new-smart",
+        "import-m3u",
+        "export-m3u"
+      ],
+      "motion": [
+        "nav.select",
+        "nav.hover"
+      ],
+      "a11y": "nav landmark; current page aria-current"
+    },
+    {
+      "id": "CHROME.PLAYER_BAR",
+      "category": "global",
+      "title": "底部播放条",
+      "source": "src/app/player_bar.rs",
+      "states": [
+        "playing",
+        "paused",
+        "no-track",
+        "seeking",
+        "volume-open",
+        "mini"
+      ],
+      "actions": [
+        "play-pause",
+        "prev",
+        "next",
+        "seek",
+        "volume",
+        "mute",
+        "mode",
+        "queue",
+        "lyrics",
+        "mini",
+        "immersive"
+      ],
+      "motion": [
+        "bar.enter",
+        "button.press",
+        "seek.drag",
+        "cover.crossfade"
+      ],
+      "a11y": "transport order fixed; Space global"
+    },
+    {
+      "id": "CHROME.NOW_RAIL",
+      "category": "global",
+      "title": "正在播放侧栏",
+      "source": "src/app/now_rail.rs",
+      "states": [
+        "playing",
+        "no-track",
+        "collapsed"
+      ],
+      "actions": [
+        "favorite",
+        "download-cover",
+        "rematch",
+        "open-now",
+        "queue"
+      ],
+      "motion": [
+        "rail.enter",
+        "cover.crossfade"
+      ],
+      "a11y": "complementary landmark; hidden below height"
+    },
+    {
+      "id": "PANEL.QUEUE",
+      "category": "global",
+      "title": "播放队列",
+      "source": "src/app/mod.rs",
+      "states": [
+        "open",
+        "empty",
+        "current"
+      ],
+      "actions": [
+        "play-row",
+        "remove",
+        "clear",
+        "save-as-playlist",
+        "close"
+      ],
+      "motion": [
+        "drawer.open",
+        "drawer.close",
+        "row.hover"
+      ],
+      "a11y": "dialog role; focus trap; Esc closes"
+    },
+    {
+      "id": "PANEL.COMMAND",
+      "category": "global",
+      "title": "命令面板",
+      "source": "src/app/command_palette.rs",
+      "states": [
+        "closed",
+        "open",
+        "typing",
+        "no-results"
+      ],
+      "actions": [
+        "query",
+        "move",
+        "execute",
+        "close"
+      ],
+      "motion": [
+        "command.open",
+        "command.close",
+        "list.move"
+      ],
+      "a11y": "combobox/listbox; aria-activedescendant"
+    },
+    {
+      "id": "FEEDBACK.TOAST",
+      "category": "global",
+      "title": "轻提示",
+      "source": "src/app/mod.rs",
+      "states": [
+        "info",
+        "success",
+        "error",
+        "undo"
+      ],
+      "actions": [
+        "dismiss",
+        "undo"
+      ],
+      "motion": [
+        "toast.enter",
+        "toast.exit"
+      ],
+      "a11y": "aria-live=polite; error uses role=alert"
+    },
+    {
+      "id": "STATE.BATCH_BAR",
+      "category": "global",
+      "title": "多选操作条",
+      "source": "src/app/library_view.rs",
+      "states": [
+        "hidden",
+        "selected"
+      ],
+      "actions": [
+        "add-to-playlist",
+        "batch-tags",
+        "remove",
+        "clear"
+      ],
+      "motion": [
+        "batch.enter",
+        "button.press"
+      ],
+      "a11y": "count announced; destructive separated"
+    },
+    {
+      "id": "OVERLAY.LYRICS_DEFAULT",
+      "category": "overlay",
+      "title": "桌面歌词 · 默认",
+      "source": "src/overlay.rs",
+      "states": [
+        "default",
+        "no-lyrics",
+        "paused"
+      ],
+      "actions": [
+        "drag",
+        "click-line",
+        "context-menu",
+        "close"
+      ],
+      "motion": [
+        "lyrics.line",
+        "lyrics.panel"
+      ],
+      "a11y": "always-on-top; Esc not required; lock available"
+    },
+    {
+      "id": "OVERLAY.LYRICS_HOVER",
+      "category": "overlay",
+      "title": "桌面歌词 · 悬停",
+      "source": "src/overlay.rs",
+      "states": [
+        "hover",
+        "locked"
+      ],
+      "actions": [
+        "gear",
+        "lock",
+        "close",
+        "drag"
+      ],
+      "motion": [
+        "lyrics.controls"
+      ],
+      "a11y": "controls only on hover/focus; 44px hit area"
+    },
+    {
+      "id": "OVERLAY.LYRICS_LOCKED",
+      "category": "overlay",
+      "title": "桌面歌词 · 锁定",
+      "source": "src/overlay.rs",
+      "states": [
+        "locked"
+      ],
+      "actions": [
+        "double-click-unlock",
+        "tray-unlock"
+      ],
+      "motion": [
+        "lyrics.lock"
+      ],
+      "a11y": "all controls hidden; unlock path documented"
+    },
+    {
+      "id": "OVERLAY.LYRICS_EMPTY",
+      "category": "overlay",
+      "title": "桌面歌词 · 无歌词",
+      "source": "src/overlay.rs",
+      "states": [
+        "no-lyrics",
+        "not-playing"
+      ],
+      "actions": [
+        "rematch",
+        "close"
+      ],
+      "motion": [
+        "lyrics.panel"
+      ],
+      "a11y": "guidance mentions .lrc next to file"
+    },
+    {
+      "id": "OVERLAY.MINI_CLASSIC",
+      "category": "overlay",
+      "title": "迷你播放器 · 经典",
+      "source": "src/overlay.rs",
+      "states": [
+        "playing",
+        "paused",
+        "no-track"
+      ],
+      "actions": [
+        "drag",
+        "play-pause",
+        "prev",
+        "next",
+        "seek",
+        "favorite",
+        "expand",
+        "lyrics",
+        "close",
+        "on-top"
+      ],
+      "motion": [
+        "mini.enter",
+        "button.press"
+      ],
+      "a11y": "410x146; controls labelled; drag handle"
+    },
+    {
+      "id": "OVERLAY.MINI_COMPACT",
+      "category": "overlay",
+      "title": "迷你播放器 · 紧凑",
+      "source": "src/overlay.rs",
+      "states": [
+        "playing",
+        "paused",
+        "no-track"
+      ],
+      "actions": [
+        "drag",
+        "play-pause",
+        "prev",
+        "next",
+        "seek",
+        "favorite",
+        "expand",
+        "lyrics",
+        "close"
+      ],
+      "motion": [
+        "mini.compact"
+      ],
+      "a11y": "text-first; no cover; same state as classic"
+    },
+    {
+      "id": "TRAY.MENU",
+      "category": "overlay",
+      "title": "系统托盘菜单",
+      "source": "src/platform/tray.rs",
+      "states": [
+        "closed",
+        "open",
+        "playing",
+        "paused"
+      ],
+      "actions": [
+        "show",
+        "play-pause",
+        "prev",
+        "next",
+        "lyrics",
+        "settings",
+        "exit"
+      ],
+      "motion": [
+        "tray.open"
+      ],
+      "a11y": "native Win32 menu; check marks for lyrics; exit confirmed"
+    },
+    {
+      "id": "MENU.TRACK",
+      "category": "menu",
+      "title": "曲目右键菜单",
+      "source": "src/app/library_view.rs",
+      "states": [
+        "closed",
+        "open",
+        "submenu"
+      ],
+      "actions": [
+        "play",
+        "favorite",
+        "rate",
+        "add-to-playlist",
+        "remove-from-playlist",
+        "find-duplicates",
+        "edit-lyrics",
+        "rematch",
+        "lrclib",
+        "reveal",
+        "edit-tags",
+        "remove"
+      ],
+      "motion": [
+        "menu.open",
+        "menu.item"
+      ],
+      "a11y": "menu role; arrow keys; submenu delay 120ms"
+    },
+    {
+      "id": "MENU.ALBUM",
+      "category": "menu",
+      "title": "专辑右键菜单",
+      "source": "src/app/browse.rs",
+      "states": [
+        "closed",
+        "open"
+      ],
+      "actions": [
+        "open-album",
+        "play-album",
+        "queue"
+      ],
+      "motion": [
+        "menu.open"
+      ],
+      "a11y": "menu role; 3 items"
+    },
+    {
+      "id": "MENU.ARTIST",
+      "category": "menu",
+      "title": "艺术家右键菜单",
+      "source": "src/app/browse.rs",
+      "states": [
+        "closed",
+        "open"
+      ],
+      "actions": [
+        "open-artist",
+        "play-all",
+        "queue"
+      ],
+      "motion": [
+        "menu.open"
+      ],
+      "a11y": "menu role; 3 items"
+    },
+    {
+      "id": "MENU.PLAYLIST",
+      "category": "menu",
+      "title": "播放列表菜单",
+      "source": "src/app/sidebar.rs",
+      "states": [
+        "closed",
+        "open"
+      ],
+      "actions": [
+        "play",
+        "rename",
+        "delete"
+      ],
+      "motion": [
+        "menu.open"
+      ],
+      "a11y": "delete is destructive and last"
+    },
+    {
+      "id": "MENU.SMART",
+      "category": "menu",
+      "title": "智能歌单菜单",
+      "source": "src/app/sidebar.rs",
+      "states": [
+        "closed",
+        "open"
+      ],
+      "actions": [
+        "play",
+        "edit-rules",
+        "delete"
+      ],
+      "motion": [
+        "menu.open"
+      ],
+      "a11y": "delete is destructive and last"
+    },
+    {
+      "id": "MENU.LYRICS",
+      "category": "menu",
+      "title": "桌面歌词菜单",
+      "source": "src/overlay.rs",
+      "states": [
+        "closed",
+        "open"
+      ],
+      "actions": [
+        "panel-opacity",
+        "text-opacity",
+        "font-size",
+        "lock",
+        "close"
+      ],
+      "motion": [
+        "menu.open",
+        "slider.drag"
+      ],
+      "a11y": "sliders keyboard operable; values announced"
+    },
+    {
+      "id": "DIALOG.NEW_PLAYLIST",
+      "category": "dialog",
+      "title": "新建播放列表",
+      "source": "src/app/dialogs.rs",
+      "states": [
+        "open",
+        "invalid-empty",
+        "submitting"
+      ],
+      "actions": [
+        "name",
+        "create",
+        "cancel"
+      ],
+      "motion": [
+        "modal.open",
+        "modal.close"
+      ],
+      "a11y": "dialog; initial focus name; Enter creates"
+    },
+    {
+      "id": "DIALOG.RENAME_PLAYLIST",
+      "category": "dialog",
+      "title": "重命名播放列表",
+      "source": "src/app/dialogs.rs",
+      "states": [
+        "open",
+        "invalid-empty"
+      ],
+      "actions": [
+        "rename",
+        "save",
+        "cancel"
+      ],
+      "motion": [
+        "modal.open"
+      ],
+      "a11y": "input prefilled and selected"
+    },
+    {
+      "id": "DIALOG.DELETE_PLAYLIST",
+      "category": "dialog",
+      "title": "删除播放列表",
+      "source": "src/app/dialogs.rs",
+      "states": [
+        "open"
+      ],
+      "actions": [
+        "delete",
+        "cancel"
+      ],
+      "motion": [
+        "modal.open"
+      ],
+      "a11y": "destructive primary; explains songs remain"
+    },
+    {
+      "id": "DIALOG.REMOVE_TRACK",
+      "category": "dialog",
+      "title": "从音乐库移除",
+      "source": "src/app/dialogs.rs",
+      "states": [
+        "open"
+      ],
+      "actions": [
+        "remove",
+        "cancel"
+      ],
+      "motion": [
+        "modal.open"
+      ],
+      "a11y": "states file is not deleted; re-scan returns"
+    },
+    {
+      "id": "DIALOG.EDIT_TAGS",
+      "category": "dialog",
+      "title": "编辑标签",
+      "source": "src/app/dialogs.rs",
+      "states": [
+        "open",
+        "saving",
+        "error"
+      ],
+      "actions": [
+        "edit-fields",
+        "save",
+        "cancel"
+      ],
+      "motion": [
+        "modal.open"
+      ],
+      "a11y": "labels; backup note visible"
+    },
+    {
+      "id": "DIALOG.BATCH_TAGS",
+      "category": "dialog",
+      "title": "批量编辑标签",
+      "source": "src/app/dialogs.rs",
+      "states": [
+        "open",
+        "saving",
+        "partial-error"
+      ],
+      "actions": [
+        "edit-fields",
+        "save",
+        "cancel"
+      ],
+      "motion": [
+        "modal.open"
+      ],
+      "a11y": "count announced; only filled fields written"
+    },
+    {
+      "id": "DIALOG.DUPLICATES",
+      "category": "dialog",
+      "title": "重复歌曲",
+      "source": "src/app/dialogs.rs",
+      "states": [
+        "open",
+        "empty",
+        "resolved"
+      ],
+      "actions": [
+        "keep",
+        "locate",
+        "ignore",
+        "close"
+      ],
+      "motion": [
+        "modal.open"
+      ],
+      "a11y": "group actions labelled; no bulk delete"
+    },
+    {
+      "id": "DIALOG.LYRICS_MATCH",
+      "category": "dialog",
+      "title": "重新匹配歌词",
+      "source": "src/app/dialogs.rs",
+      "states": [
+        "open",
+        "searching",
+        "results",
+        "empty",
+        "error"
+      ],
+      "actions": [
+        "query",
+        "search",
+        "use",
+        "cancel"
+      ],
+      "motion": [
+        "modal.open",
+        "list.update"
+      ],
+      "a11y": "candidate rows include duration and timeline badge"
+    },
+    {
+      "id": "DIALOG.FOLDERS",
+      "category": "dialog",
+      "title": "音乐文件夹",
+      "source": "src/app/dialogs.rs",
+      "states": [
+        "open",
+        "empty"
+      ],
+      "actions": [
+        "add",
+        "rescan",
+        "remove",
+        "close"
+      ],
+      "motion": [
+        "modal.open"
+      ],
+      "a11y": "remove folder confirms; native picker"
+    },
+    {
+      "id": "DIALOG.SHORTCUTS",
+      "category": "dialog",
+      "title": "键盘快捷键",
+      "source": "src/app/dialogs.rs",
+      "states": [
+        "open"
+      ],
+      "actions": [
+        "close"
+      ],
+      "motion": [
+        "modal.open"
+      ],
+      "a11y": "two columns; keycaps readable"
+    },
+    {
+      "id": "DIALOG.ABOUT",
+      "category": "dialog",
+      "title": "关于 RPlayer",
+      "source": "src/app/dialogs.rs",
+      "states": [
+        "open"
+      ],
+      "actions": [
+        "check-update",
+        "close"
+      ],
+      "motion": [
+        "modal.open"
+      ],
+      "a11y": "version and data dir selectable"
+    },
+    {
+      "id": "TOOL.EQ",
+      "category": "tool",
+      "title": "均衡器",
+      "source": "src/app/equalizer.rs",
+      "states": [
+        "off",
+        "on",
+        "preset",
+        "custom"
+      ],
+      "actions": [
+        "toggle",
+        "preset",
+        "band",
+        "preamp",
+        "reset",
+        "close"
+      ],
+      "motion": [
+        "eq.open",
+        "slider.drag"
+      ],
+      "a11y": "sliders labelled by frequency; 10 bands"
+    },
+    {
+      "id": "TOOL.SMART_BUILDER",
+      "category": "tool",
+      "title": "新建智能歌单",
+      "source": "src/app/smart.rs",
+      "states": [
+        "empty",
+        "rules",
+        "no-results",
+        "saving"
+      ],
+      "actions": [
+        "name",
+        "match-mode",
+        "add-rule",
+        "remove-rule",
+        "limit",
+        "save",
+        "cancel"
+      ],
+      "motion": [
+        "smart.open",
+        "rule.add"
+      ],
+      "a11y": "rule rows labelled; live match count"
+    },
+    {
+      "id": "TOOL.HEALTH",
+      "category": "tool",
+      "title": "曲库健康检查",
+      "source": "src/app/health.rs",
+      "states": [
+        "scanning",
+        "ok",
+        "issues"
+      ],
+      "actions": [
+        "scan",
+        "locate-missing",
+        "close"
+      ],
+      "motion": [
+        "health.open",
+        "progress.fill"
+      ],
+      "a11y": "issue counts; no auto-delete"
+    },
+    {
+      "id": "TOOL.LYRICS_EDITOR",
+      "category": "tool",
+      "title": "编辑歌词",
+      "source": "src/app/lyrics_edit.rs",
+      "states": [
+        "loading",
+        "editing",
+        "dirty",
+        "saving",
+        "error"
+      ],
+      "actions": [
+        "edit-line",
+        "set-time",
+        "add-line",
+        "delete-line",
+        "save",
+        "cancel"
+      ],
+      "motion": [
+        "editor.open",
+        "row.focus"
+      ],
+      "a11y": "timestamp format mm:ss.xx; unsaved warning"
+    },
+    {
+      "id": "SETTINGS.APPEARANCE",
+      "category": "settings",
+      "title": "设置 · 外观",
+      "source": "src/app/settings.rs",
+      "states": [
+        "default",
+        "theme-switch",
+        "reduced-motion"
+      ],
+      "actions": [
+        "theme",
+        "reduced-motion"
+      ],
+      "motion": [
+        "theme.switch"
+      ],
+      "a11y": "2 theme cards; reduce motion 0ms"
+    },
+    {
+      "id": "SETTINGS.DESKTOP_LYRICS",
+      "category": "settings",
+      "title": "设置 · 桌面歌词",
+      "source": "src/app/settings.rs",
+      "states": [
+        "default",
+        "disabled",
+        "locked"
+      ],
+      "actions": [
+        "show",
+        "panel-opacity",
+        "text-opacity",
+        "font-size",
+        "lock"
+      ],
+      "motion": [
+        "slider.drag"
+      ],
+      "a11y": "live preview; values announced"
+    },
+    {
+      "id": "SETTINGS.MINI_PLAYER",
+      "category": "settings",
+      "title": "设置 · 迷你播放器",
+      "source": "src/app/settings.rs",
+      "states": [
+        "default"
+      ],
+      "actions": [
+        "style",
+        "on-top",
+        "snap"
+      ],
+      "motion": [
+        "setting.toggle"
+      ],
+      "a11y": "style radio group"
+    },
+    {
+      "id": "SETTINGS.OFFLINE",
+      "category": "settings",
+      "title": "设置 · 离线模式",
+      "source": "src/app/settings.rs",
+      "states": [
+        "on",
+        "off"
+      ],
+      "actions": [
+        "default-offline"
+      ],
+      "motion": [
+        "setting.toggle"
+      ],
+      "a11y": "explains manual online actions still work"
+    },
+    {
+      "id": "SETTINGS.ONLINE",
+      "category": "settings",
+      "title": "设置 · 在线内容",
+      "source": "src/app/settings.rs",
+      "states": [
+        "default",
+        "downloading",
+        "cleared"
+      ],
+      "actions": [
+        "auto-cover",
+        "clear-cache",
+        "auto-lyrics",
+        "download-current"
+      ],
+      "motion": [
+        "progress.fill",
+        "setting.toggle"
+      ],
+      "a11y": "cache size visible; actions disabled offline"
+    },
+    {
+      "id": "SETTINGS.DATA",
+      "category": "settings",
+      "title": "设置 · 数据",
+      "source": "src/app/settings.rs",
+      "states": [
+        "default",
+        "backing-up",
+        "restoring",
+        "error"
+      ],
+      "actions": [
+        "backup",
+        "restore",
+        "include-cache",
+        "settings-only"
+      ],
+      "motion": [
+        "progress.fill"
+      ],
+      "a11y": "native pickers; confirm before overwrite"
+    }
+  ],
+  "nativeDialogs": [
+    {
+      "id": "NATIVE.FOLDER_PICKER",
+      "title": "选择音乐文件夹",
+      "source": "rfd::FileDialog",
+      "trigger": "添加文件夹 / 管理文件夹",
+      "owner": "OS",
+      "copy": "选择音乐文件夹"
+    },
+    {
+      "id": "NATIVE.M3U_IMPORT",
+      "title": "导入 M3U",
+      "source": "rfd::FileDialog",
+      "trigger": "侧边栏 → 导入 M3U",
+      "owner": "OS",
+      "copy": "选择 M3U 播放列表"
+    },
+    {
+      "id": "NATIVE.M3U_EXPORT",
+      "title": "导出 M3U",
+      "source": "rfd::FileDialog",
+      "trigger": "侧边栏 → 导出当前视图",
+      "owner": "OS",
+      "copy": "保存 M3U 文件"
+    },
+    {
+      "id": "NATIVE.BACKUP_FOLDER",
+      "title": "选择备份位置",
+      "source": "rfd::FileDialog",
+      "trigger": "设置 → 数据 → 备份",
+      "owner": "OS",
+      "copy": "选择备份保存位置"
+    },
+    {
+      "id": "NATIVE.RESTORE_CONFIRM",
+      "title": "恢复数据确认",
+      "source": "rfd::MessageDialog",
+      "trigger": "设置 → 数据 → 恢复",
+      "owner": "OS",
+      "copy": "将覆盖当前设置；恢复前自动备份"
+    },
+    {
+      "id": "NATIVE.CLEAR_CONFIRM",
+      "title": "清空缓存 / 统计确认",
+      "source": "rfd::MessageDialog",
+      "trigger": "设置 → 在线内容 / 数据",
+      "owner": "OS",
+      "copy": "不可撤销；不影响音频文件"
+    },
+    {
+      "id": "NATIVE.REVEAL_EXPLORER",
+      "title": "在文件夹中显示",
+      "source": "Explorer / SHOpenFolderAndSelectItems",
+      "trigger": "曲目菜单 / 重复歌曲定位",
+      "owner": "OS",
+      "copy": "打开资源管理器并选中文件"
+    }
+  ],
+  "nonUi": [
+    {
+      "module": "src/stats.rs",
+      "reason": "playback statistics only; no window"
+    },
+    {
+      "module": "src/app/session.rs",
+      "reason": "restores view/queue; no visible surface"
+    },
+    {
+      "module": "src/platform/dcomp_panel.rs",
+      "reason": "DWM taskbar preview; no custom UI copy"
+    }
+  ]
+}

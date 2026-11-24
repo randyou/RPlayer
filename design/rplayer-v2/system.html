@@ -493,7 +493,6 @@
         </div>
         <div class="eq-presets">
           <button class="chip">平直</button><button class="chip">流行</button><button class="chip">摇滚</button><button class="chip">爵士</button><button class="chip">低音</button><button class="chip is-active">人声</button><button class="chip">古典</button><button class="chip">电子</button>
-          <button class="chip is-ghost">保存为预设</button>
         </div>
         <div class="eq-bands">
           <div class="eq-band"><span class="db">+3.0</span><div class="v-track"><i class="zero"></i><b class="knob" style="bottom:66%"></b><em style="height:66%"></em></div><span class="hz">31</span></div>
@@ -602,25 +601,22 @@
   <!-- ═════════════════════ 05 · SETTINGS ═════════════════════ -->
   <section class="plate plate-paper" id="settings">
     <header class="plate-head">
-      <div class="eyebrow"><span>SETTINGS</span><span class="idx">05</span><span>/ 从 6 项到 9 项</span></div>
+      <div class="eyebrow"><span>SETTINGS</span><span class="idx">05</span><span>/ 现有 6 组，重新编排</span></div>
       <h1>设置，不是一张长清单。</h1>
       <div class="plate-mark"><b>RPLAYER</b> · SYSTEM 05 / 07</div>
-      <p class="plate-lede">按“我在调什么”分组：资料库、外观、播放、歌词、迷你播放器、离线与在线、数据、快捷键、关于。所有开关即时生效。</p>
+      <p class="plate-lede">不新增后台能力，只把现有的六组设置按场景重排：外观、桌面歌词、迷你播放器、离线模式、在线内容、数据。快捷键与关于仍是独立面板。</p>
     </header>
 
     <div class="settings-pair">
       <div class="settings-win">
         <aside class="sw-nav">
           <div class="sw-brand"><span class="brand-mark">R</span><span>设置</span></div>
-          <button class="sw-tab">资料库</button>
           <button class="sw-tab is-active">外观</button>
-          <button class="sw-tab">播放</button>
-          <button class="sw-tab">歌词</button>
+          <button class="sw-tab">桌面歌词</button>
           <button class="sw-tab">迷你播放器</button>
-          <button class="sw-tab">离线与在线</button>
+          <button class="sw-tab">离线模式</button>
+          <button class="sw-tab">在线内容</button>
           <button class="sw-tab">数据</button>
-          <button class="sw-tab">快捷键</button>
-          <button class="sw-tab">关于</button>
           <div class="sw-nav-foot mono">RPLAYER 0.13.5</div>
         </aside>
         <div class="sw-main">
@@ -642,21 +638,19 @@
               </div>
             </div>
             <div class="sw-row">
-              <div><b>跟随系统</b><span>在日落时切换到夜幕主题</span></div>
+              <div><b>减少动态效果</b><span>关闭封面过渡、歌词上浮与列表入场</span></div>
               <span class="switch light"><i></i></span>
             </div>
-            <div class="sw-group-label">界面</div>
-            <div class="sw-row"><div><b>界面缩放</b><span>当前 100% · 适合 1440 × 900</span></div><div class="scale"><i style="width:100%"></i><b></b></div><span class="mono sw-val">100%</span></div>
-            <div class="sw-row"><div><b>显示格式徽标</b><span>在曲目名称后显示 FLAC / WAV</span></div><span class="switch light is-on"><i></i></span></div>
-            <div class="sw-row"><div><b>减少动态效果</b><span>关闭封面过渡和歌词上浮</span></div><span class="switch light"><i></i></span></div>
-            <div class="sw-row"><div><b>高对比度</b><span>加强边框与弱化文字的对比</span></div><span class="switch light"><i></i></span></div>
-            <div class="sw-group-label">封面</div>
-            <div class="sw-row"><div><b>从封面取色</b><span>让正在播放页的背景随唱片变色</span></div><span class="switch light is-on"><i></i></span></div>
-            <div class="sw-row"><div><b>优先读取内嵌封面</b><span>内嵌 → 同目录图片 → 缓存</span></div><span class="switch light is-on"><i></i></span></div>
-            <div class="sw-group-label">窗口</div>
-            <div class="sw-row"><div><b>记住窗口大小与位置</b><span>下次启动时恢复到上次的窗口</span></div><span class="switch light is-on"><i></i></span></div>
-            <div class="sw-row"><div><b>启动时恢复上次页面</b><span>回到上次浏览的曲库、专辑或歌单</span></div><span class="switch light is-on"><i></i></span></div>
-            <div class="sw-row"><div><b>关闭时最小化到托盘</b><span>播放不中断；从托盘重新打开</span></div><span class="switch light is-on"><i></i></span></div>
+            <div class="sw-note">
+              <span class="mono">THEME SYSTEM</span>
+              <b>只保留两套主题。</b>
+              <p>现有六套主题保留在代码中，但不再暴露入口。Paper / Nocturne 各自校准对比度、封面取色与截图，减少长期维护成本。</p>
+            </div>
+            <div class="sw-note soft">
+              <span class="mono">IMPLEMENTATION</span>
+              <b>所有开关即时生效。</b>
+              <p>没有“应用 / 取消”。主题切换 280ms，减少动态效果时降为 0ms。</p>
+            </div>
           </div>
           <div class="sw-foot"><span>设置会自动保存</span><button class="btn-primary">完成</button></div>
         </div>
@@ -665,20 +659,17 @@
       <div class="settings-win">
         <aside class="sw-nav">
           <div class="sw-brand"><span class="brand-mark">R</span><span>设置</span></div>
-          <button class="sw-tab">资料库</button>
           <button class="sw-tab">外观</button>
-          <button class="sw-tab">播放</button>
-          <button class="sw-tab is-active">歌词</button>
+          <button class="sw-tab is-active">桌面歌词</button>
           <button class="sw-tab">迷你播放器</button>
-          <button class="sw-tab">离线与在线</button>
+          <button class="sw-tab">离线模式</button>
+          <button class="sw-tab">在线内容</button>
           <button class="sw-tab">数据</button>
-          <button class="sw-tab">快捷键</button>
-          <button class="sw-tab">关于</button>
           <div class="sw-nav-foot mono">RPLAYER 0.13.5</div>
         </aside>
         <div class="sw-main">
           <div class="sw-head">
-            <div><div class="eyebrow"><span>LYRICS</span><span class="idx">04</span></div><h2>歌词</h2></div>
+            <div><div class="eyebrow"><span>DESKTOP LYRICS</span><span class="idx">02</span></div><h2>桌面歌词</h2></div>
             <button class="tool-x light" aria-label="关闭设置">×</button>
           </div>
           <div class="sw-body">
@@ -696,13 +687,16 @@
             <div class="sw-row"><div><b>文字不透明度</b><span>背景很暗时仍保持可读</span></div><div class="scale"><i style="width:96%"></i><b style="left:96%"></b></div><span class="mono sw-val">96%</span></div>
             <div class="sw-row"><div><b>字号</b><span>18–40 px · 随歌词窗口缩放</span></div><div class="scale"><i style="width:62%"></i><b style="left:62%"></b></div><span class="mono sw-val">32 px</span></div>
             <div class="sw-row"><div><b>锁定位置</b><span>锁定后不响应拖动与双击</span></div><span class="switch light"><i></i></span></div>
-            <div class="sw-group-label">在线</div>
-            <div class="sw-row"><div><b>自动下载缺失歌词</b><span>LRCLIB · 免费开放歌词库</span></div><span class="switch light is-on"><i></i></span></div>
-            <div class="sw-row"><div><b>优先使用本地 .lrc</b><span>本地文件 → 编辑缓存 → 在线</span></div><span class="switch light is-on"><i></i></span></div>
-            <div class="sw-group-label">行为</div>
-            <div class="sw-row"><div><b>歌词提前 0.3 秒</b><span>让当前行先亮起，再唱到</span></div><div class="scale"><i style="width:58%"></i><b style="left:58%"></b></div><span class="mono sw-val">0.3s</span></div>
-            <div class="sw-row"><div><b>点击歌词跳转到该句</b><span>只跳转，不改变播放状态</span></div><span class="switch light is-on"><i></i></span></div>
-            <div class="sw-row"><div><b>双击锁定 / 解锁位置</b><span>锁定后隐藏全部按钮，只留歌词</span></div><span class="switch light is-on"><i></i></span></div>
+            <div class="sw-note">
+              <span class="mono">DIRECT MANIPULATION</span>
+              <b>点击歌词跳转，双击锁定。</b>
+              <p>这两件事是直接操作，不占设置行。锁定后隐藏全部按钮，只留歌词；再双击或从托盘解除。</p>
+            </div>
+            <div class="sw-note soft">
+              <span class="mono">ONLINE CONTENT</span>
+              <b>自动下载歌词在「在线内容」。</b>
+              <p>歌词窗口只负责显示与排版；网络、LRCLIB 与缓存策略归到内容来源，避免同一开关出现在两个页面。</p>
+            </div>
           </div>
           <div class="sw-foot"><span>设置会自动保存</span><button class="btn-primary">完成</button></div>
         </div>
@@ -712,9 +706,9 @@
     <div class="ia-strip">
       <div class="ia-label">SETTINGS IA</div>
       <div class="ia-chips">
-        <span>01 资料库</span><span>02 外观</span><span>03 播放</span><span>04 歌词</span><span>05 迷你播放器</span><span>06 离线与在线</span><span>07 数据</span><span>08 快捷键</span><span>09 关于</span>
+        <span>01 外观</span><span>02 桌面歌词</span><span>03 迷你播放器</span><span>04 离线模式</span><span>05 在线内容</span><span>06 数据</span><span class="chip-sep">＋</span><span>快捷键 · 对话框</span><span>关于 · 对话框</span>
       </div>
-      <p>原来的「桌面歌词 / 迷你播放器 / 离线模式 / 在线内容 / 数据」不再散落：<b>窗口级设置与内容来源分开</b>，每个分组不超过 7 行。</p>
+      <p>保持现有六组设置，<b>不新增后台能力</b>；快捷键与关于仍是独立面板。每个分组不超过 7 行，开关即时生效。</p>
     </div>
   </section>
 
@@ -832,70 +826,54 @@
   <!-- ═════════════════════ 07 · SETTINGS MAP ═════════════════════ -->
   <section class="plate plate-paper" id="settings-map">
     <header class="plate-head">
-      <div class="eyebrow"><span>SETTINGS MAP</span><span class="idx">07</span><span>/ 剩余 7 个抽屉</span></div>
-      <h1>九个抽屉，一套秩序。</h1>
+      <div class="eyebrow"><span>SETTINGS MAP</span><span class="idx">07</span><span>/ 剩余 4 组</span></div>
+      <h1>剩下四个抽屉，两个独立面板。</h1>
       <div class="plate-mark"><b>RPLAYER</b> · SYSTEM 07 / 07</div>
       <p class="plate-lede">设置不是仓库。每一页只放当前场景需要的开关；默认值可解释，危险操作可撤销，所有修改即时生效。</p>
     </header>
 
     <div class="set-map">
       <div class="set-card">
-        <div class="ms-head"><span class="mono">01</span><b>资料库</b><span class="ms-meta">LIBRARY</span></div>
+        <div class="ms-head"><span class="mono">03</span><b>迷你播放器</b><span class="ms-meta">MINI</span></div>
         <div class="ms-body">
-          <div class="ms-row"><div><b>启动时扫描</b><span>打开后检查新增与移除的文件</span></div><span class="switch light"><i></i></span></div>
-          <div class="ms-row"><div><b>监听文件夹变化</b><span>文件变动时自动更新曲库</span></div><span class="switch light is-on"><i></i></span></div>
-          <div class="ms-row"><div><b>封面来源</b><span>内嵌 → 同目录图片 → 缓存</span></div><span class="ms-value">内嵌优先</span></div>
-          <div class="ms-row"><div><b>重复检测</b><span>只提示，不自动删除</span></div><span class="ms-value">提醒</span></div>
-          <div class="ms-row"><div><b>扫描并发</b><span>机械硬盘建议 2</span></div><span class="ms-value">2 线程</span></div>
-        </div>
-      </div>
-
-      <div class="set-card">
-        <div class="ms-head"><span class="mono">03</span><b>播放</b><span class="ms-meta">PLAYBACK</span></div>
-        <div class="ms-body">
-          <div class="ms-row"><div><b>淡入淡出</b><span>切歌与暂停时消除爆音</span></div><span class="ms-value">0.3 s</span></div>
-          <div class="ms-row"><div><b>播放结束</b><span>队列播完后的行为</span></div><span class="ms-value">停止</span></div>
-          <div class="ms-row"><div><b>恢复上次队列</b><span>包含播放位置与循环模式</span></div><span class="switch light is-on"><i></i></span></div>
-          <div class="ms-row"><div><b>音量记忆</b><span>每台输出设备独立保存</span></div><span class="switch light is-on"><i></i></span></div>
-          <div class="ms-row"><div><b>输出设备</b><span>系统默认 · 44.1 kHz</span></div><span class="ms-value">默认</span></div>
-        </div>
-      </div>
-
-      <div class="set-card">
-        <div class="ms-head"><span class="mono">05</span><b>迷你播放器</b><span class="ms-meta">MINI</span></div>
-        <div class="ms-body">
-          <div class="ms-row"><div><b>默认样式</b><span>标准显示封面，紧凑只留文字</span></div><span class="ms-value">标准</span></div>
+          <div class="ms-row"><div><b>样式</b><span>经典显示封面，紧凑只留文字</span></div><span class="ms-value">经典</span></div>
           <div class="ms-row"><div><b>始终置顶</b><span>不遮挡主窗口的右下角</span></div><span class="switch light is-on"><i></i></span></div>
-          <div class="ms-row"><div><b>关闭主窗口时</b><span>显示迷你播放器而不是退出</span></div><span class="switch light is-on"><i></i></span></div>
-          <div class="ms-row"><div><b>紧凑模式隐藏封面</b><span>410 × 146 只保留曲名与时间</span></div><span class="switch light is-on"><i></i></span></div>
-          <div class="ms-row"><div><b>尺寸</b><span>标准 410 × 146 · 固定比例</span></div><span class="ms-value">410 × 146</span></div>
+          <div class="ms-row"><div><b>边缘吸附</b><span>拖到屏幕边缘时自动吸附</span></div><span class="switch light is-on"><i></i></span></div>
+          <div class="ms-note">底部播放栏的迷你按钮可随时切换主 / 迷你模式；两种样式共用同一份播放状态。</div>
         </div>
       </div>
 
       <div class="set-card">
-        <div class="ms-head"><span class="mono">06</span><b>离线与在线</b><span class="ms-meta">SOURCE</span></div>
+        <div class="ms-head"><span class="mono">04</span><b>离线模式</b><span class="ms-meta">OFFLINE</span></div>
         <div class="ms-body">
-          <div class="ms-row"><div><b>离线优先</b><span>断网时所有本地功能照常</span></div><span class="switch light is-on"><i></i></span></div>
-          <div class="ms-row"><div><b>自动匹配封面</b><span>MusicBrainz · Cover Art Archive</span></div><span class="switch light is-on"><i></i></span></div>
-          <div class="ms-row"><div><b>在线歌词</b><span>LRCLIB · 免费开放歌词库</span></div><span class="switch light is-on"><i></i></span></div>
-          <div class="ms-row"><div><b>网络代理</b><span>跟随系统 · 失败时回退直连</span></div><span class="ms-value">直连</span></div>
-          <div class="ms-row"><div><b>缓存上限</b><span>封面与歌词，超出后淘汰最旧</span></div><span class="ms-value">256 MB</span></div>
+          <div class="ms-row"><div><b>默认离线</b><span>启动后不自动联网</span></div><span class="switch light is-on"><i></i></span></div>
+          <div class="ms-note">手动点击封面或歌词时仍可联网补全；本地曲库、播放、歌单不依赖网络。</div>
+          <div class="ms-quote">本地优先，<br>不是“离线也能用”。</div>
         </div>
       </div>
 
       <div class="set-card">
-        <div class="ms-head"><span class="mono">07</span><b>数据</b><span class="ms-meta">DATA</span></div>
+        <div class="ms-head"><span class="mono">05</span><b>在线内容</b><span class="ms-meta">SOURCE</span></div>
         <div class="ms-body">
-          <div class="ms-row"><div><b>数据库</b><span>曲目、评分、播放统计</span></div><span class="ms-value">48.2 MB</span></div>
-          <div class="ms-row"><div><b>封面缓存</b><span>可随时重建</span></div><span class="ms-value">12.4 MB</span></div>
-          <div class="ms-row"><div><b>自动备份</b><span>保留最近 7 份</span></div><span class="ms-value">每周</span></div>
-          <div class="ms-row"><div><b>导出</b><span>播放列表与曲库清单</span></div><span class="ms-value">M3U / CSV</span></div>
-          <div class="ms-row"><div><b>清空播放统计</b><span>不影响评分与歌单</span></div><span class="ms-danger">清空…</span></div>
+          <div class="ms-row"><div><b>自动匹配缺失封面</b><span>MusicBrainz · Cover Art Archive</span></div><span class="switch light is-on"><i></i></span></div>
+          <div class="ms-row"><div><b>清除封面缓存</b><span>可随时重建，不影响音频</span></div><span class="ms-value">清除 12.4 MB</span></div>
+          <div class="ms-row"><div><b>自动下载缺失歌词</b><span>没有本地 .lrc 时从 LRCLIB 搜索</span></div><span class="switch light is-on"><i></i></span></div>
+          <div class="ms-row"><div><b>下载当前歌词</b><span>只对当前曲目手动触发</span></div><span class="ms-value">下载</span></div>
         </div>
       </div>
 
       <div class="set-card">
-        <div class="ms-head"><span class="mono">08</span><b>快捷键</b><span class="ms-meta">KEYS</span></div>
+        <div class="ms-head"><span class="mono">06</span><b>数据</b><span class="ms-meta">DATA</span></div>
+        <div class="ms-body">
+          <div class="ms-row"><div><b>备份数据…</b><span>设置、索引、统计、会话</span></div><span class="ms-value">选择位置</span></div>
+          <div class="ms-row"><div><b>恢复数据…</b><span>恢复前自动再备份一份</span></div><span class="ms-value">选择备份</span></div>
+          <div class="ms-row"><div><b>包含封面和歌词缓存</b><span>关闭时备份更小</span></div><span class="switch light"><i></i></span></div>
+          <div class="ms-row"><div><b>只恢复设置与播放列表</b><span>曲库与播放统计保持不变</span></div><span class="switch light"><i></i></span></div>
+        </div>
+      </div>
+
+      <div class="set-card">
+        <div class="ms-head"><span class="mono">＋</span><b>快捷键</b><span class="ms-meta">DIALOG</span></div>
         <div class="ms-body">
           <div class="ms-row"><div><b>搜索</b><span>聚焦顶部搜索框</span></div><span class="keycap">Ctrl F</span></div>
           <div class="ms-row"><div><b>命令面板</b><span>跳到任意页面或动作</span></div><span class="keycap">Ctrl K</span></div>
@@ -906,34 +884,42 @@
       </div>
 
       <div class="set-card">
-        <div class="ms-head"><span class="mono">09</span><b>关于</b><span class="ms-meta">ABOUT</span></div>
+        <div class="ms-head"><span class="mono">＋</span><b>关于</b><span class="ms-meta">DIALOG</span></div>
         <div class="ms-body">
           <div class="about-lockup"><span class="brand-mark large">R</span><div><b>RPlayer</b><span>本地优先 · 不上传音乐</span></div></div>
-          <div class="ms-row"><div><b>版本</b><span>最新检查 2026.11.24</span></div><span class="ms-value">0.13.5</span></div>
-          <div class="ms-row"><div><b>更新</b><span>只在你确认后安装</span></div><span class="ms-value">检查更新</span></div>
+          <div class="ms-row"><div><b>版本</b><span>设计基线</span></div><span class="ms-value">0.13.5</span></div>
           <div class="ms-row"><div><b>数据目录</b><span>%APPDATA%\RPlayer</span></div><span class="ms-value">打开</span></div>
           <div class="ms-row"><div><b>开源许可</b><span>egui · Symphonia · LRCLIB</span></div><span class="ms-value">查看</span></div>
         </div>
       </div>
 
       <div class="set-card rules-card">
-        <div class="ms-head"><span class="mono">RULES</span><b>设置的原则</b><span class="ms-meta">5 RULES</span></div>
+        <div class="ms-head"><span class="mono">RULES</span><b>设置的原则</b><span class="ms-meta">4 RULES</span></div>
         <div class="ms-body">
           <div class="big-rule">设置<br>不是仓库。</div>
           <ol class="rule-list">
-            <li><b>9 个分组</b><span>每页最多 7 行</span></li>
+            <li><b>6 个分组</b><span>不新增后台能力</span></li>
             <li><b>即时生效</b><span>没有“应用 / 取消”</span></li>
             <li><b>危险操作</b><span>说明数据是否保留</span></li>
-            <li><b>可搜索</b><span>Ctrl K 能直达任意开关</span></li>
-            <li><b>可回退</b><span>清空统计前先备份</span></li>
+            <li><b>键盘可达</b><span>Tab 进入，Esc 退出</span></li>
           </ol>
+        </div>
+      </div>
+
+      <div class="set-card motion-card">
+        <div class="ms-head"><span class="mono">MOTION</span><b>开关与面板</b><span class="ms-meta">MS</span></div>
+        <div class="ms-body">
+          <div class="ms-motion"><b>160</b><span>开关 / 按钮按压</span><em>ease-out</em></div>
+          <div class="ms-motion"><b>220</b><span>弹窗进入 / 退场</span><em>cubic-bezier(.22,1,.36,1)</em></div>
+          <div class="ms-motion"><b>280</b><span>主题切换</span><em>ease-in-out</em></div>
+          <div class="ms-motion"><b>0</b><span>减少动态效果</span><em>instant</em></div>
         </div>
       </div>
     </div>
 
     <div class="state-legend">
       <span class="mono">IA</span>
-      <p><b>窗口级</b>（外观 / 播放 / 歌词 / 迷你 / 快捷键）与 <b>内容来源</b>（资料库 / 离线与在线 / 数据）分开；关于独立。</p>
+      <p><b>6 组设置</b>：外观、桌面歌词在本页；迷你播放器、离线模式、在线内容、数据在下页。快捷键与关于是独立对话框。</p>
       <span class="mono">07 / 07</span>
     </div>
   </section>
@@ -951,3 +937,4 @@
   </script>
 </body>
 </html>
+

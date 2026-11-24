@@ -309,12 +309,15 @@
     color: var(--muted);
   }
 
+  .native-note { display: flex; align-items: baseline; gap: 18px; margin-top: 18px; padding: 11px 14px; border-left: 2px solid var(--signal); background: rgba(182,75,49,.045); }
+  .native-note span { flex: 0 0 auto; font-family: var(--mono); font-size: 7.5px; letter-spacing: .12em; color: var(--signal); }
+  .native-note p { margin: 0; font-size: 9.5px; line-height: 1.6; color: var(--muted); }
   .closing-line {
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
     gap: 40px;
-    margin-top: 128px;
+    margin-top: 38px;
     border-top: 2px solid var(--ink);
     padding-top: 22px;
   }
@@ -381,6 +384,39 @@
   .cov-row p { font-size: 10.5px; line-height: 1.65; color: var(--muted); }
   .cov-row .ref { font-family: var(--mono); font-size: 7.5px; letter-spacing: .08em; color: var(--faint); text-align: right; }
 
+  /* AI handoff */
+  .ai-grid { display: grid; grid-template-columns: 760px 1fr; gap: 64px; margin-top: 30px; align-items: start; }
+  .ai-stats { display: flex; gap: 34px; border-top: 2px solid var(--ink); padding-top: 14px; }
+  .ai-stat b { display: block; font-family: var(--serif); font-size: 46px; font-weight: 500; line-height: 1; color: var(--accent); }
+  .ai-stat span { display: block; margin-top: 6px; font-family: var(--mono); font-size: 7.5px; letter-spacing: .1em; color: var(--faint); }
+  .ai-files { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 24px; }
+  .ai-file { border: 1px solid var(--line); padding: 12px 13px; background: rgba(250,246,237,.4); }
+  .ai-file b { display: block; font-family: var(--mono); font-size: 9px; letter-spacing: .06em; color: var(--ink); }
+  .ai-file span { display: block; margin-top: 5px; font-size: 9px; line-height: 1.65; color: var(--muted); }
+  .ai-file em { display: block; margin-top: 7px; font-family: var(--mono); font-size: 7px; font-style: normal; color: var(--accent); }
+  .code-card { background: #191b17; color: #EDE6D8; padding: 26px 28px 22px; border: 1px solid rgba(255,255,255,.08); }
+  .code-head { display: flex; justify-content: space-between; margin-bottom: 16px; font-family: var(--mono); font-size: 7.5px; letter-spacing: .12em; color: rgba(255,255,255,.4); }
+  .code-card pre { margin: 0; font-family: var(--mono); font-size: 10.5px; line-height: 1.95; white-space: pre-wrap; }
+  .code-card .k { color: #9FC4AA; }
+  .code-card .s { color: #D9B98A; }
+  .code-card .c { color: #737E73; }
+  .ai-read { display: flex; gap: 22px; margin-top: 22px; border-top: 1px solid var(--line); padding-top: 14px; }
+  .ai-read div { flex: 1; }
+  .ai-read b { display: block; font-family: var(--mono); font-size: 7.5px; color: var(--accent); letter-spacing: .1em; }
+  .ai-read span { display: block; margin-top: 4px; font-size: 9px; color: var(--muted); }
+
+  .annot-grid { display: grid; grid-template-columns: 970px 1fr; gap: 50px; margin-top: 26px; align-items: start; }
+  .annot-grid img { display: block; width: 100%; height: auto; border: 1px solid rgba(29,27,22,.18); }
+  .annot-side img { width: 88%; border: 1px solid rgba(29,27,22,.18); }
+  .annot-caption { margin-top: 8px; font-family: var(--mono); font-size: 7.5px; letter-spacing: .09em; color: var(--faint); }
+  .annot-notes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 24px; border-top: 1px solid var(--line); padding-top: 16px; }
+  .annot-notes b { display: block; font-family: var(--serif); font-size: 17px; font-weight: 500; margin-top: 5px; }
+  .annot-notes span { font-family: var(--mono); font-size: 7.5px; letter-spacing: .1em; color: var(--faint); }
+  .annot-notes p { margin-top: 5px; font-size: 9.5px; line-height: 1.7; color: var(--muted); }
+  .ai-bottom { display: grid; grid-template-columns: repeat(3, 1fr); gap: 34px; margin-top: 74px; border-top: 1px solid var(--line); padding-top: 16px; }
+  .ai-bottom span { font-family: var(--mono); font-size: 7.5px; letter-spacing: .1em; color: var(--faint); }
+  .ai-bottom b { display: block; margin-top: 6px; font-family: var(--serif); font-size: 19px; font-weight: 500; }
+  .ai-bottom p { margin-top: 6px; font-size: 9.5px; line-height: 1.7; color: var(--muted); }
   /* capture mode for per-slide PNGs */
   body.capture { background: var(--bg); }
   body.capture .deck { padding: 0; gap: 0; display: block; }
@@ -560,7 +596,7 @@
     <div class="dialog-copy">
       <div><b>ONE ENTRY</b><p>Ctrl K 统一入口：曲目、专辑、页面、设置。输入即筛选，↑↓ 选择，Enter 执行，Esc 退出。</p></div>
       <div><b>ONE SURFACE</b><p>队列是抽屉，不是第二套页面。当前曲、来源、播放模式在同一视线内；不打断主界面。</p></div>
-      <div><b>ONE DECISION</b><p>设置按场景分组：外观与歌词先落地，最终 9 组；所有开关即时生效，不再有“应用 / 取消”。</p></div>
+      <div><b>ONE DECISION</b><p>设置保持现有六组：外观、桌面歌词、迷你播放器、离线、在线、数据；所有开关即时生效，不再有“应用 / 取消”。</p></div>
     </div>
     <div class="folio">RPLAYER V2 · 07</div>
   </section>
@@ -578,12 +614,12 @@
       <div class="handoff-col">
         <h3>交付物</h3>
         <ul>
-          <li><code>design/rplayer-v2/index.html</code> 可交互原型</li>
-          <li><code>tokens.css</code> 颜色 / 字体 / 间距变量</li>
-          <li><code>system.html</code> 系统界面 7 图版</li>
-          <li><code>shots/</code> 10 主界面 + 7 系统图版</li>
-          <li>主设计稿 PDF（10 页）</li>
-          <li>系统界面稿 PDF（7 页）</li>
+          <li><code>index.html</code> 可交互原型；<code>tokens.css</code> 变量</li>
+          <li><code>system.html</code> + <code>shots/</code> 10 主界面、7 图版</li>
+          <li>主设计稿 PDF（12 页）；系统界面稿（7 页）</li>
+          <li>交互与动效规范 PDF（1 页）</li>
+          <li><code>spec/*.json</code> 52 表面 / 48 动效 / 23 规则</li>
+          <li>12 条实现流程与 7 个原生系统对话框清单</li>
         </ul>
         <h3>工程映射</h3>
         <ul>
@@ -608,7 +644,7 @@
   <section class="slide" id="s9">
     <div class="eyebrow">08 · SYSTEM SURFACES / 7 PLATES</div>
     <h2 style="margin-top:18px;font-size:48px;">其余界面，<span style="color:var(--accent)">同一套秩序。</span></h2>
-    <p class="kicker" style="margin-top:12px;max-width:1060px;">桌面上的迷你播放器与歌词、右键菜单、11 个对话框、4 个工具窗口、9 组设置，以及浏览与状态页。不是补丁，是把同一套字体、间距和动作语法铺到每一个角落。</p>
+    <p class="kicker" style="margin-top:12px;max-width:1060px;">桌面上的迷你播放器与歌词、右键菜单、11 个对话框、4 个工具窗口、6 组设置，以及浏览与状态页。不是补丁，是把同一套字体、间距和动作语法铺到每一个角落。</p>
 
     <div class="sys-atlas">
       <figure>
@@ -637,11 +673,11 @@
       </figure>
       <figure>
         <img src="shots/sys-07-settings-map.png" alt="设置信息架构">
-        <figcaption>07 / SETTINGS MAP · REMAINING 7 TABS</figcaption>
+        <figcaption>07 / SETTINGS MAP · 4 GROUPS + 2 DIALOGS</figcaption>
       </figure>
       <div class="sys-note">
         <span class="mono" style="font-size:8px;letter-spacing:.12em;color:var(--faint);">COVERAGE</span>
-        <span class="big-count">43</span>
+        <span class="big-count">52</span>
         <b>个可操作表面</b>
         <p>从托盘的一行菜单到歌词编辑的每一行时间戳，共用 4 / 8 / 12 间距、8px 控件圆角、同一套中文文案语法。</p>
         <span class="tiny">7 PLATES · 1600 × 1000 · SEE PDF</span>
@@ -661,11 +697,11 @@
   <section class="slide" id="s10">
     <div class="eyebrow">09 · COVERAGE / NO ORPHANS</div>
     <h2 style="margin-top:18px;">没有漏掉的角落。</h2>
-    <p class="kicker" style="margin-top:12px;max-width:980px;">先把真实存在的界面列完，再谈风格。以下 43 个表面全部来自当前 0.13.5 的代码路径，没有为设计稿虚构功能。</p>
+    <p class="kicker" style="margin-top:12px;max-width:980px;">先把真实存在的界面列完，再谈风格。以下 52 个界面与 7 个系统对话框全部来自当前 0.13.5 的代码路径，没有为设计稿虚构功能。</p>
 
     <div class="coverage">
       <div class="coverage-total">
-        <b>43</b>
+        <b>52</b>
         <span>个可操作表面</span>
         <em>SYS-01 … SYS-07<br>7 PLATES · 1600 × 1000<br>DESIGN ONLY · 0.13.5</em>
       </div>
@@ -674,6 +710,11 @@
           <h3>桌面外设</h3><span class="count">07</span>
           <p>迷你播放器标准 / 紧凑；桌面歌词默认 / 悬停 / 无歌词 / 锁定；系统托盘。</p>
           <span class="ref">SYS-01</span>
+        </div>
+        <div class="cov-row">
+          <h3>全局与框架</h3><span class="count">08</span>
+          <p>标题栏、侧栏、顶栏、播放条、队列抽屉、命令面板、Toast、拖放层。</p>
+          <span class="ref">SYS-01/02</span>
         </div>
         <div class="cov-row">
           <h3>右键菜单</h3><span class="count">06</span>
@@ -691,13 +732,13 @@
           <span class="ref">SYS-04</span>
         </div>
         <div class="cov-row">
-          <h3>设置</h3><span class="count">09</span>
-          <p>资料库、外观、播放、歌词、迷你播放器、离线与在线、数据、快捷键、关于。</p>
+          <h3>设置</h3><span class="count">06</span>
+          <p>外观、桌面歌词、迷你播放器、离线模式、在线内容、数据。快捷键与关于在对话框清单。</p>
           <span class="ref">SYS-05/07</span>
         </div>
         <div class="cov-row">
-          <h3>浏览与状态</h3><span class="count">06</span>
-          <p>艺术家、专辑详情、智能歌单、搜索空态、多选、拖入目标。</p>
+          <h3>浏览与状态</h3><span class="count">10</span>
+          <p>曲库、专辑、专辑详情、艺术家、收藏、最近、文件夹、歌单、智能歌单，以及空态 / 多选 / 扫描。</p>
           <span class="ref">SYS-06</span>
         </div>
       </div>
@@ -707,6 +748,8 @@
       <span class="mono" style="font-size:8px;letter-spacing:.1em;color:var(--faint);">APPENDIX / 10</span>
     </div>
 
+    <div class="native-note"><span>NATIVE / 07</span><p>文件夹选择 · M3U 导入 / 导出 · 备份目录 · 恢复确认 · 清空确认 · 在资源管理器中显示。保留系统样式，只定义触发与文案。</p></div>
+
     <div class="closing-line">
       <p>没有“其他”。<br>所有界面，都是主界面的一部分。</p>
       <span class="end">END OF SYSTEM APPENDIX<br>RPLAYER V2 · 2026.11.24</span>
@@ -714,6 +757,78 @@
     <div class="folio">RPLAYER V2 · 10</div>
   </section>
 
+  <!-- 11 AI HANDOFF -->
+  <section class="slide" id="s11">
+    <div class="eyebrow">10 · AI HANDOFF / READABLE BY DEFAULT</div>
+    <h2 style="margin-top:18px;">先给结构，<br>再给画面。</h2>
+    <div class="ai-grid">
+      <div>
+        <p class="kicker" style="max-width:700px;">设计稿不只是一组截图。每个界面、每个动作、每段时长都有稳定 ID；JSON 是主稿，图版是索引，说明书解释为什么。</p>
+        <div class="ai-stats" style="margin-top:24px;">
+          <div class="ai-stat"><b>52</b><span>DESIGNED SURFACES</span></div>
+          <div class="ai-stat"><b>07</b><span>NATIVE OS DIALOGS</span></div>
+          <div class="ai-stat"><b>48</b><span>MOTION PATTERNS</span></div>
+          <div class="ai-stat"><b>23</b><span>INTERACTION RULES</span></div>
+        </div>
+        <div class="ai-files">
+          <div class="ai-file"><b>spec/inventory.json</b><span>52 个界面、7 个系统对话框、源码路径、状态与动作。</span><em>SCHEMA rplayer.design.inventory/1</em></div>
+          <div class="ai-file"><b>spec/interactions.json</b><span>23 条触发 → 结果 → 键盘 → aria → motion。</span><em>SCHEMA rplayer.design.interactions/1</em></div>
+          <div class="ai-file"><b>spec/motion.json</b><span>48 个动效模式，时长 token、曲线、减弱动态替代。</span><em>SCHEMA rplayer.design.motion/1</em></div>
+          <div class="ai-file"><b>spec/flows.json</b><span>12 条端到端路径：播放、搜索、托盘、备份、队列。</span><em>SCHEMA rplayer.design.flows/1</em></div>
+        </div>
+        <div class="ai-read">
+          <div><b>01 / READ</b><span>先读 inventory，确认边界</span></div>
+          <div><b>02 / TRACE</b><span>再读 interactions，接行为</span></div>
+          <div><b>03 / TIME</b><span>用 motion 约束节奏</span></div>
+          <div><b>04 / CHECK</b><span>最后对图版与截图</span></div>
+        </div>
+      </div>
+      <div class="code-card">
+        <div class="code-head"><span>inventory.json · VIEW.LIBRARY</span><span>01 / 04</span></div>
+        <pre>{
+  <span class="k">"id"</span>: <span class="s">"VIEW.LIBRARY"</span>,
+  <span class="k">"title"</span>: <span class="s">"本地曲库"</span>,
+  <span class="k">"source"</span>: <span class="s">"src/app/library_view.rs"</span>,
+  <span class="k">"states"</span>: [<span class="s">"default"</span>, <span class="s">"loading"</span>,
+             <span class="s">"empty"</span>, <span class="s">"search-empty"</span>,
+             <span class="s">"multiselect"</span>, <span class="s">"scanning"</span>],
+  <span class="k">"actions"</span>: [<span class="s">"play"</span>, <span class="s">"select"</span>, <span class="s">"search"</span>,
+              <span class="s">"context-menu"</span>],
+  <span class="k">"motion"</span>: [<span class="s">"row.hover"</span>, <span class="s">"row.select"</span>],
+  <span class="k">"a11y"</span>: <span class="s">"grid; rows aria-selected"</span>
+}</pre>
+      </div>
+    </div>
+    <div class="ai-bottom">
+      <div><span>WHY JSON</span><b>图和代码之间的合同</b><p>颜色、尺寸、状态、时长都能被校验；不依赖截图里的像素猜测。</p></div>
+      <div><span>STABLE ID</span><b>一个名字，三处出现</b><p>VIEW.LIBRARY / row.select 同时出现在 JSON、图版编号和源码映射里。</p></div>
+      <div><span>SINGLE SOURCE</span><b>先改结构，再改画面</b><p>图版是 JSON 的渲染结果，不是定义；变更先回到 spec 文件。</p></div>
+    </div>
+    <div class="folio">RPLAYER V2 · 11</div>
+  </section>
+
+  <!-- 12 INTERACTION SPEC -->
+  <section class="slide" id="s12">
+    <div class="eyebrow">11 · INTERACTION / MOTION</div>
+    <h2 style="margin-top:18px;">每个动作，都有出处。</h2>
+    <p class="kicker" style="margin-top:10px;max-width:980px;">五种行状态不是五个 hover；每个状态、每个时长都能回到一份 JSON。图上的编号就是 spec 条目的 id。</p>
+    <div class="annot-grid">
+      <div>
+        <img src="shots/spec-rows.png" alt="曲目行五种状态标注">
+        <div class="annot-caption">A / TRACK ROW · DEFAULT · HOVER · SELECTED · PLAYING · FOCUS</div>
+      </div>
+      <div class="annot-side">
+        <img src="shots/spec-motion.png" alt="动效 token 与标注规则">
+        <div class="annot-caption">C / TOKENS · D / ANNOTATION KEY</div>
+      </div>
+    </div>
+    <div class="annot-notes">
+      <div><span>01 / PRECEDENCE</span><b>焦点 &gt; 选中 &gt; 播放 &gt; 悬停</b><p>一行只允许一种强调色；焦点环不能被选中底色吞掉。</p></div>
+      <div><span>02 / TIME</span><b>90 / 140 / 280 / 520</b><p>超出 520ms 的动作不进入产品；列表 stagger 最多 6 项。</p></div>
+      <div><span>03 / REDUCED</span><b>0ms · 无位移</b><p>保留颜色与透明度；播放中的 eq 冻结为静态四格。</p></div>
+    </div>
+    <div class="folio">RPLAYER V2 · 12</div>
+  </section>
 </div>
 <script>
   const params = new URLSearchParams(location.search);
@@ -727,3 +842,14 @@
 </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+

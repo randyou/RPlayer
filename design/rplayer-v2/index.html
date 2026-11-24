@@ -560,15 +560,12 @@
     <div class="settings-panel" role="dialog" aria-modal="true" aria-label="设置">
       <aside class="settings-nav">
         <div class="settings-brand"><span class="brand-mark small">R</span><span>设置</span></div>
-        <button class="settings-tab">资料库</button>
         <button class="settings-tab is-active">外观</button>
-        <button class="settings-tab">播放</button>
-        <button class="settings-tab">歌词</button>
+        <button class="settings-tab">桌面歌词</button>
         <button class="settings-tab">迷你播放器</button>
-        <button class="settings-tab">离线与在线</button>
+        <button class="settings-tab">离线模式</button>
+        <button class="settings-tab">在线内容</button>
         <button class="settings-tab">数据</button>
-        <button class="settings-tab">快捷键</button>
-        <button class="settings-tab">关于</button>
         <div class="settings-nav-foot mono">RPLAYER 0.13.5</div>
       </aside>
       <div class="settings-body">
@@ -580,19 +577,38 @@
               <button class="theme-card is-active" data-theme-choice="light"><span class="theme-preview light"><i></i><i></i></span><span>纸张 <small>Paper</small></span><svg class="icon check"><use href="#i-check"/></svg></button>
               <button class="theme-card" data-theme-choice="dark"><span class="theme-preview dark"><i></i><i></i></span><span>夜幕 <small>Nocturne</small></span><svg class="icon check"><use href="#i-check"/></svg></button>
             </div>
-            <label class="setting-row"><span><b>跟随系统</b><small>在日落时切换到夜幕主题</small></span><span class="switch"><input type="checkbox" /><i></i></span></label>
+            <label class="setting-row"><span><b>减少动态效果</b><small>关闭封面过渡、歌词上浮与列表入场</small></span><span class="switch"><input type="checkbox" /><i></i></span></label>
           </div>
           <div class="setting-group">
-            <div class="setting-group-title mono">界面</div>
-            <label class="setting-row"><span><b>界面缩放</b><small>当前 100% · 适合 1440 × 900</small></span><span class="range-wrap"><input type="range" min="80" max="140" value="100" /><span class="mono">100%</span></span></label>
-            <label class="setting-row"><span><b>显示格式徽标</b><small>在曲目名称后显示 FLAC / WAV</small></span><span class="switch"><input type="checkbox" checked /><i></i></span></label>
-            <label class="setting-row"><span><b>减少动态效果</b><small>关闭封面过渡和歌词上浮</small></span><span class="switch"><input type="checkbox" /><i></i></span></label>
-            <label class="setting-row"><span><b>高对比度</b><small>加强边框与弱化文字的对比</small></span><span class="switch"><input type="checkbox" /><i></i></span></label>
+            <div class="setting-group-title mono">预览</div>
+            <div class="appearance-preview">
+              <div class="ap-window">
+                <div class="ap-side">
+                  <span class="ap-brand">R</span>
+                  <i class="ap-nav is-active"></i>
+                  <i class="ap-nav"></i><i class="ap-nav"></i><i class="ap-nav"></i>
+                  <i class="ap-nav"></i><i class="ap-nav"></i>
+                  <div class="ap-side-foot"></div>
+                </div>
+                <div class="ap-main">
+                  <span class="mono ap-kicker">LIBRARY 01</span>
+                  <b class="ap-title">本地曲库</b>
+                  <div class="ap-track is-active"><i></i><span></span><em></em></div>
+                  <div class="ap-track"><i></i><span></span><em></em></div>
+                  <div class="ap-track"><i></i><span></span><em></em></div>
+                </div>
+              </div>
+              <div class="ap-meta">
+                <span class="mono">CURRENT THEME</span>
+                <b>纸张 · Paper</b>
+                <p>背景 #F4EFE5<br>文字 #1D1B16<br>强调 #2E5B44</p>
+                <div class="ap-swatches"><i></i><i></i><i></i></div>
+              </div>
+            </div>
           </div>
           <div class="setting-group">
-            <div class="setting-group-title mono">封面</div>
-            <label class="setting-row"><span><b>从封面取色</b><small>让正在播放页的背景随唱片变色</small></span><span class="switch"><input type="checkbox" checked /><i></i></span></label>
-            <label class="setting-row"><span><b>优先读取内嵌封面</b><small>内嵌 → 同目录图片 → 缓存</small></span><span class="switch"><input type="checkbox" checked /><i></i></span></label>
+            <div class="setting-group-title mono">说明</div>
+            <p class="settings-note"><b>现有六组设置，不新增后台能力。</b>六套主题保留在代码中，但不再暴露入口；Paper / Nocturne 各自校准对比度与截图。快捷键与关于仍是独立面板。</p>
           </div>
         </div>
         <div class="settings-foot"><span>设置会自动保存</span><button class="btn btn-primary" data-close="settings">完成</button></div>

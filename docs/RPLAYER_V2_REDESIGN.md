@@ -7,8 +7,10 @@
 | 分支 | `design/ui-v2-listening-room` |
 | 日期 | 2026-11-24 |
 | 目标窗口 | 1440 × 900（最小 1120 × 720） |
-| 设计稿 | [`deck.html`](../design/rplayer-v2/deck.html) · [`RPlayer-v2-设计稿.pdf`](../design/rplayer-v2/RPlayer-v2-设计稿.pdf)（10 页） |
+| 设计稿 | [`deck.html`](../design/rplayer-v2/deck.html) · [`RPlayer-v2-设计稿.pdf`](../design/rplayer-v2/RPlayer-v2-设计稿.pdf)（12 页） |
 | 系统界面稿 | [`system.html`](../design/rplayer-v2/system.html) · [`RPlayer-v2-系统界面设计稿.pdf`](../design/rplayer-v2/RPlayer-v2-系统界面设计稿.pdf)（7 页） |
+| 交互规范 | [`spec.html`](../design/rplayer-v2/spec.html) · [`RPlayer-v2-交互与动效规范.pdf`](../design/rplayer-v2/RPlayer-v2-交互与动效规范.pdf)（1 页） |
+| 机器可读规格 | [`spec/`](../design/rplayer-v2/spec)（inventory / interactions / motion / flows） |
 | 可交互原型 | [`index.html`](../design/rplayer-v2/index.html) |
 | 截图 | [`shots/`](../design/rplayer-v2/shots) |
 
@@ -109,11 +111,12 @@ RPlayer 0.13.5 的功能是完整的：本地扫描、歌词、队列、歌单�
 
 ### 3.8 设置
 
-- 最终信息架构收成 **9 组**：资料库 / 外观 / 播放 / 歌词 / 迷你播放器 / 离线与在线 / 数据 / 快捷键 / 关于。
-- 分组按“用户正在调什么”组织，而不是按代码模块；每组最多 7 行，超过则拆组。
+- 保持现有 **6 组**，不新增后台能力：外观 / 桌面歌词 / 迷你播放器 / 离线模式 / 在线内容 / 数据。
+- 快捷键与关于不放进设置，继续作为独立对话框；这是对 0.13.5 现有结构的保留，不是信息架构升级。
 - 主题只留两张卡：纸张、夜幕；跟随系统是一个开关。
 - 所有设置即时生效，不再有“应用 / 取消”；危险操作必须可撤销。
-- 设置窗口 720 × 640；左侧 150px 导航，右侧 36px 行高。主原型目前只展开“外观”页作为视觉样本，最终按 9 组落地。
+- 设置窗口基准 720 × 640（1440 原型为 840 × 660）；左侧 150px 导航，右侧 36px 行高。主原型展开“外观”页作为视觉样本，其余组由系统图版覆盖。
+- 外观页增加一个“预览”区，展示当前主题的侧栏、标题、行状态与色值；它不是新设置，只是主题卡的下文。
 
 ### 3.9 桌面歌词与迷你播放器
 
@@ -208,7 +211,7 @@ RPlayer 0.13.5 的功能是完整的：本地扫描、歌词、队列、歌单�
 | 正在播放 | `src/app/now_playing.rs` | 430 封面、60 标题、32 歌词；返回与沉浸切换 |
 | 右栏 | `src/app/now_rail.rs` | 封面 / 歌词入口 / UP NEXT 三段；窄窗口隐藏 |
 | 命令面板 | `src/app/command_palette.rs` | 分组、键盘导航、共享查询状态 |
-| 设置 | `src/app/settings.rs` | 9 组信息架构；720×640；即时生效 |
+| 设置 | `src/app/settings.rs` | 保留现有 6 组；720×640；即时生效；快捷键与关于仍为对话框 |
 | 桌面歌词 | `src/overlay.rs` | 860×158；悬停控件；透明度/字号/锁定菜单；无歌词态 |
 | 迷你播放器 | `src/overlay.rs` | 410×146；标准 + 紧凑两种密度；共用播放状态 |
 | 系统托盘 | `src/platform/tray.rs` | 保留 Win32 菜单语义；增加分组/勾选/当前曲头；自绘作为增强 |
@@ -251,7 +254,7 @@ RPlayer 0.13.5 的功能是完整的：本地扫描、歌词、队列、歌单�
 6. **无边框窗口 + 桌面歌词**：两个独立窗口的置顶、焦点与鼠标穿透需要 Windows 平台验证。
 7. **系统托盘自绘**：Win32 托盘菜单的 owner-draw 能做出品牌感，但会失去系统高对比/键盘/多显示器缩放的一部分免费行为；首版建议只做分组、勾选与当前曲头，保留原生菜单。
 8. **右键菜单全面自绘**：可统一视觉，但必须补齐键盘导航、屏幕边缘翻转、子菜单延迟与高 DPI；工程量高于主界面。
-9. **9 组设置**：比 6 组更完整，但入口更多；首版必须在每组内控制行数，并支持 `Ctrl K` 搜索设置项。
+9. **设置的“完整性”**：真实代码只有 6 组；不要再扩成 9 组。视觉上把第 7–9 个抽屉画出来会让实现者误以为要新增后台能力，这是本轮已经修正的一次范围膨胀。
 
 ---
 
@@ -263,7 +266,7 @@ RPlayer 0.13.5 的功能是完整的：本地扫描、歌词、队列、歌单�
 4. 是否接受自定义标题栏，还是保留原生标题栏？
 5. 1280px 以下隐藏右栏，是否可接受？
 6. 专辑 5 列 + 导入卡、歌单一屏 5 首，是否符合你的资料库规模？
-7. 设置最终收成 9 组（资料库 / 外观 / 播放 / 歌词 / 迷你播放器 / 离线与在线 / 数据 / 快捷键 / 关于），是否接受？
+7. 设置保持现有 6 组（外观 / 桌面歌词 / 迷你播放器 / 离线模式 / 在线内容 / 数据），快捷键与关于继续做独立对话框，是否接受？
 8. 右键菜单与托盘是否统一自绘？若接受，托盘首版仍建议保留 Win32 语义。
 9. 迷你播放器保留“标准 / 紧凑”两种密度，是否都需要进入首版？
 
@@ -277,21 +280,50 @@ RPlayer 0.13.5 的功能是完整的：本地扫描、歌词、队列、歌单�
 | [`design/rplayer-v2/tokens.css`](../design/rplayer-v2/tokens.css) | 颜色、字体、间距、圆角、动效变量 |
 | [`design/rplayer-v2/prototype.css`](../design/rplayer-v2/prototype.css) | 原型样式 |
 | [`design/rplayer-v2/prototype.js`](../design/rplayer-v2/prototype.js) | 屏幕路由、封面、命令面板、队列、主题 |
-| [`design/rplayer-v2/deck.html`](../design/rplayer-v2/deck.html) | 10 页主设计稿（浏览器打开） |
-| [`design/rplayer-v2/RPlayer-v2-设计稿.pdf`](../design/rplayer-v2/RPlayer-v2-设计稿.pdf) | 10 页主设计稿（打印 / 分享） |
+| [`design/rplayer-v2/deck.html`](../design/rplayer-v2/deck.html) | 12 页主设计稿（浏览器打开） |
+| [`design/rplayer-v2/RPlayer-v2-设计稿.pdf`](../design/rplayer-v2/RPlayer-v2-设计稿.pdf) | 12 页主设计稿（打印 / 分享） |
 | [`design/rplayer-v2/system.html`](../design/rplayer-v2/system.html) | 7 张系统界面图版（桌面 / 菜单 / 对话框 / 工具 / 设置 / 状态 / 设置地图） |
 | [`design/rplayer-v2/system.css`](../design/rplayer-v2/system.css) | 系统界面图版样式，复用 tokens |
 | [`design/rplayer-v2/RPlayer-v2-系统界面设计稿.pdf`](../design/rplayer-v2/RPlayer-v2-系统界面设计稿.pdf) | 7 页系统界面稿（打印 / 分享） |
-| [`design/rplayer-v2/shots/`](../design/rplayer-v2/shots) | 10 张 1440 × 900 主界面截图 + 7 张 1600 × 1000 系统图版 |
+| [`design/rplayer-v2/spec.html`](../design/rplayer-v2/spec.html) | 1 页交互与动效规范（1600 × 1000） |
+| [`design/rplayer-v2/RPlayer-v2-交互与动效规范.pdf`](../design/rplayer-v2/RPlayer-v2-交互与动效规范.pdf) | 1 页规范（打印 / 分享） |
+| [`design/rplayer-v2/spec/`](../design/rplayer-v2/spec) | `inventory.json` / `interactions.json` / `motion.json` / `flows.json` |
+| [`design/rplayer-v2/shots/`](../design/rplayer-v2/shots) | 10 张 1440 × 900 主界面 + 7 张 1600 × 1000 系统图版 + 规范图 |
 
 原型快捷键：`Ctrl K` 命令面板，`Ctrl 1/2/3` 曲库/专辑/正在播放，`Ctrl ,` 设置，`Ctrl L` 沉浸歌词，`Q` 队列，`F` 收藏，`Space` 播放/暂停，`Esc` 关闭。
 
 ---
 
-## 10. 下一步
+## 10. 机器可读规格
+
+这一版的主稿不是 PDF，而是 `design/rplayer-v2/spec/` 下的四份 JSON。图版是索引，JSON 是定义。
+
+| 文件 | 内容 | 数量 |
+| --- | --- | --- |
+| `inventory.json` | 每个界面 / 外设 / 菜单 / 对话框 / 工具 / 设置分组的稳定 ID、标题、源码路径、状态、动作、动效引用、可访问性 | 52 个设计界面 + 7 个原生系统对话框 = 59 |
+| `motion.json` | 动效 token、每类动作的时长、曲线、属性、减弱动态替代 | 48 条模式 |
+| `interactions.json` | 触发 → 结果 → 键盘 → aria → motion 引用 | 23 条 |
+| `flows.json` | 端到端路径：播放、搜索、右键、多选、迷你、歌词、设置、托盘、扫描、备份、队列 | 12 条 |
+
+约定：
+
+- 稳定 ID 使用 `VIEW.LIBRARY` / `MENU.TRACK` / `DIALOG.EDIT_TAGS` / `MOTION.ROW_SELECT` 这类命名；同一个 ID 同时出现在 JSON、图版编号与源码映射里。
+- 读取顺序固定为 `inventory → interactions → motion → flows`；先确认边界，再接行为，再定节奏，最后用图版核对。
+- 所有 `motion` 引用都必须能在 `motion.json` 找到；`interactions` 的引用必须能在 `inventory` 找到。当前校验结果：`bad refs []`。
+- 设置只有 6 组：外观 / 桌面歌词 / 迷你播放器 / 离线模式 / 在线内容 / 数据。快捷键与关于在 `DIALOG` 清单里，不占设置分组。
+- 原生系统对话框只记录触发与文案，不重画：文件夹选择、M3U 导入、M3U 导出、备份目录、恢复确认、清空确认、在资源管理器中显示。
+- 不属于 UI 的实现模块单独列在 `nonUi`：`src/stats.rs`、`src/app/session.rs`、`src/platform/dcomp_panel.rs`；不为了“看起来完整”虚构界面。
+
+---
+
+## 11. 下一步
 
 1. 审核本稿，确认第 8 节的九个决策。
 2. 冻结 tokens 与两套主题，先改 `theme.rs` 和字体注册。
 3. 按“框架 → 曲库 → 正在播放 → 专辑/歌单 → 命令/队列/设置 → 桌面外设 → 菜单/对话框/工具 → 状态页”的顺序实现。
 4. 每屏完成后用真实窗口截图回归，和 `shots/` 对照；桌面歌词与迷你播放器需单独做 100% / 125% / 150% DPI 检查。
 5. 全量通过后更新 `docs/`、版本说明与商店截图。
+
+
+
+
