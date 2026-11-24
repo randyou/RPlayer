@@ -229,8 +229,8 @@ pub fn show_lyrics(
                         ui.painter(),
                         Pos2::new(center_x, capsule.center().y + 1.0),
                         lyric,
-                        FontId::proportional(snapshot.lyrics_font),
-                        theme::c().accent,
+                        crate::ui::tokens::serif(snapshot.lyrics_font),
+                        Color32::from_rgb(0xF7, 0xF2, 0xE8),
                         shadow,
                         text_alpha,
                     );
