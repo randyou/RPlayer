@@ -244,12 +244,16 @@ pub struct Library {
     /// Originals from the most recent successful batch tag edit.
     #[serde(default)]
     pub last_tag_batch: Option<Vec<crate::tag_edit::TagEdit>>,
+    /// Scan keys the user removed through duplicate cleanup. They stay out of
+    /// the library until the folder is removed and added again.
+    #[serde(default)]
+    pub ignored_tracks: Vec<String>,
 }
 
 impl Default for Library {
     fn default() -> Self {
         Self {
-            version: 5,
+            version: 6,
             folders: Vec::new(),
             tracks: Vec::new(),
             playlists: Vec::new(),
@@ -276,6 +280,7 @@ impl Default for Library {
             replaygain: "off".to_string(),
             eq: crate::eq::EqSettings::default(),
             last_tag_batch: None,
+            ignored_tracks: Vec::new(),
         }
     }
 }
@@ -587,6 +592,20 @@ mod tests {
         lib.tracks.clear();
         lib.prune_playlists();
         assert_eq!(lib.track_count_for_playlist(pid), 0);
+    }
+
+    #[test]
+    fn ignored_tracks_survive_json_and_default_empty() {
+        let mut lib = Library::default();
+        lib.ignored_tracks = vec!["c:/music/a.flac".to_string()];
+        let json = serde_json::to_string(&lib).unwrap();
+        let restored: Library = serde_json::from_str(&json).unwrap();
+        assert_eq!(restored.ignored_tracks.len(), 1);
+
+        let mut value: serde_json::Value = serde_json::from_str(&json).unwrap();
+        value.as_object_mut().unwrap().remove("ignored_tracks");
+        let old: Library = serde_json::from_value(value).unwrap();
+        assert!(old.ignored_tracks.is_empty());
     }
 
     #[test]

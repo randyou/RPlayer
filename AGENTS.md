@@ -36,7 +36,7 @@ src/playback.rs      CUE segment <-> whole-file position mapping
 src/backup.rs        folder backups, validation and restore/rollback
 src/model.rs         Library/Track/Playlist data types
 src/cue.rs           CUE Sheet parsing and virtual track creation
-src/duplicates.rs    duplicate group detection
+src/duplicates.rs    duplicate group detection and grouping helpers
 src/health.rs        missing-file and CUE relink helpers
 src/tag_edit.rs      tag write and undo snapshots
 src/storage.rs       local JSON settings + SQLite tracks
@@ -101,7 +101,7 @@ src/ui/motion.rs     motion tokens and reduced-motion switch
 
 ## Verification
 
-- Unit tests: `cargo test --release` (currently 51+).
+- Unit tests: `cargo test --release` (currently 54+).
 - Windows UI automation: `agent-desktop snapshot --window-id <id>`, then click
   by `ref_id`; prefer AccessKit names over pixel coordinates.
 - Screenshots must be checked after UI changes; avoid leaving test images in

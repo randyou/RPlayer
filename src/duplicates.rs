@@ -9,6 +9,22 @@ pub struct DuplicateGroup {
     pub track_ids: Vec<u64>,
 }
 
+/// Ids that should be removed when the user keeps `keep`.
+pub fn others(group: &[u64], keep: u64) -> Vec<u64> {
+    group.iter().copied().filter(|id| *id != keep).collect()
+}
+
+/// Stable signature for the session-only "ignore this group" set.
+pub fn signature(ids: &[u64]) -> String {
+    let mut sorted = ids.to_vec();
+    sorted.sort_unstable();
+    sorted
+        .iter()
+        .map(u64::to_string)
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
 fn key(track: &Track) -> (String, String) {
     (
         track.title.trim().to_lowercase(),
@@ -103,6 +119,18 @@ mod tests {
         let groups = find(&tracks);
         assert_eq!(groups.len(), 1);
         assert_eq!(groups[0].track_ids, vec![1, 2]);
+    }
+
+    #[test]
+    fn keep_only_returns_every_other_member() {
+        assert_eq!(others(&[8, 3, 5], 3), vec![8, 5]);
+        assert!(others(&[8], 8).is_empty());
+    }
+
+    #[test]
+    fn signature_is_order_independent() {
+        assert_eq!(signature(&[9, 2, 5]), signature(&[2, 5, 9]));
+        assert_ne!(signature(&[2, 5]), signature(&[2, 6]));
     }
 
     #[test]

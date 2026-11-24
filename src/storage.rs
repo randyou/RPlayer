@@ -10,7 +10,7 @@ use crate::model::{Library, Track};
 
 pub const APP_DIR_NAME: &str = "RPlayer";
 pub const LIBRARY_FILE: &str = "library.json";
-pub const SCHEMA_VERSION: u32 = 5;
+pub const SCHEMA_VERSION: u32 = 6;
 
 /// Per-user data directory:
 /// - Windows: `%APPDATA%\RPlayer`

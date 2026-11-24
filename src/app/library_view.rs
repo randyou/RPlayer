@@ -363,6 +363,9 @@ impl RPlayerApp {
                         self.checked.clear();
                     }
                 }
+                if widgets::secondary_button(ui, "重复歌曲").clicked() {
+                    self.open_duplicates();
+                }
             }
 
             if self.batch_mode {
@@ -1069,9 +1072,16 @@ impl RPlayerApp {
                                     );
                                 });
                                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                                    if widgets::icon_button(ui, Icon::Trash, 28.0, "移除此目录")
-                                        .clicked()
-                                    {
+                                    let remove =
+                                        widgets::icon_button(ui, Icon::Trash, 28.0, "移除此目录");
+                                    remove.widget_info(|| {
+                                        egui::WidgetInfo::labeled(
+                                            egui::WidgetType::Button,
+                                            true,
+                                            format!("移除此目录：{}", folder.display()),
+                                        )
+                                    });
+                                    if remove.clicked() {
                                         self.remove_folder(&folder);
                                         self.toast("已移除音乐目录", super::ToastKind::Info);
                                     }
