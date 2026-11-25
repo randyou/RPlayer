@@ -72,3 +72,11 @@
 | 标题栏新增上下整宽 10px 拖动带 | 主窗口标题栏 | 物理拖动顶部/底部各一次，窗口分别位移 | 已回归 |
 | 保留面包屑与搜索左侧拖动 | 标题栏 | 原有 `drag` 路径代码未移除 | 已回归（代码） |
 | 根窗口 `WindowLevel::Normal` | 主窗口 | `GWL_EXSTYLE` 不含 `WS_EX_TOPMOST`；点击主题按钮正常 | 已回归 |
+
+## v2.1.0 验收反馈 · 三项修复
+
+| 问题 | 根因 | 修法 | 验证 |
+| --- | --- | --- | --- |
+| 托盘菜单四角有黑色直角 | eframe 每个 viewport 先用 panel fill 清屏，透明弹窗丢不掉这层底色，圆角卡片外就露出方形底色 | `platform::set_rounded_region(title, radius)`：`CreateRoundRectRgn` + `SetWindowRgn`，弹窗每帧裁圆角 | 截图放大左上角，直角消失（`tray-round2-screen.png`） |
+| 桌面歌词打开时主窗拖不动 | `enable_lyrics_native_drag` 的 `LYRICS_OLD_PROC` 一次性闩锁：歌词窗口关闭再打开是新 HWND，子类化没重装，整条 860×158 全部返回 `HTCLIENT`，把下面主窗的拖动区吃掉 | 同函数改为按 `LYRICS_TARGET` 比对 HWND，窗口换了就重装子类；`WM_NCHITTEST` 在胶囊外返回 `HTTRANSPARENT`，胶囊内 `HTCAPTION` | `SendMessageW(WM_NCHITTEST)` 探针：胶囊中心 2、胶囊外 −1（`lyr-fix-*`） |
+| 歌词面板调节/拖动有延迟 | 系统模态移动循环期间事件循环不重绘，DComp 胶囊是独立 HWND，跟着 `WM_MOVE` 才更新，于是拖的时候背景追不上文字 | `WM_ENTERSIZEMOVE` 隐藏胶囊、`WM_EXITSIZEMOVE` 再显示（`dcomp_panel::set_visible`） | 需人工拖动复验 |

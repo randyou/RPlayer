@@ -157,6 +157,10 @@ impl RPlayerApp {
         // frame it was requested, otherwise the next frame is an idle one and
         // the menu would not appear until something else wakes the app.
         ctx.show_viewport_immediate(tray_menu_viewport(), builder, move |ctx, _class| {
+            // Trim the corners at the OS level: eframe clears every viewport
+            // with the panel fill, so a rounded card would otherwise sit on a
+            // square patch of that colour.
+            crate::platform::set_rounded_region("RPlayer 托盘菜单", 10.0);
             let snapshot = state
                 .lock()
                 .map(|state| state.clone())

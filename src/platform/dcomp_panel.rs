@@ -438,3 +438,26 @@ pub fn update(title: &str, rect: (i32, i32, i32, i32), alpha: f32, rgb: (u8, u8,
     }
     draw(panel, rect.2.max(1) as u32, rect.3.max(1) as u32, alpha, rgb).is_ok()
 }
+
+/// Shows or hides the panel without changing its content. The panel is a
+/// separate HWND, so it does not follow the lyric window through the system's
+/// modal move loop - hiding it for the duration of a drag keeps the capsule
+/// from trailing behind the text.
+pub fn set_visible(visible: bool) {
+    let Ok(mut guard) = panel().lock() else {
+        return;
+    };
+    let Some(panel) = guard.as_mut() else {
+        return;
+    };
+    unsafe {
+        let _ = ShowWindow(
+            panel.hwnd,
+            if visible {
+                windows::Win32::UI::WindowsAndMessaging::SW_SHOWNOACTIVATE
+            } else {
+                windows::Win32::UI::WindowsAndMessaging::SW_HIDE
+            },
+        );
+    }
+}

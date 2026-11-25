@@ -833,6 +833,8 @@ fn update_lyrics_panel_impl(
 pub fn update_lyrics_panel(_title: &str, _rect: (i32, i32, i32, i32), _alpha: f32, _rgb: (u8, u8, u8), _radius: f32) {}
 static LYRICS_OLD_PROC: std::sync::atomic::AtomicIsize =
     std::sync::atomic::AtomicIsize::new(0);
+static LYRICS_TARGET: std::sync::atomic::AtomicIsize =
+    std::sync::atomic::AtomicIsize::new(0);
 
 #[cfg(target_os = "windows")]
 unsafe extern "system" fn lyrics_native_proc(
@@ -865,9 +867,32 @@ unsafe extern "system" fn lyrics_native_proc(
             GetClientRect(hwnd, &mut rect);
         }
         let width = rect.right - rect.left;
-        let controls = (point.x < 230 && point.y < 130)
-            || (point.x > width - 56 && point.y < 46);
-        return if controls { 1 } else { 2 };
+        let height = rect.bottom - rect.top;
+        let controls = point.x < 230 && point.y < 130
+            || point.x > width - 56 && point.y < 46;
+        if controls {
+            return 1; // HTCLIENT: egui draws and hit-tests its own buttons.
+        }
+        // The lyric window is a wide always-on-top strip, but only the capsule
+        // is visible. Clicks outside it have to fall through to whatever is
+        // behind, otherwise the overlay blocks the main window's title bar.
+        let inset = 16;
+        let inside = point.x >= inset
+            && point.y >= inset
+            && point.x <= width - inset
+            && point.y <= height - inset;
+        return if inside { 2 } else { -1 }; // HTCAPTION: drag, HTTRANSPARENT: pass through.
+    }
+    // The system runs a modal move loop while the caption is dragged, so the
+    // event loop stops painting. Hide the DComp capsule for that window instead
+    // of letting it trail behind the text.
+    if msg == 0x0231 {
+        crate::platform::dcomp_panel::set_visible(false);
+        return 0;
+    }
+    if msg == 0x0232 {
+        crate::platform::dcomp_panel::set_visible(true);
+        return 0;
     }
     let old = LYRICS_OLD_PROC.load(Ordering::SeqCst);
     unsafe {
@@ -877,6 +902,60 @@ unsafe extern "system" fn lyrics_native_proc(
             DefWindowProcW(hwnd, msg, wp, lp)
         }
     }
+}
+
+/// Clips a window to a rounded rectangle so the corners outside the drawn
+/// panel do not fall back to the framebuffer clear colour. eframe clears each
+/// viewport with the panel fill before egui paints, and a transparent popup
+/// cannot drop that fill, so the OS has to cut the corners instead.
+#[cfg(target_os = "windows")]
+pub fn set_rounded_region(title: &str, radius: f32) -> bool {
+    #[link(name = "user32")]
+    extern "system" {
+        fn FindWindowW(class_name: *const u16, window_name: *const u16) -> isize;
+        fn GetWindowRect(hwnd: isize, rect: *mut RectI) -> i32;
+        fn SetWindowRgn(hwnd: isize, region: isize, redraw: i32) -> i32;
+    }
+    #[link(name = "gdi32")]
+    extern "system" {
+        fn CreateRoundRectRgn(
+            left: i32, top: i32, right: i32, bottom: i32,
+            width: i32, height: i32,
+        ) -> isize;
+    }
+    #[repr(C)]
+    struct RectI {
+        left: i32,
+        top: i32,
+        right: i32,
+        bottom: i32,
+    }
+    let wide: Vec<u16> = title.encode_utf16().chain(std::iter::once(0)).collect();
+    let hwnd = unsafe { FindWindowW(std::ptr::null(), wide.as_ptr()) };
+    if hwnd == 0 {
+        return false;
+    }
+    let mut rect = RectI { left: 0, top: 0, right: 0, bottom: 0 };
+    if unsafe { GetWindowRect(hwnd, &mut rect) } == 0 {
+        return false;
+    }
+    let width = rect.right - rect.left;
+    let height = rect.bottom - rect.top;
+    if width <= 0 || height <= 0 {
+        return false;
+    }
+    let diameter = (radius * 2.0).max(2.0) as i32;
+    let region = unsafe { CreateRoundRectRgn(0, 0, width + 1, height + 1, diameter, diameter) };
+    if region == 0 {
+        return false;
+    }
+    // SetWindowRgn takes ownership of the region.
+    unsafe { SetWindowRgn(hwnd, region, 1) != 0 }
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn set_rounded_region(_title: &str, _radius: f32) -> bool {
+    false
 }
 
 /// Lets the user drag the lyric window from any non-control area.
@@ -890,7 +969,13 @@ pub fn enable_lyrics_native_drag(title: &str) {
     }
     let wide: Vec<u16> = title.encode_utf16().chain(std::iter::once(0)).collect();
     let hwnd = unsafe { FindWindowW(std::ptr::null(), wide.as_ptr()) };
-    if hwnd == 0 || LYRICS_OLD_PROC.load(Ordering::SeqCst) != 0 {
+    if hwnd == 0 {
+        return;
+    }
+    // The lyric viewport is recreated every time the overlay is toggled, and a
+    // new HWND starts with the stock window proc - so the subclass has to be
+    // reinstalled rather than latched once per process.
+    if LYRICS_TARGET.load(Ordering::SeqCst) == hwnd {
         return;
     }
     let old = unsafe {
@@ -898,6 +983,7 @@ pub fn enable_lyrics_native_drag(title: &str) {
     };
     if old != 0 {
         LYRICS_OLD_PROC.store(old, Ordering::SeqCst);
+        LYRICS_TARGET.store(hwnd, Ordering::SeqCst);
     }
 }
 
