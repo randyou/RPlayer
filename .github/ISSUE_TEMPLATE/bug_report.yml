@@ -1,0 +1,51 @@
+name: Bug report
+description: Something in RPlayer behaves differently than expected
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请先确认问题能复现，并尽量附上截图或录屏。所有信息都是公开的，请不要贴个人路径、账号或歌曲文件的私密内容。
+  - type: input
+    id: version
+    attributes:
+      label: RPlayer 版本
+      description: 关于窗口里的版本号，或 zip 文件名
+      placeholder: v2.2.0
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows 版本与缩放
+      placeholder: Windows 11 23H2, 150% scaling
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 打开音乐目录
+        2. 扫描含 CUE 的文件夹
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望结果
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际结果
+      description: 有截图、日志或错误提示就贴在这里
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: 补充信息
+      description: 例如音频格式、是否离线、是否装了第三方主题
