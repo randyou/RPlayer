@@ -1,9 +1,3 @@
-//! Global hardware media keys.
-//!
-//! This is the portable, no-window part of system media integration: the keys
-//! work while RPlayer is in the background. Full Windows SMTC metadata
-//! (taskbar/lock screen) is a separate follow-up.
-
 use std::sync::mpsc::{self, Receiver};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -15,7 +9,7 @@ pub enum MediaCommand {
 }
 
 #[cfg(target_os = "windows")]
-pub fn start() -> Option<Receiver<MediaCommand>> {
+pub fn start(wake: impl Fn() + Send + 'static) -> Option<Receiver<MediaCommand>> {
     use std::ptr;
     use winapi::um::winuser::{
         GetMessageW, RegisterHotKey, UnregisterHotKey, MOD_NOREPEAT, MSG, VK_MEDIA_NEXT_TRACK,
@@ -50,6 +44,8 @@ pub fn start() -> Option<Receiver<MediaCommand>> {
                         if sender.send(*command).is_err() {
                             break;
                         }
+                        // Wake the UI instead of waiting for its idle tick.
+                        wake();
                     }
                 }
             }
@@ -65,6 +61,6 @@ pub fn start() -> Option<Receiver<MediaCommand>> {
 }
 
 #[cfg(not(target_os = "windows"))]
-pub fn start() -> Option<Receiver<MediaCommand>> {
+pub fn start(_wake: impl Fn() + Send + 'static) -> Option<Receiver<MediaCommand>> {
     None
 }

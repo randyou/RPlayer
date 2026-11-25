@@ -211,6 +211,11 @@ pub struct RPlayerApp {
     health_checking: bool,
     #[cfg(target_os = "windows")]
     tray: Option<crate::platform::tray::Tray>,
+    /// True when a background heartbeat already pokes the UI, so the idle path
+    /// does not schedule a second timer that would double the idle frame rate.
+    tray_heartbeat: bool,
+    /// Mirrors the root viewport's minimized state for the heartbeat thread.
+    window_minimized: std::sync::Arc<std::sync::atomic::AtomicBool>,
     allow_exit: bool,
     main_window_pos: Option<Pos2>,
     audio: Option<AudioEngine>,
@@ -380,6 +385,8 @@ impl RPlayerApp {
             health_checking: false,
             #[cfg(target_os = "windows")]
             tray: None,
+            tray_heartbeat: false,
+            window_minimized: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
             allow_exit: false,
             main_window_pos: None,
             audio,
@@ -492,11 +499,18 @@ impl RPlayerApp {
         {
             app.tray = crate::platform::tray::Tray::create();
             if app.tray.is_some() {
-                // The main viewport is minimized when sent to the tray; keep a
-                // light heartbeat so menu events can be polled while hidden.
+                app.tray_heartbeat = true;
+                // The main viewport is minimized when sent to the tray, so the
+                // heartbeat is what keeps menu events flowing while hidden.
+                // Visible-but-paused windows do not need that rate: the frame
+                // loop is the single idle timer (see `request_repaint`) and one
+                // frame costs ~14 ms of paint, so it ticks slowly on purpose.
                 let ctx = cc.egui_ctx.clone();
+                let minimized = app.window_minimized.clone();
                 std::thread::spawn(move || loop {
-                    std::thread::sleep(std::time::Duration::from_millis(250));
+                    let hidden = minimized.load(std::sync::atomic::Ordering::Relaxed);
+                    let ms = if hidden { 300 } else { 3000 };
+                    std::thread::sleep(std::time::Duration::from_millis(ms));
                     ctx.request_repaint_of(egui::ViewportId::ROOT);
                 });
             }
@@ -504,7 +518,14 @@ impl RPlayerApp {
         if let Some(err) = audio_error {
             app.toast(format!("音频输出不可用：{err}"), ToastKind::Error);
         }
-        app.media_rx = crate::platform::media::start();
+        {
+            // Media keys wake the UI directly; the idle heartbeat can then be
+            // slow without making the hardware keys feel laggy.
+            let ctx = cc.egui_ctx.clone();
+            app.media_rx = crate::platform::media::start(move || {
+                ctx.request_repaint_of(egui::ViewportId::ROOT);
+            });
+        }
         if let Some(session) = crate::session::load() {
             app.restore_session(session);
         }
@@ -3036,8 +3057,7 @@ impl RPlayerApp {
     }
 
     fn request_repaint(&self, ctx: &egui::Context) {
-        let playing = self.is_playing();
-        let delay = if playing {
+        let delay = if self.is_playing() {
             33
         } else if self.scanning
             || self.toast.is_some()
@@ -3045,8 +3065,14 @@ impl RPlayerApp {
             || self.cover_fetching.is_some()
         {
             120
+        } else if self.tray_heartbeat {
+            // The tray thread already pokes the root viewport on a slow tick;
+            // a second idle timer here would double the idle frame rate.
+            return;
         } else {
-            500
+            // Fully idle: nothing on screen changes on its own, so a slow tick
+            // is enough to pick up media-key and filesystem events.
+            1000
         };
         ctx.request_repaint_after(Duration::from_millis(delay));
     }
@@ -3219,6 +3245,11 @@ impl eframe::App for RPlayerApp {
 
 impl RPlayerApp {
     fn update_inner(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        let minimized = ctx
+            .input(|input| input.viewport().minimized)
+            .unwrap_or(false);
+        self.window_minimized
+            .store(minimized, std::sync::atomic::Ordering::Relaxed);
         if let Some(scale) = self.debug_scale {
             if (ctx.pixels_per_point() - scale).abs() > 1e-4 {
                 ctx.set_pixels_per_point(scale);

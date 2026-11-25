@@ -590,7 +590,10 @@ pub fn show_lyrics(
                 queue.push(OverlayCommand::CloseLyrics);
             }
         }
-        ctx.request_repaint_after(std::time::Duration::from_millis(33));
+        // Playing keeps a 30 fps tick so the lyric line can advance; paused
+        // frames only need to react to explicit wakes from the main viewport.
+        let interval = if snapshot.playing { 33 } else { 500 };
+        ctx.request_repaint_after(std::time::Duration::from_millis(interval));
     });
 }
 

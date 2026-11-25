@@ -27,7 +27,8 @@ impl RPlayerApp {
                     crate::platform::tray::TrayAction::Exit => self.exit_from_tray(ctx),
                 }
             }
-            ctx.request_repaint_after(std::time::Duration::from_millis(250));
+            // No timer here: the tray heartbeat thread pokes the root viewport,
+            // and polling twice per frame would only raise idle CPU.
         }
         #[cfg(not(target_os = "windows"))]
         {
