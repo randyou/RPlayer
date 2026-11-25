@@ -307,6 +307,10 @@ pub struct RPlayerApp {
     scan_done: usize,
     scan_seen: HashSet<u64>,
     scan_errors: Vec<String>,
+    /// D12 inline error card: expanded state and dismiss flag.
+    error_card_open: bool,
+    error_card_dismissed: bool,
+    scan_finished_at: Option<std::time::Instant>,
     ignored_duplicate_groups: HashSet<String>,
     dialog: Dialog,
     last_dialog: Dialog,
@@ -480,6 +484,9 @@ impl RPlayerApp {
             scan_done: 0,
             scan_seen: HashSet::new(),
             scan_errors: Vec::new(),
+            error_card_open: false,
+            error_card_dismissed: false,
+            scan_finished_at: None,
             ignored_duplicate_groups: HashSet::new(),
             dialog: Dialog::None,
             last_dialog: Dialog::None,
@@ -620,6 +627,7 @@ impl RPlayerApp {
         self.scan_done = 0;
         self.scan_seen.clear();
         self.scan_errors.clear();
+        self.error_card_dismissed = false;
         let known: std::collections::HashMap<String, (u64, u64)> = self
             .library
             .tracks
@@ -687,6 +695,9 @@ impl RPlayerApp {
                 }
                 ScanEvent::Finished { errors } => {
                     self.scan_errors = errors;
+                    self.scan_finished_at = Some(std::time::Instant::now());
+                    self.error_card_open = false;
+                    self.error_card_dismissed = false;
                     finished = true;
                 }
             }
