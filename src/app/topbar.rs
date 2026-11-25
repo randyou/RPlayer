@@ -516,6 +516,16 @@ impl RPlayerApp {
         if response.has_focus() {
             crate::ui::focus::ring_rect(ui, rect.shrink(2.0), 0);
         }
+        // The caption buttons are drawn by hand, so without an explicit name
+        // screen readers fall back to "自定义" for every one of them (v2.1.4
+        // acceptance report from Narrator). Publish a real button name; Enter
+        // and Space reach them through egui's focused-widget activation.
+        let label = match kind {
+            WindowButton::Minimize => "最小化窗口",
+            WindowButton::Maximize => "最大化窗口",
+            WindowButton::Close => "关闭窗口",
+        };
+        crate::ui::widgets::mark(&response, egui::WidgetType::Button, label, None);
         response
     }
 }

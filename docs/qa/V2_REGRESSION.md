@@ -289,3 +289,29 @@
 改用点：`browse.rs`/`now_rail.rs`/`player_bar.rs`/`topbar.rs`/`tray.rs` 的 `Color32::WHITE` → `theme::ON_MEDIA`；`sidebar.rs` 与 `widgets.rs` 的白色叠层 → `theme::wash()`；`mod.rs`/`dialogs.rs` 阴影与背景遮罩 → `theme::scrim()`；`settings.rs` 品牌预览卡、`now_playing.rs` 场景渐变 → `theme::brand::*` / `theme::scene::*`；`overlay.rs` 的色键与当前行文字 → `theme::COLOR_KEY` / `theme::c().text`。
 
 验证：`cargo test --release` 71 passed；纸张主题下曲库、扩展「正在播放」场景截图 `tools/qa/out/screens/n1-paper.png`、`n1-scene.png` 与改动前一致（纯值等价迁移）。
+
+## R2 结论修订（v2.1.4，讲述人实测）
+
+**原判定**：辅助技术激活顶栏图标按钮无效（R2）。
+**修订为：自动化工具限制，不是产品缺陷。**
+
+讲述人（m07509/m07515）实测：Tab 能依次到达「切换到深色主题 / 设置 / 均衡器 / 迷你播放器 / 桌面歌词」，名称与顺序都正确；聚焦到「设置」后**按 Enter 会打开设置面板**，再按 Space 又把它关掉（同一个动作被触发两次）。说明 UIA → AccessKit → egui 的激活链路是通的。
+
+`agent-desktop click` 仍无效，原因在工具侧：它注入的动作不是 `Invoke`/AccessKit `Click`（本地探针 `RPLAYER_AK_LOG` 证明 `Event::AccessKitActionRequest` 从未到达 egui），且该节点不提供 `InvokePattern`。
+
+因此回归判据改为：**「UIA 名称断言 + 物理点击」组合**，不再依赖 `agent-desktop click` 的语义激活。
+
+## 窗口控制按钮命名（v2.1.4 修复）
+
+讲述人反馈右上角三个自绘按钮都读「自定义」（UIA 对无名称自绘控件的兜底文案）。
+
+修法：`src/app/topbar.rs:459 fn window_button` 末尾补
+`crate::ui::widgets::mark(&response, egui::WidgetType::Button, label, None)`，label 分别为「最小化窗口 / 最大化窗口 / 关闭窗口」；`mark` 的可见性从私有改为 `pub(crate)`。
+
+验证（`System.Windows.Automation` 读主窗按钮）：`[最小化窗口] rect=1380,104,46,54`、`[最大化窗口] rect=1430,104,46,54`、`[关闭窗口] rect=1480,104,46,54` —— 三个名称都已就位。
+
+## 首 Tab 焦点停在窗口节点（v2.1.4 记录，未修）
+
+讲述人连按两次 Tab 都读「……RPlayer窗口」。实测 `agent-desktop` 快照里 Tab 后 `focused` 落在 `role=window` 的根节点上，再 Tab 才离开。
+
+判定：egui 把根 viewport 暴露成可聚焦的 Window 节点，属框架行为；要在应用层压掉需要改 `accesskit` 节点属性或升级 egui，与本轮 J6 同源，留到 v2.1.4 的适配器专项一起处理。

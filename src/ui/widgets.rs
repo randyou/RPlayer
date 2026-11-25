@@ -783,7 +783,7 @@ pub fn toggle_switch(ui: &mut Ui, on: &mut bool) -> Response {
     response
 }
 
-fn mark(response: &Response, typ: WidgetType, label: &str, selected: Option<bool>) {
+pub(crate) fn mark(response: &Response, typ: WidgetType, label: &str, selected: Option<bool>) {
     response.widget_info(|| match selected {
         Some(selected) => WidgetInfo::selected(typ, true, selected, label),
         None => WidgetInfo::labeled(typ, true, label),
