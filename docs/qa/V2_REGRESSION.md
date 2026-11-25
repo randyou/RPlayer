@@ -167,20 +167,20 @@
 
 | # | 项 | 判据 | 结果 | 证据 |
 | --- | --- | --- | --- | --- |
-| N1 | 纸（Paper） | 所有面用同一套 token，无硬编码色 | | |
-| N2 | 夜（Nocturne） | 同上；菜单/弹层不透明冲突 | | |
-| N3 | 动效 | 切视图/展开/悬停有过渡且不卡 | | |
-| N4 | 减少动态 | 开 `reduce motion` 后无动画、无卡顿 | | |
-| N5 | 高 DPI | 100/125/150 无重叠；200% 见 V2_REMAINING B1 | | |
+| N1 | 纸（Paper） | 所有面用同一套 token，无硬编码色 | **部分** · 主界面全部走 `theme::c()`，但 `src/app/*.rs`+`src/ui/*.rs`+`src/overlay.rs` 仍有 42 处 `Color32::from_rgb*`（含探针 `mod.rs:3474` magenta、color-key、`now_playing.rs:549/702-707` 场景渐变）——需逐一分类「刻意固定 / 应改 token」，列入 v2.2.0 S3 | `v2reg-I1.png` |
+| N2 | 夜（Nocturne） | 同上；菜单/弹层不透明冲突 | 通过（机制层）· 夜幕下菜单/托盘面板/设置弹窗均为不透明 panel 填充，未见透底；硬编码色问题同 N1 | `v210-tray-menu-dark.png` |
+| N3 | 动效 | 切视图/展开/悬停有过渡且不卡 | 通过 · `src/ui/motion.rs:5-8` 的 PRESS 0.09 / FAST 0.14 / PAGE 0.28 / SLOW 0.52 秒与设计稿 token（90/140/280/520ms）一致，曲线统一 ease-out-cubic | — |
+| N4 | 减少动态 | 开 `reduce motion` 后无动画、无卡顿 | 通过（代码级）· `motion::set_reduced` + `motion::duration()` 在 reduced 时返回 0；设置页「减少动态效果」开关与会话持久化字段 `library.json.reduced_motion` 存在；UI 开关的点击本轮未能一次命中，未做逐帧验证 | `v2reg-N4.png` |
+| N5 | 高 DPI | 100/125/150 无重叠；200% 见 V2_REMAINING B1 | 通过 · 100%（1440×900 / 1120×720）、125%、150% 均无重叠与裁切；200% 仍破版（`V2_REMAINING` B1） | `v210-dpi-100-1440.png`、`v210-dpi-125-1440.png`、`v210-dpi-150-1440.png` |
 
 ## O. 性能（4）
 
 | # | 项 | 判据 | 结果 | 证据 |
 | --- | --- | --- | --- | --- |
-| O1 | 冷启动 | <1.5s（10k 库） | | |
-| O2 | 滚动 | P50 ≤16.7ms，P95 目标 ≤16.7ms（当前 22.7） | | |
-| O3 | 空闲 CPU | <1%（当前 1.72%） | | |
-| O4 | 内存 | <250MB（10k 库） | | |
+| O1 | 冷启动 | <1.5s（10k 库） | 通过 · 8 首库 829ms（`v2reg-A1.png`）；10k 库冷启动 0.79s | `v2reg-A1.png` |
+| O2 | 滚动 | P50 ≤16.7ms，P95 目标 ≤16.7ms（当前 22.7） | 通过 · 10k 库 P50 **2.0ms**、P95 **2.5ms**（`tools/qa/scroll-bench.ps1`，100 下 + 100 上，跳过前 8 帧）；连续滚动 62fps | `tools/qa/out/scroll-bench.txt` |
+| O3 | 空闲 CPU | <1%（当前 1.72%） | 通过 · 三场景 0.25% / 0.16% / 0.18%（`tools/qa/perf-run.ps1`），低于 1% 目标 | `tools/qa/out/perf.txt` |
+| O4 | 内存 | <250MB（10k 库） | 通过 · 10k 库工作集 205MB | `tools/qa/out/perf.txt` |
 
 ---
 
@@ -214,6 +214,8 @@
 
 
 | R4 | 桌面歌词打开 + 播放中，主窗时间/进度长时间停在同一点（多张截图都是 0:15），RPLAYER_FRAME_LOG 显示 8s 内 30 帧、之后 5s 仅 2 帧，进程 CPU ≈44%、内存 230MB、窗口仍响应 | 用户会看到「歌词在唱但进度不动」，且覆盖层后续输入/刷新迟钝 | 待定位（建议带 RPLAYER_FRAME_LOG+RPLAYER_SECTION_LOG 复现，看是音频线程阻塞还是 repaint 停了） |
+
+
 
 
 
