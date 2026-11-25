@@ -188,11 +188,15 @@ impl RPlayerApp {
                     }),
             )
             .show(ctx, |ui| {
+                ui.label(
+                    RichText::new("LIBRARY HEALTH")
+                        .font(crate::ui::tokens::mono(8.5))
+                        .color(theme::c().faint),
+                );
                 ui.horizontal(|ui| {
                     ui.label(
                         RichText::new("曲库健康检查")
-                            .size(18.0)
-                            .strong()
+                            .font(crate::ui::tokens::serif(24.0))
                             .color(theme::c().text),
                     );
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {

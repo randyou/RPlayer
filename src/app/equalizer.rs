@@ -64,9 +64,13 @@ impl RPlayerApp {
                     ui.vertical(|ui| {
                         ui.spacing_mut().item_spacing.y = 1.0;
                         ui.label(
+                            RichText::new("EQUALIZER")
+                                .font(crate::ui::tokens::mono(8.0))
+                                .color(theme::c().faint),
+                        );
+                        ui.label(
                             RichText::new("均衡器")
-                                .size(18.0)
-                                .strong()
+                                .font(crate::ui::tokens::serif(24.0))
                                 .color(theme::c().text),
                         );
                         ui.label(

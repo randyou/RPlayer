@@ -141,6 +141,11 @@ impl RPlayerApp {
                     }),
             )
             .show(ctx, |ui| {
+                ui.label(
+                    RichText::new("SMART PLAYLIST")
+                        .font(crate::ui::tokens::mono(8.5))
+                        .color(theme::c().faint),
+                );
                 ui.horizontal(|ui| {
                     ui.label(
                         RichText::new(if draft.id.is_some() {
@@ -148,8 +153,7 @@ impl RPlayerApp {
                         } else {
                             "新建智能歌单"
                         })
-                            .size(18.0)
-                            .strong()
+                            .font(crate::ui::tokens::serif(24.0))
                             .color(theme::c().text),
                     );
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {

@@ -191,3 +191,17 @@ M4 当前完成项：
 - [x] 队列抽屉 280ms 滑入。
 - [x] `cargo test --release`：70 passed；`cargo build --release` 通过。
 - [ ] 透明 DComp 窗口的屏幕截图受桌面背景影响，不作为像素级验收依据。
+
+## v2.0.3 对话框与工具窗口
+
+| 文件 | 窗口 | 说明 |
+| --- | --- | --- |
+| `v203-dialog.png` | 1440×900 | 新建播放列表：RPLAYER · DIALOG 眉题、衬线标题、空名称主操作禁用 |
+| `v203-dialog-1120.png` | 1120×720 | 最小窗口对话框不裁切 |
+| `v203-health.png` | 1440×900 | 曲库健康检查：LIBRARY HEALTH 眉题、衬线标题 |
+| `v203-eq.png` | 1440×900 | 均衡器：EQUALIZER 眉题、衬线标题、频段与预设完整 |
+
+- [x] 对话框标题与说明统一。
+- [x] 三个工具窗口标题统一，关闭按钮不重叠。
+- [x] `cargo test --release`：70 passed；`cargo build --release` 通过。
+- [ ] 工具窗口内部控件未逐项重排。

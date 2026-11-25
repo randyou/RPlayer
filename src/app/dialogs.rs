@@ -914,7 +914,17 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
 }
 
 fn dialog_header(ui: &mut Ui, title: &str, subtitle: &str) {
-    ui.label(RichText::new(title).size(19.0).strong().color(theme::c().text));
+    ui.label(
+        RichText::new("RPLAYER · DIALOG")
+            .font(crate::ui::tokens::mono(8.5))
+            .color(theme::c().faint),
+    );
+    ui.add_space(5.0);
+    ui.label(
+        RichText::new(title)
+            .font(crate::ui::tokens::serif(23.0))
+            .color(theme::c().text),
+    );
     if !subtitle.is_empty() {
         ui.add_space(3.0);
         ui.add(Label::new(RichText::new(subtitle).size(11.5).color(theme::c().muted)).wrap());
