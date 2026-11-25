@@ -284,6 +284,9 @@ impl RPlayerApp {
     fn album_import_card(&mut self, ui: &mut Ui, width: f32) {
         let card_height = width + 64.0;
         let (rect, response) = ui.allocate_exact_size(Vec2::new(width, card_height), Sense::click());
+        response.widget_info(|| {
+            egui::WidgetInfo::labeled(egui::WidgetType::Button, true, "添加音乐文件夹")
+        });
         let cover = Rect::from_min_size(rect.min, Vec2::splat(width));
         let hovered = response.hovered();
         let painter = ui.painter();
@@ -328,6 +331,18 @@ impl RPlayerApp {
     fn album_card(&mut self, ui: &mut Ui, group: &AlbumGroup, width: f32) {
         let card_height = width + 64.0;
         let (rect, response) = ui.allocate_exact_size(Vec2::new(width, card_height), Sense::click());
+        response.widget_info(|| {
+            egui::WidgetInfo::labeled(
+                egui::WidgetType::Button,
+                true,
+                format!(
+                    "专辑：{} — {}，{} 首",
+                    group.title,
+                    group.artist,
+                    group.ids.len()
+                ),
+            )
+        });
         let hovered = response.hovered();
         let cover = Rect::from_min_size(rect.min, Vec2::splat(width));
 
@@ -388,6 +403,7 @@ impl RPlayerApp {
             theme::c().faint,
         );
 
+        let response = response.on_hover_text(format!("{}\n{}", group.title, group.artist));
         if response.double_clicked() {
             let ids = group.ids.clone();
             self.play_queue(ui.ctx(), ids, 0);
@@ -418,6 +434,18 @@ impl RPlayerApp {
     fn artist_card(&mut self, ui: &mut Ui, group: &ArtistGroup, width: f32) {
         let card_height = width + 64.0;
         let (rect, response) = ui.allocate_exact_size(Vec2::new(width, card_height), Sense::click());
+        response.widget_info(|| {
+            egui::WidgetInfo::labeled(
+                egui::WidgetType::Button,
+                true,
+                format!(
+                    "艺术家：{}，{} 张专辑，{} 首",
+                    group.name,
+                    group.album_count,
+                    group.ids.len()
+                ),
+            )
+        });
         let hovered = response.hovered();
         let cover = Rect::from_min_size(rect.min, Vec2::splat(width));
 
@@ -470,6 +498,7 @@ impl RPlayerApp {
             theme::c().faint,
         );
 
+        let response = response.on_hover_text(&group.name);
         if response.double_clicked() {
             let ids = group.ids.clone();
             self.play_queue(ui.ctx(), ids, 0);
