@@ -22,6 +22,7 @@
 
 ## 约定
 
+- **产物只往 `out/` 里写**：截图放 `out\screens\`、帧日志/CSV 放 `out\logs\`、临时 JSON/hwnd 放 `out\state\`，一次性脚本放 `tools\scratch\`（同样 gitignore）。仓库根目录与 `D:\Workspace` 必须保持干净 —— 2026-11-25 就因为反复直接写 `D:\Workspace\_miniN.png` 被要求重做归置。
 - 每次取证给产物起可读名字，最终证据再拷进 `docs/qa/v0.2/` 并写进 `SURFACE_MATRIX.md` / `REGRESSION_LOG.md`。
 - 点击前用 `GetWindowRect` 现算屏幕坐标：窗口位置每次启动都会变，写死坐标必然点空。
 - `agent-desktop click '@ref'` 对真 `Button` 有效，对 `chip`（role=switch）与表格行无效；那类控件只能用 `phys-click.ps1`。

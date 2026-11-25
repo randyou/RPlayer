@@ -118,10 +118,14 @@ src/ui/focus.rs      2px focus rings for custom controls
 
 ## Verification
 
-- Unit tests: `cargo test --release` (currently 70).
+- Unit tests: `cargo test --release` (currently 71; update this line when it moves).
 - `cargo test` does **not** rebuild `target/release/rplayer.exe`; always run
   `cargo build --release` before UI screenshots.
 - Windows UI automation: `agent-desktop snapshot --window-id <id>`, then click
   by `ref_id`; prefer AccessKit names over pixel coordinates.
 - Screenshots must be checked after UI changes; avoid leaving test images in
   `docs/` unless they are intentional documentation.
+- **Never write scratch files outside this repository.** All probes go under
+  `tools/qa/out/` (screens, logs, state — gitignored) and throwaway scripts under
+  `tools/scratch/`; the repo root and `D:\Workspace` stay clean. Long-lived QA
+  scripts live in `tools/qa/` with the naming from `tools/qa/README.md`.
