@@ -41,6 +41,8 @@ pub(super) enum TrayMenuCommand {
 
 pub(super) struct TrayMenu {
     pub pos: Pos2,
+    /// The tray icon point the popup grows out of, in viewport points.
+    pub origin: Pos2,
     pub opened_at: f64,
     pub commands: Arc<Mutex<Vec<TrayMenuCommand>>>,
     /// `(cover id, texture)`; the popup loads the thumbnail once per track
@@ -95,7 +97,8 @@ impl RPlayerApp {
     /// off the monitor.
     pub(super) fn open_tray_menu(&mut self, ctx: &egui::Context, screen: Pos2) {
         let ppp = ctx.pixels_per_point().max(0.5);
-        let mut pos = Pos2::new(screen.x / ppp, screen.y / ppp);
+        let origin = Pos2::new(screen.x / ppp, screen.y / ppp);
+        let mut pos = origin;
         let height = menu_height();
         // Prefer the real work area of the monitor under the cursor: the tray
         // lives in the notification area, and egui reports no monitor size for
@@ -120,6 +123,7 @@ impl RPlayerApp {
         }
         self.tray_menu = Some(TrayMenu {
             pos,
+            origin,
             opened_at: ctx.input(|input| input.time),
             commands: Arc::new(Mutex::new(Vec::new())),
             cover: Arc::new(Mutex::new(None)),
@@ -131,7 +135,7 @@ impl RPlayerApp {
         let Some(open) = self.tray_menu.as_ref() else {
             return;
         };
-        let (pos, opened_at) = (open.pos, open.opened_at);
+        let (pos, origin, opened_at) = (open.pos, open.origin, open.opened_at);
         let commands = open.commands.clone();
         // The closure below owns a clone; this handle drains the results after
         // the viewport has drawn for this frame.
@@ -168,10 +172,35 @@ impl RPlayerApp {
             let mut clicked: Option<TrayMenuCommand> = None;
             let mut close = false;
 
-            egui::CentralPanel::default()
-                .frame(egui::Frame::NONE)
+            // Pop out of the tray icon: scale the whole panel up from the icon
+            // point over the first 120 ms. The panel lives on its own layer so
+            // the transform can be applied to it alone.
+            let panel_id = egui::Id::new("rplayer-tray-panel");
+            let now = ctx.input(|input| input.time);
+            let progress = (((now - opened_at) / 0.12) as f32).clamp(0.0, 1.0);
+            let eased = 1.0 - (1.0 - progress).powi(3);
+            let scale = 0.94 + 0.06 * eased;
+            let anchor = Vec2::new(origin.x - pos.x, origin.y - pos.y);
+            ctx.set_transform_layer(
+                egui::LayerId::new(egui::Order::Foreground, panel_id),
+                egui::emath::TSTransform::new(anchor * (1.0 - scale), scale),
+            );
+            if progress < 1.0 {
+                ctx.request_repaint_after(std::time::Duration::from_millis(16));
+            }
+
+            egui::Area::new(panel_id)
+                .order(egui::Order::Foreground)
+                .fixed_pos(Pos2::ZERO)
+                .default_size(Vec2::new(MENU_WIDTH, height))
                 .show(ctx, |ui| {
-                    let card = ui.max_rect();
+                    // Pin the drawing rect: the area is anchored at the viewport
+                    // origin, so the card is exactly the popup size and the
+                    // transform above scales it about the tray icon.
+                    let size = Vec2::new(MENU_WIDTH, height);
+                    ui.set_min_size(size);
+                    ui.set_max_size(size);
+                    let card = egui::Rect::from_min_size(Pos2::ZERO, size);
                     ui.painter().rect_filled(
                         card,
                         CornerRadius::same(10),

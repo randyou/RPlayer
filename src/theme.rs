@@ -11,7 +11,7 @@ use egui::epaint::Shadow;
 use egui::style::{WidgetVisuals, Widgets};
 use egui::{
     Color32, CornerRadius, FontData, FontDefinitions, FontFamily, FontId, Frame, Margin, Stroke,
-    Style, TextStyle, Visuals,
+    TextStyle, Visuals,
 };
 
 /// Light or dark appearance. Kept as a tiny enum so it can be persisted and
@@ -489,9 +489,16 @@ pub fn install_preset(ctx: &egui::Context, preset: ThemePreset) {
 }
 
 /// Rebuilds the egui style from the active palette. Call after a live toggle.
+///
+/// The current style is the starting point rather than `Style::default()`:
+/// rebuilding from scratch dropped every spacing field this function does not
+/// set, so a live theme switch could shuffle widget sizes and leave panels
+/// laid out differently than they were when the window opened (v2.1.0
+/// acceptance report: the top bar and the lyric opacity panel changed layout
+/// after switching themes).
 pub fn apply_style(ctx: &egui::Context) {
     let palette = *c();
-    let mut style = Style::default();
+    let mut style = (*ctx.style()).clone();
     style.visuals = visuals_for(&palette);
     style.spacing.item_spacing = egui::vec2(10.0, 10.0);
     style.spacing.button_padding = egui::vec2(16.0, 9.0);
