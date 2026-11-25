@@ -138,7 +138,12 @@ impl RPlayerApp {
             }
         }
 
-        let rail_ready = Self::rail_available(ui.ctx()) && self.current.is_some();
+        // Albums and Artists render a full-width grid; the now-playing rail is
+        // skipped there, so treating it as available would swallow the click
+        // (highlight only, nothing drawn). Fall back to the queue page instead.
+        let rail_ready = Self::rail_available(ui.ctx())
+            && self.current.is_some()
+            && !matches!(self.view, super::View::Albums | super::View::Artists);
         let queue_active = self.queue_open
             || (rail_ready && self.now_rail_open && self.rail_queue);
         let old_inactive = ui.visuals().widgets.inactive.bg_fill;
@@ -179,7 +184,17 @@ impl RPlayerApp {
                     self.queue_open = false;
                 }
             } else {
-                self.queue_open = !self.queue_open;
+                // No rail surface in these views: land on the library so the
+                // queue is actually visible instead of only highlighting the row.
+                self.view = super::View::Library;
+                self.batch_mode = false;
+                if Self::rail_available(ui.ctx()) {
+                    self.now_rail_open = true;
+                    self.rail_queue = true;
+                    self.queue_open = false;
+                } else {
+                    self.queue_open = !self.queue_open;
+                }
             }
         }
         if egui::DragAndDrop::has_any_payload(ui.ctx()) {
