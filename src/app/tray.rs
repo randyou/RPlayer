@@ -7,7 +7,7 @@
 use std::sync::{Arc, Mutex};
 
 use eframe::egui::{
-    self, Align2, CornerRadius, FontId, Pos2, RichText, Stroke, Vec2, ViewportBuilder,
+    self, Align2, CornerRadius, FontId, Pos2, Stroke, Vec2, ViewportBuilder,
     ViewportCommand, ViewportId,
 };
 
@@ -40,9 +40,6 @@ pub(super) struct TrayMenu {
     pub pos: Pos2,
     pub opened_at: f64,
     pub commands: Arc<Mutex<Vec<TrayMenuCommand>>>,
-    /// Consecutive frames the cursor spent outside the popup, used to dismiss it
-    /// the way a native menu would.
-    pub outside: Arc<std::sync::atomic::AtomicU32>,
 }
 
 pub(super) fn tray_menu_viewport() -> ViewportId {
@@ -93,21 +90,32 @@ impl RPlayerApp {
     pub(super) fn open_tray_menu(&mut self, ctx: &egui::Context, screen: Pos2) {
         let ppp = ctx.pixels_per_point().max(0.5);
         let mut pos = Pos2::new(screen.x / ppp, screen.y / ppp);
-        let screen_size = ctx
-            .input(|input| input.viewport().monitor_size)
-            .unwrap_or(Vec2::new(1920.0, 1080.0));
         let height = menu_height();
+        // Prefer the real work area of the monitor under the cursor: the tray
+        // lives in the notification area, and egui reports no monitor size for
+        // the root viewport, so the old 1920x1080 fallback put the popup
+        // half off-screen on a 1440-wide display.
+        let (screen_size, min_pos) = match crate::platform::cursor_monitor_work_area() {
+            Some((left, top, right, bottom)) => (
+                Vec2::new(right / ppp, bottom / ppp),
+                Vec2::new(left / ppp, top / ppp),
+            ),
+            None => (
+                ctx.input(|input| input.viewport().monitor_size)
+                    .unwrap_or(Vec2::new(1920.0, 1080.0)),
+                Vec2::ZERO,
+            ),
+        };
         if pos.x + MENU_WIDTH > screen_size.x {
-            pos.x = (screen_size.x - MENU_WIDTH).max(0.0);
+            pos.x = (screen_size.x - MENU_WIDTH).max(min_pos.x);
         }
         if pos.y + height > screen_size.y {
-            pos.y = (pos.y - height).max(0.0);
+            pos.y = (pos.y - height).max(min_pos.y);
         }
         self.tray_menu = Some(TrayMenu {
             pos,
             opened_at: ctx.input(|input| input.time),
             commands: Arc::new(Mutex::new(Vec::new())),
-            outside: Arc::new(std::sync::atomic::AtomicU32::new(0)),
         });
         ctx.request_repaint();
     }
@@ -118,7 +126,6 @@ impl RPlayerApp {
         };
         let (pos, opened_at) = (open.pos, open.opened_at);
         let commands = open.commands.clone();
-        let outside = open.outside.clone();
         // The closure below owns a clone; this handle drains the results after
         // the viewport has drawn for this frame.
         let queue = open.commands.clone();
@@ -142,7 +149,6 @@ impl RPlayerApp {
         // frame it was requested, otherwise the next frame is an idle one and
         // the menu would not appear until something else wakes the app.
         ctx.show_viewport_immediate(tray_menu_viewport(), builder, move |ctx, _class| {
-            let outside = outside.clone();
             let snapshot = state
                 .lock()
                 .map(|state| state.clone())
@@ -319,12 +325,13 @@ impl RPlayerApp {
             }
             // The popup is created inactive on purpose: a focus-stealing,
             // undecorated transparent window fails to be created on Windows.
-            // Dismissal therefore watches the real cursor instead of focus.
+            // It is anchored to the tray icon, so the cursor normally sits
+            // outside its rect right after opening - a native menu therefore
+            // dismisses on an outside click, never on hover-out.
             let now = ctx.input(|input| input.time);
-            let inside = crate::platform::cursor_in_window("RPlayer 托盘菜单");
-            if inside || now - opened_at < 0.2 {
-                outside.store(0, std::sync::atomic::Ordering::Relaxed);
-            } else if outside.fetch_add(1, std::sync::atomic::Ordering::Relaxed) >= 3 {
+            if now - opened_at > 0.25
+                && crate::platform::left_button_outside("RPlayer 托盘菜单")
+            {
                 close = true;
             }
             if let Some(command) = clicked {
@@ -338,8 +345,9 @@ impl RPlayerApp {
                     queue.push(TrayMenuCommand::Close);
                 }
             }
-            // Poll focus loss without spinning: the menu lives for seconds.
-            ctx.request_repaint_after(std::time::Duration::from_millis(120));
+            // Poll for the outside click without spinning: the menu lives for
+            // seconds, but the poll has to be fast enough to catch a quick tap.
+            ctx.request_repaint_after(std::time::Duration::from_millis(40));
         });
 
         let mut commands_rx = Vec::new();
@@ -391,4 +399,5 @@ impl RPlayerApp {
         ctx.send_viewport_cmd(egui::ViewportCommand::Close);
     }
 }
+
 

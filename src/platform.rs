@@ -515,6 +515,103 @@ pub fn cursor_in_window(_title: &str) -> bool {
     false
 }
 
+/// True while the left mouse button is held down and the cursor sits outside
+/// the window with this title. The tray popup is created without activation
+/// (a focus-stealing undecorated transparent window fails to be created on
+/// Windows), so it cannot use focus loss to dismiss itself.
+#[cfg(target_os = "windows")]
+pub fn left_button_outside(title: &str) -> bool {
+    #[link(name = "user32")]
+    extern "system" {
+        fn GetAsyncKeyState(key: i32) -> i16;
+    }
+    const VK_LBUTTON: i32 = 0x01;
+    let down = unsafe { GetAsyncKeyState(VK_LBUTTON) as u16 & 0x8000 != 0 };
+    down && !cursor_in_window(title)
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn left_button_outside(_title: &str) -> bool {
+    false
+}
+
+/// Work area (left, top, right, bottom) in physical pixels of the monitor that
+/// contains the cursor. The tray popup anchors to the notification area, which
+/// lives on a specific monitor, and egui's `monitor_size` is `None` for the
+/// root viewport - so it has to ask Win32 instead of guessing 1920x1080.
+#[cfg(target_os = "windows")]
+pub fn cursor_monitor_work_area() -> Option<(f32, f32, f32, f32)> {
+    #[link(name = "user32")]
+    extern "system" {
+        fn MonitorFromPoint(point: PointI, flags: u32) -> isize;
+        fn GetMonitorInfoW(monitor: isize, info: *mut MonitorInfo) -> i32;
+    }
+    #[repr(C)]
+    struct PointI {
+        x: i32,
+        y: i32,
+    }
+    #[repr(C)]
+    struct RectI {
+        left: i32,
+        top: i32,
+        right: i32,
+        bottom: i32,
+    }
+    #[repr(C)]
+    struct MonitorInfo {
+        size: u32,
+        monitor: RectI,
+        work: RectI,
+        flags: u32,
+    }
+    const MONITOR_DEFAULTTONEAREST: u32 = 2;
+
+    #[link(name = "user32")]
+    extern "system" {
+        fn GetCursorPos(point: *mut PointI) -> i32;
+    }
+
+    let mut point = PointI { x: 0, y: 0 };
+    if unsafe { GetCursorPos(&mut point) } == 0 {
+        return None;
+    }
+    let monitor = unsafe { MonitorFromPoint(point, MONITOR_DEFAULTTONEAREST) };
+    if monitor == 0 {
+        return None;
+    }
+    let mut info = MonitorInfo {
+        size: std::mem::size_of::<MonitorInfo>() as u32,
+        monitor: RectI {
+            left: 0,
+            top: 0,
+            right: 0,
+            bottom: 0,
+        },
+        work: RectI {
+            left: 0,
+            top: 0,
+            right: 0,
+            bottom: 0,
+        },
+        flags: 0,
+    };
+    if unsafe { GetMonitorInfoW(monitor, &mut info) } == 0 {
+        return None;
+    }
+    Some((
+        info.work.left as f32,
+        info.work.top as f32,
+        info.work.right as f32,
+        info.work.bottom as f32,
+    ))
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn cursor_monitor_work_area() -> Option<(f32, f32, f32, f32)> {
+    None
+}
+
 #[cfg(not(target_os = "windows"))]
 pub fn set_window_borderless(_title: &str) {}
 
