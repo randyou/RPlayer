@@ -190,7 +190,12 @@ pub fn show_lyrics(
                     );
                 }
 
-                let shadow = theme::black_alpha(0.62);
+                // D14: 0 0 1px halo - dark text on paper, light text over Nocturne.
+                let shadow = if dark {
+                    theme::white_alpha(0.22)
+                } else {
+                    theme::black_alpha(0.35)
+                };
                 let center_x = capsule.center().x;
 
                 for _ in 0..text_passes {
@@ -1328,13 +1333,25 @@ fn shadow_text(
     shadow: Color32,
     alpha: f32,
 ) {
-    painter.text(
-        pos + Vec2::new(1.0, 2.0),
-        Align2::CENTER_CENTER,
-        text,
-        font.clone(),
-        with_alpha(shadow, alpha),
-    );
+    // Approximate text-shadow 0 0 1px with an eight-way halo.
+    for (dx, dy) in [
+        (-0.75, 0.0),
+        (0.75, 0.0),
+        (0.0, -0.75),
+        (0.0, 0.75),
+        (-0.55, -0.55),
+        (0.55, -0.55),
+        (-0.55, 0.55),
+        (0.55, 0.55),
+    ] {
+        painter.text(
+            pos + Vec2::new(dx, dy),
+            Align2::CENTER_CENTER,
+            text,
+            font.clone(),
+            with_alpha(shadow, alpha),
+        );
+    }
     painter.text(
         pos,
         Align2::CENTER_CENTER,
