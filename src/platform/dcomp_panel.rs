@@ -29,7 +29,7 @@ use windows::Win32::Graphics::Dwm::{
 };
 use windows::Win32::Graphics::Dxgi::{IDXGIDevice, IDXGISurface};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
-use windows::Win32::UI::Input::KeyboardAndMouse::{GetCapture, ReleaseCapture, SetCapture};
+use windows::Win32::UI::Input::KeyboardAndMouse::{GetCapture, GetKeyState, ReleaseCapture, SetCapture};
 use windows::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DefWindowProcW, FindWindowW, GetClientRect, GetCursorPos, GetWindowRect, PostMessageW, RegisterClassW, SendMessageW, SetWindowPos, ShowWindow, HCURSOR, HICON,
     SWP_NOACTIVATE, SWP_SHOWWINDOW, SW_SHOWNOACTIVATE, WM_ERASEBKGND, WNDCLASSW, WNDPROC,
@@ -115,6 +115,12 @@ unsafe extern "system" fn panel_proc(
         // swallows clicks aimed at the window underneath.
         let mut rect = windows::Win32::Foundation::RECT::default();
         let _ = unsafe { GetClientRect(hwnd, &mut rect) };
+        // Right clicks belong to the lyric window below: the panel owns no menu
+        // and reports HTCLIENT for the capsule, which swallowed the right button
+        // before egui ever saw it (v2.1.2 overlay context menu).
+        if unsafe { GetKeyState(0x02) } < 0 {
+            return LRESULT(-1); // HTTRANSPARENT: let the lyric window decide.
+        }
         return LRESULT(match unsafe { capsule_hit(hwnd, rect) } {
             true => 1,   // HTCLIENT
             false => -1, // HTTRANSPARENT

@@ -400,6 +400,11 @@ pub fn show_lyrics(
                     Id::new("lyrics-drag"),
                     Sense::click_and_drag(),
                 );
+                // The strip is too short to host a popup of its own: egui would
+                // place a context menu below the pointer, outside the window, and
+                // clip it away. Right clicks therefore open the same controls
+                // panel the gear button toggles (lock / settings / close).
+                let right_clicked = drag.secondary_clicked() || crate::platform::take_lyrics_menu_request();
                 if drag.double_clicked() && locked {
                     if let Ok(mut queue) = commands.lock() {
                         queue.push(OverlayCommand::SetLyricsLocked(false));
@@ -470,7 +475,7 @@ pub fn show_lyrics(
                 let was_open = ctx
                     .data(|data| data.get_temp::<bool>(controls_id))
                     .unwrap_or(false);
-                let mut controls_open = was_open && !locked;
+                let mut controls_open = (was_open || right_clicked) && !locked;
                 let button_rect = if locked {
                     Rect::NOTHING
                 } else {
@@ -573,17 +578,35 @@ pub fn show_lyrics(
                                         });
                                     }
                                     ui.add_space(4.0);
-                                    if widgets::secondary_button(ui, "打开桌面歌词设置").clicked() {
-                                        if let Ok(mut queue) = commands.lock() {
-                                            queue.push(OverlayCommand::OpenLyricsSettings);
+                                    // One compact row: the strip is only 158 px
+                                    // tall, so three stacked buttons would push the
+                                    // last one outside the window and clip it.
+                                    ui.horizontal(|ui| {
+                                        if widgets::secondary_button(ui, "设置…").clicked() {
+                                            if let Ok(mut queue) = commands.lock() {
+                                                queue.push(OverlayCommand::OpenLyricsSettings);
+                                            }
+                                            controls_open = false;
                                         }
-                                        controls_open = false;
-                                    }
+                                        let lock_label = if locked { "解锁" } else { "锁定" };
+                                        if widgets::secondary_button(ui, lock_label).clicked() {
+                                            if let Ok(mut queue) = commands.lock() {
+                                                queue.push(OverlayCommand::SetLyricsLocked(!locked));
+                                            }
+                                            controls_open = false;
+                                        }
+                                        if widgets::secondary_button(ui, "关闭").clicked() {
+                                            if let Ok(mut queue) = commands.lock() {
+                                                queue.push(OverlayCommand::CloseLyrics);
+                                            }
+                                            controls_open = false;
+                                        }
+                                    });
                                 });
                         });
                     popup_rect = area.response.rect;
                 }
-                if controls_open && !button.clicked() {
+                if controls_open && was_open && !right_clicked && !button.clicked() {
                     let clicked_outside = ctx.input(|input| {
                         input.pointer.any_click()
                             && input.pointer.latest_pos().is_some_and(|position| {

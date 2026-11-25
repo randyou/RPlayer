@@ -216,6 +216,16 @@ pub fn set_lyrics_locked(locked: bool) {
 pub fn lyrics_locked() -> bool {
     LYRICS_LOCKED.load(std::sync::atomic::Ordering::Relaxed)
 }
+
+/// Right clicks on the lyric strip are captured by the native window proc: the
+/// overlay's layered, non-activating window does not hand the secondary button
+/// to egui, so the strip's own menu never opened. The proc raises this flag and
+/// `show_lyrics` consumes it to open the controls panel.
+static LYRICS_MENU: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+pub fn take_lyrics_menu_request() -> bool {
+    LYRICS_MENU.swap(false, std::sync::atomic::Ordering::Relaxed)
+}
 pub fn set_taskbar_button_visible(visible: bool) -> bool {
     use winapi::um::winuser::{
         GetWindowLongPtrW, SetWindowLongPtrW, SetWindowPos, GWL_EXSTYLE, SWP_FRAMECHANGED,
@@ -1113,6 +1123,7 @@ unsafe extern "system" fn lyrics_native_proc(
         fn ScreenToClient(hwnd: isize, point: *mut PointI) -> i32;
         fn ClientToScreen(hwnd: isize, point: *mut PointI) -> i32;
         fn CallWindowProcW(prev: isize, hwnd: isize, msg: u32, wp: usize, lp: isize) -> isize;
+        fn GetKeyState(vk: i32) -> i16;
         fn DefWindowProcW(hwnd: isize, msg: u32, wp: usize, lp: isize) -> isize;
     }
     #[repr(C)]
@@ -1175,6 +1186,13 @@ unsafe extern "system" fn lyrics_native_proc(
             // own caption drag; egui keeps the double-click-to-unlock path.
             return 1;
         }
+        // Right clicks have to reach egui: the strip's context menu (lock,
+        // settings) lives in the client area. Reporting HTCAPTION turned the
+        // whole capsule into non-client space, so WM_NCRBUTTONUP went to the
+        // system and the menu never opened.
+        if unsafe { GetKeyState(0x02) } < 0 {
+            return 1; // VK_RBUTTON down → client area, egui opens the menu.
+        }
         return 2; // HTCAPTION: drag the lyric strip.
     }
     // The lyric strip is a non-activating overlay, but Windows still treats it
@@ -1183,6 +1201,12 @@ unsafe extern "system" fn lyrics_native_proc(
     // re-activating the player instead of starting a drag (v2.1.0 issue #2).
     if msg == 0x0021 {
         return 3; // MA_NOACTIVATE
+    }
+    if msg == 0x0205 {
+        // WM_RBUTTONUP on the strip: open the overlay's controls panel. The
+        // secondary button never reaches egui on this layered window.
+        LYRICS_MENU.store(true, Ordering::Relaxed);
+        return 0;
     }
     if msg == 0x0006 {
         // WM_ACTIVATE: if something still activated us, hand the foreground
