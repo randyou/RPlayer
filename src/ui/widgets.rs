@@ -755,8 +755,152 @@ pub fn empty_illustration(ui: &mut Ui, size: f32) {
     );
 }
 
+/// A compact outlined pill used for segmented choices and tool presets.
+pub fn pill(ui: &mut Ui, text: &str, selected: bool) -> Response {
+    let color = if selected {
+        theme::c().on_accent
+    } else {
+        theme::c().muted
+    };
+    let galley = ui
+        .painter()
+        .layout_no_wrap(text.to_owned(), FontId::proportional(11.5), color);
+    let width = (galley.size().x + 26.0).max(46.0);
+    let (rect, response) = ui.allocate_exact_size(Vec2::new(width, 26.0), Sense::click());
+    let hovered = response.hovered();
+    let press = ui.ctx().animate_bool_with_time(
+        ui.id().with(("press", text)),
+        response.is_pointer_button_down_on(),
+        crate::ui::motion::duration(crate::ui::motion::PRESS),
+    );
+    let paint_rect = Rect::from_center_size(rect.center(), rect.size() * (1.0 - 0.025 * press));
+    let radius = CornerRadius::same(99);
+    let fill = if selected {
+        theme::c().accent
+    } else if hovered {
+        theme::c().hover
+    } else {
+        Color32::TRANSPARENT
+    };
+    ui.painter().rect_filled(paint_rect, radius, fill);
+    ui.painter().rect_stroke(
+        paint_rect,
+        radius,
+        Stroke::new(
+            1.0_f32,
+            if selected {
+                theme::c().accent
+            } else {
+                theme::c().border
+            },
+        ),
+        StrokeKind::Inside,
+    );
+    ui.painter().galley(
+        Pos2::new(
+            paint_rect.center().x - galley.size().x * 0.5,
+            paint_rect.center().y - galley.size().y * 0.5,
+        ),
+        galley,
+        color,
+    );
+    let response = response.on_hover_cursor(CursorIcon::PointingHand);
+    mark(&response, WidgetType::Button, text, Some(selected));
+    crate::ui::focus::focus_on_click(&response);
+    crate::ui::focus::ring(ui, &response);
+    response
+}
+
+/// Small primary button for the shared 32px dialog action band.
+pub fn primary_button_compact(ui: &mut Ui, text: &str) -> Response {
+    compact_button(ui, text, true)
+}
+
+/// Small secondary button for the shared 32px dialog action band.
+pub fn secondary_button_compact(ui: &mut Ui, text: &str) -> Response {
+    compact_button(ui, text, false)
+}
+
+fn compact_button(ui: &mut Ui, text: &str, primary: bool) -> Response {
+    let enabled = ui.is_enabled();
+    let text_color = if !enabled {
+        theme::c().faint
+    } else if primary {
+        theme::c().on_accent
+    } else {
+        theme::c().text
+    };
+    let galley = ui.painter().layout_no_wrap(
+        text.to_owned(),
+        FontId::proportional(12.5),
+        text_color,
+    );
+    let width = (galley.size().x + 36.0).max(64.0);
+    let (rect, response) = ui.allocate_exact_size(Vec2::new(width, 32.0), Sense::click());
+    let hovered = enabled && response.hovered();
+    let press = ui.ctx().animate_bool_with_time(
+        ui.id().with(("press", text)),
+        response.is_pointer_button_down_on(),
+        crate::ui::motion::duration(crate::ui::motion::PRESS),
+    );
+    let paint_rect = Rect::from_center_size(rect.center(), rect.size() * (1.0 - 0.025 * press));
+    let radius = CornerRadius::same(crate::ui::tokens::RADIUS_CONTROL);
+    let (fill, stroke) = if !enabled {
+        (theme::c().border_soft, Color32::TRANSPARENT)
+    } else if primary {
+        (
+            if hovered {
+                theme::c().accent.gamma_multiply(1.06)
+            } else {
+                theme::c().accent
+            },
+            Color32::TRANSPARENT,
+        )
+    } else {
+        (
+            if hovered {
+                theme::c().hover
+            } else {
+                theme::c().card
+            },
+            theme::c().border,
+        )
+    };
+    ui.painter().rect_filled(paint_rect, radius, fill);
+    if stroke != Color32::TRANSPARENT {
+        ui.painter().rect_stroke(
+            paint_rect,
+            radius,
+            Stroke::new(1.0_f32, stroke),
+            StrokeKind::Inside,
+        );
+    }
+    ui.painter().galley(
+        Pos2::new(
+            paint_rect.center().x - galley.size().x * 0.5,
+            paint_rect.center().y - galley.size().y * 0.5,
+        ),
+        galley,
+        text_color,
+    );
+    let response = if enabled {
+        response.on_hover_cursor(CursorIcon::PointingHand)
+    } else {
+        response
+    };
+    mark(&response, WidgetType::Button, text, None);
+    crate::ui::focus::focus_on_click(&response);
+    crate::ui::focus::ring(ui, &response);
+    response
+}
+
 /// Small animated switch used by the equalizer and overlay settings.
 pub fn toggle_switch(ui: &mut Ui, on: &mut bool) -> Response {
+    toggle_switch_named(ui, on, "开关")
+}
+
+/// Same switch with an explicit AccessKit name for the surface it belongs to.
+pub fn toggle_switch_named(ui: &mut Ui, on: &mut bool, label: &str) -> Response {
     let (rect, mut response) = ui.allocate_exact_size(Vec2::new(42.0, 23.0), Sense::click());
     if response.clicked() {
         *on = !*on;
@@ -777,7 +921,7 @@ pub fn toggle_switch(ui: &mut Ui, on: &mut bool) -> Response {
         theme::c().panel,
     );
     let response = response.on_hover_cursor(CursorIcon::PointingHand);
-    mark(&response, WidgetType::Checkbox, "开关", Some(*on));
+    mark(&response, WidgetType::Checkbox, label, Some(*on));
     crate::ui::focus::focus_on_click(&response);
     crate::ui::focus::ring(ui, &response);
     response

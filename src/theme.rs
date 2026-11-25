@@ -4,6 +4,7 @@
 //! the whole UI — including custom-painted rows, icons and overlays — can switch
 //! between the midnight and paper themes without rebuilding widgets.
 
+use std::cell::Cell;
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::sync::Arc;
 
@@ -312,9 +313,34 @@ pub fn set_mode(mode: ThemeMode) {
     set_preset(ThemePreset::default_for_mode(mode));
 }
 
+thread_local! {
+    /// Palette forced by [`scoped`] while a single surface is painted.
+    static OVERRIDE: Cell<Option<&'static Palette>> = const { Cell::new(None) };
+}
+
 /// The active palette. Every custom-painted colour goes through this.
 pub fn c() -> &'static Palette {
-    preset().palette()
+    OVERRIDE
+        .with(Cell::get)
+        .unwrap_or_else(|| preset().palette())
+}
+
+/// Paint one surface with a fixed palette, whatever the user picked.
+///
+/// The equalizer is always a Nocturne panel: it is a hardware-style tool, so it
+/// keeps its dark face on the paper theme too. The override lasts only for the
+/// closure and nests safely.
+pub fn scoped<R>(palette: &'static Palette, draw: impl FnOnce() -> R) -> R {
+    struct Restore(Option<&'static Palette>);
+    impl Drop for Restore {
+        fn drop(&mut self) {
+            OVERRIDE.with(|slot| slot.set(self.0));
+        }
+    }
+
+    let previous = OVERRIDE.with(|slot| slot.replace(Some(palette)));
+    let _restore = Restore(previous);
+    draw()
 }
 
 /// Text and glyphs drawn straight onto cover art. Media is unpredictable, so
@@ -865,5 +891,21 @@ mod tests {
         assert!(contrast(DARK.muted, DARK.bg) >= 4.5);
         assert!(contrast(DARK.accent, DARK.bg) >= 4.5);
         assert!(contrast(DARK.on_accent, DARK.accent) >= 4.5);
+    }
+
+    #[test]
+    fn scoped_palette_is_restored_after_the_surface() {
+        // Palettes are `const`, so compare colours rather than pointers; other
+        // tests also flip the global preset in parallel.
+        let before = c().bg;
+        let inside = scoped(&DARK, || {
+            assert_eq!(c().bg, DARK.bg);
+            let nested = scoped(&LIGHT, || c().bg);
+            assert_eq!(nested, LIGHT.bg);
+            assert_eq!(c().bg, DARK.bg);
+            c().dark
+        });
+        assert!(inside);
+        assert_eq!(c().bg, before);
     }
 }

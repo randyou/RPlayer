@@ -89,9 +89,32 @@ v2 的功能面已经关掉，剩下的两件事性质完全不同：
 
 重复歌曲操作台、曲库健康检查（720×340）。现有健康检查面板可用，缺：三卡点击进入明细、重复项并排 diff、批量处理入口。
 
-### S5 编辑类对话框 D7–D9（M，3–4 天）
+### S5 编辑类对话框 D7–D9（M，3–4 天）· **已完成**
 
-歌词编辑 820×430、智能歌单 620×430、均衡器 820×250（10 段 62px 间距）。现有 EQ 548×404 与稿不符，需重排；智能歌单构建器当前缺失（K5 无法验收）。
+已改（`src/app/lyrics_edit.rs`、`src/app/smart.rs`、`src/app/equalizer.rs`，配套 `src/lyrics.rs`、`src/theme.rs`、`src/ui/widgets.rs`）：
+
+- **歌词编辑器** 820×430（`fixed_size(788×398)` + 16px 边距，egui 的 `fixed_size` 只算内容区）：LYRICS EDITOR 眉标 + 编辑歌词 serif 28 + 副行「曲名 · 艺人 · 本地编辑」；表头 时间/歌词 + 发丝线；行高 34、时间列 62、歌词起点 96；当前行 `accent_alpha(0.10)` 底 + 2px accent 左条；行尾播放 22（从该句起播）与删除 22；「+ 新增一句」固定在列表外，避免滚动条裁切；底栏「TIME 00:00.00 / 空文本 = 纯文本行」+ 取消 / 保存歌词。
+- **歌词数据层**（`src/lyrics.rs`）：`LyricsEditor` 增加 `artist` 与 `baseline`，新增 `is_dirty` / `invalid_row` / `any_invalid` / `first_invalid_row` / `current_index(position)`；时间统一 `format_timestamp_plain`（`mm:ss.xx`，编辑器内不带方括号）。时间非法时该行标 danger 红、右上出现「未保存」chip、保存按钮禁用，不弹窗。
+- **智能歌单** 620×430：固定三段列宽 字段 116 / 操作 88 / 值 flex（`allocate_ui_with_layout` 锁宽，避免随文字跳列）；行高 30、行距 4；序号 `01`/`02` mono faint；空值行 danger 红框 + 底部只留一条「第 N 条规则缺少值」，保存禁用；`+ 添加条件` 虚线圆角按钮（`Shape::dashed_line` 手绘）；PREVIEW 块 54 高（sage 底 + 2px accent 左条 + 「N 首匹配」serif 15）；名称输入与值输入用 Frame(card + 1px border + 圆角 8) 包无框 `TextEdit`；ComboBox 下拉用 `ctx.set_style` 临时换 paper 面与 accent 选中（egui 的 popup 只读 `ctx.style()`，改 `ui.style` 无效），高度放到 240 让 8 个字段可滚。
+- **空值语义**：`rule_matches` 里空值直接返回 false（此前 `包含 ""` 会匹配全库，导致预览永远不是 0 首）；`can_save = 规则非空 && 名称非空 && 无缺失值`。
+- **均衡器** 820×250：`theme::scoped(&theme::DARK, …)` 让整窗固定 Nocturne（新增线程局部调色板覆盖，可嵌套，退出即恢复，纸张主题下也是暗面）；面板内容 788×218、边距 16；头部 EQUALIZER / 均衡器 serif 24 / 「10 段 · 仅作用于当前输出」+ 已启用 toggle + 关闭；预设 8 个 pill 单行横向滚动（`ScrollBarVisibility::AlwaysHidden`，不折行）；10 根推子 62px 间距、82 高、1.5px 细轨 + 空心 accent 描边 knob，双击归零、上下键 ±0.5；底栏 PREAMP 可拖字段（0.1 dB/px）+「修改即时生效，不写入音频文件」+ 重置（保留 enabled）。
+- **共用控件**（`src/ui/widgets.rs`）：新增 `pill`（26 高、99 圆角、选中实心 accent）、`primary_button_compact` / `secondary_button_compact`（32 高、圆角 8、禁用走 border_soft + faint）、`toggle_switch_named`（可传 AccessKit 名称）。
+
+证据（`docs/qa/v0.2/`，均实测尺寸，另有同内容 `-print.png`）：
+
+| 面 | 文件（`-screen.png`） |
+| --- | --- |
+| 歌词编辑器 · 正常 | `v220-S5-lyrics-editor-screen.png`（820×430） |
+| 歌词编辑器 · 非法时间 + 未保存 | `v220-S5-lyrics-invalid-screen.png` |
+| 智能歌单 · 构建器 | `v220-S5-smart-builder-screen.png`（620×430） |
+| 智能歌单 · 空值禁用保存 | `v220-S5-smart-incomplete-screen.png` |
+| 均衡器 · 纸张主题下的 Nocturne 面板 | `v220-S5-equalizer-screen.png`（820×250） |
+
+取舍（记录，不阻塞 D7–D9 收口）：
+- 歌词行高取 34 而非稿面文字写的 36：430 高内 7 行 × 36 + 新增一句 + 表头 + 底栏会溢出，34 刚好排满且行距仍明显。
+- 智能歌单规则行取 30：稿面实测 27、稿注「共用 36px 行」，两者都不能同时满足 3 行 + 添加 + 预览 + 底栏，取中值。
+- 保存按钮在未脏时也可点（写回同样内容）；未加「脏才可保存」门控，避免用户误以为不能保存。
+- 均衡器的调色板覆盖只管自绘与共用控件；egui 原生弹层（如未来加入文本输入）仍随全局主题，当前 EQ 内无文本输入，不触发。
 
 ### S6 系统面 D10–D12（M，2–3 天）
 

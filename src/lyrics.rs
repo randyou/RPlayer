@@ -31,29 +31,81 @@ pub struct EditorRow {
 pub struct LyricsEditor {
     pub track_id: u64,
     pub title: String,
+    pub artist: String,
     pub rows: Vec<EditorRow>,
     pub plain: bool,
+    /// Row text as loaded, so the editor can show an unsaved marker.
+    baseline: Vec<(String, String)>,
 }
 
 impl LyricsEditor {
-    pub fn from_lyrics(track_id: u64, title: String, lyrics: &Lyrics) -> Self {
+    pub fn from_lyrics(track_id: u64, title: String, artist: String, lyrics: &Lyrics) -> Self {
+        let rows: Vec<EditorRow> = lyrics
+            .lines
+            .iter()
+            .map(|line| EditorRow {
+                time: if lyrics.plain {
+                    String::new()
+                } else {
+                    format_timestamp_plain(line.time)
+                },
+                text: line.text.clone(),
+            })
+            .collect();
+        let baseline = rows
+            .iter()
+            .map(|row| (row.time.clone(), row.text.clone()))
+            .collect();
         Self {
             track_id,
             title,
+            artist,
+            rows,
             plain: lyrics.plain,
-            rows: lyrics
-                .lines
-                .iter()
-                .map(|line| EditorRow {
-                    time: if lyrics.plain {
-                        String::new()
-                    } else {
-                        format_timestamp(line.time)
-                    },
-                    text: line.text.clone(),
-                })
-                .collect(),
+            baseline,
         }
+    }
+
+    pub fn is_dirty(&self) -> bool {
+        self.rows.len() != self.baseline.len()
+            || self
+                .rows
+                .iter()
+                .zip(&self.baseline)
+                .any(|(row, base)| row.time != base.0 || row.text != base.1)
+    }
+
+    /// Timed rows whose timestamp cannot be parsed. The editor reddens only
+    /// that row instead of interrupting the listener with a dialog.
+    pub fn invalid_row(&self, index: usize) -> bool {
+        self.rows.get(index).is_some_and(|row| {
+            let time = row.time.trim();
+            !time.is_empty() && parse_time(time).is_none()
+        })
+    }
+
+    pub fn any_invalid(&self) -> bool {
+        (0..self.rows.len()).any(|index| self.invalid_row(index))
+    }
+
+    pub fn first_invalid_row(&self) -> Option<usize> {
+        (0..self.rows.len()).find(|index| self.invalid_row(*index))
+    }
+
+    /// Row highlighted for the current playback position.
+    pub fn current_index(&self, position: f64) -> Option<usize> {
+        let mut active = None;
+        for (index, row) in self.rows.iter().enumerate() {
+            let time = row.time.trim();
+            if time.is_empty() {
+                continue;
+            }
+            match parse_time(time) {
+                Some(time) if time <= position + 0.2 => active = Some(index),
+                _ => {}
+            }
+        }
+        active
     }
 
     pub fn build(&self) -> Option<Lyrics> {
@@ -228,6 +280,14 @@ pub fn format_timestamp(time: f64) -> String {
     format!("[{minutes:02}:{seconds:05.2}]")
 }
 
+/// Same as [`format_timestamp`] without the LRC brackets, for editor rows.
+pub fn format_timestamp_plain(time: f64) -> String {
+    let total = time.max(0.0);
+    let minutes = (total / 60.0).floor() as u32;
+    let seconds = total - f64::from(minutes) * 60.0;
+    format!("{minutes:02}:{seconds:05.2}")
+}
+
 /// Accepts `mm:ss.xx` and `hh:mm:ss.xx`, with or without brackets.
 pub fn parse_time(value: &str) -> Option<f64> {
     let trimmed = value.trim();
@@ -346,5 +406,38 @@ mod tests {
         assert!(lyrics.plain);
         assert_eq!(lyrics.lines.len(), 2);
         assert_eq!(lyrics.active_index(2.0), None);
+    }
+
+    #[test]
+    fn editor_round_trips_timestamps_without_brackets() {
+        let lyrics = parse_lrc("[00:12.40]第一行\n[01:05.02]第二行\n");
+        let editor = LyricsEditor::from_lyrics(7, "曲名".into(), "歌手".into(), &lyrics);
+        assert_eq!(editor.rows[0].time, "00:12.40");
+        assert_eq!(editor.rows[1].time, "01:05.02");
+        assert!(!editor.is_dirty());
+        let saved = editor.build().expect("editor saves");
+        assert_eq!(format_timestamp(saved.lines[0].time), "[00:12.40]");
+    }
+
+    #[test]
+    fn editor_flags_dirty_and_invalid_rows() {
+        let lyrics = parse_lrc("[00:01.00]第一行\n[00:02.00]第二行\n");
+        let mut editor = LyricsEditor::from_lyrics(7, "曲名".into(), "歌手".into(), &lyrics);
+        assert!(!editor.any_invalid());
+        editor.rows[1].text = "改过的第二行".into();
+        assert!(editor.is_dirty());
+        editor.rows[0].time = "0:0x".into();
+        assert!(editor.invalid_row(0));
+        assert_eq!(editor.first_invalid_row(), Some(0));
+        assert!(editor.build().is_none());
+    }
+
+    #[test]
+    fn editor_highlights_the_row_for_the_playback_position() {
+        let lyrics = parse_lrc("[00:01.00]第一行\n[00:05.00]第二行\n[00:09.00]第三行\n");
+        let editor = LyricsEditor::from_lyrics(7, "曲名".into(), "歌手".into(), &lyrics);
+        assert_eq!(editor.current_index(0.4), None);
+        assert_eq!(editor.current_index(5.1), Some(1));
+        assert_eq!(editor.current_index(30.0), Some(2));
     }
 }
