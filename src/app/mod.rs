@@ -3312,6 +3312,27 @@ impl RPlayerApp {
         // enum scan only runs on the first frames where no player window exists
         // yet.
         crate::platform::cache_main_window();
+    // Accessibility probe: a manual screen-reader session has to tell "the
+    // platform adapter never forwards the action" apart from "egui received it
+    // but dropped the id". Setting RPLAYER_AK_LOG appends every action request
+    // that actually reaches egui, so the two cases look different on disk.
+    if let Ok(path) = std::env::var("RPLAYER_AK_LOG") {
+        ctx.input(|input| {
+            for event in &input.events {
+                if let egui::Event::AccessKitActionRequest(request) = event {
+                    use std::io::Write as _;
+                    if let Ok(mut file) = std::fs::OpenOptions::new()
+                        .create(true)
+                        .append(true)
+                        .open(&path)
+                    {
+                        let _ = writeln!(file, "{:?}", request.action);
+                    }
+                }
+            }
+        });
+    }
+
         let minimized = ctx
             .input(|input| input.viewport().minimized)
             .unwrap_or(false);

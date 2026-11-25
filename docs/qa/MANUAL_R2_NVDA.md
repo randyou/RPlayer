@@ -41,3 +41,19 @@
 
 - **完全没事件** → 走「在 eframe/winit 层补 adapter 转发」，与 J6 同一个改造方向（次级窗口也没有 adapter），建议合并成一个 v2.1.4 的「可访问性适配器」专项。
 - **有事件但无效** → 改 `src/app/mod.rs` 的 `update_inner`：把 `Event::AccessKitActionRequest` 里 `Action::Click` 桥接成焦点控件的 `Enter`（v2.1.2 试过一版，因无法验证而回滚，代码在 `db3fec2` 之前的提交里可查）。
+
+## 附：本地诊断探针（v2.1.3 起）
+
+先跑一次带探针的进程，再让读屏去激活控件，能把「事件没到」和「事件到了但没生效」分开：
+
+```powershell
+$env:RPLAYER_AK_LOG = "$PWD\tools\qa\out\logs\ak.log"
+.\target\release\rplayer.exe
+# 用 NVDA / 讲述人聚焦到「设置」并激活
+Get-Content .\tools\qa\out\logs\ak.log   # 或确认文件不存在
+```
+
+- **文件不存在 / 空** → AccessKit 动作请求没有到达 egui，问题在适配器或 AT 侧（与 J6 同源）。
+- **有 `Click(...)` 行但界面没反应** → 事件到了、id 没对上，改 `src/app/mod.rs` 里的桥接（历史提交 `db3fec2` 之前可查回滚版本）。
+
+本机已用 `agent-desktop click` 实测：**文件不生成**，所以先把结论记在适配器侧；NVDA 若不同，请把 `ak.log` 内容一起贴回来。
