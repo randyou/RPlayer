@@ -210,10 +210,11 @@ impl RPlayerApp {
                 ui.add_space(8.0);
 
                 let mut remove = None;
+                let mut missing_value = false;
                 for (index, rule) in draft.rules.iter_mut().enumerate() {
                     ui.horizontal(|ui| {
                         egui::ComboBox::from_id_salt(("smart-field", index))
-                            .width(92.0)
+                            .width(116.0)
                             .selected_text(field_label(&rule.field))
                             .show_ui(ui, |ui| {
                                 for (id, label) in FIELDS {
@@ -221,7 +222,7 @@ impl RPlayerApp {
                                 }
                             });
                         egui::ComboBox::from_id_salt(("smart-op", index))
-                            .width(66.0)
+                            .width(88.0)
                             .selected_text(&rule.op)
                             .show_ui(ui, |ui| {
                                 for op in OPS {
@@ -230,7 +231,7 @@ impl RPlayerApp {
                             });
                         ui.add(
                             egui::TextEdit::singleline(&mut rule.value)
-                                .desired_width(105.0)
+                                .desired_width((ui.available_width() - 44.0).max(120.0))
                                 .hint_text("值"),
                         );
                         if widgets::icon_button(ui, crate::ui::icons::Icon::Close, 24.0, "删除条件")
@@ -239,6 +240,14 @@ impl RPlayerApp {
                             remove = Some(index);
                         }
                     });
+                    if rule.value.trim().is_empty() {
+                        missing_value = true;
+                        ui.label(
+                            RichText::new("缺少值 · 补全第 {} 条规则后才能保存")
+                                .size(9.5)
+                                .color(theme::signal()),
+                        );
+                    }
                     ui.add_space(4.0);
                 }
                 if let Some(index) = remove {
@@ -282,9 +291,11 @@ impl RPlayerApp {
                 ui.add_space(10.0);
                 ui.with_layout(Layout::bottom_up(Align::RIGHT), |ui| {
                     ui.horizontal(|ui| {
-                        if widgets::primary_button(ui, "保存智能歌单").clicked() {
-                            save = true;
-                        }
+                        ui.add_enabled_ui(!missing_value, |ui| {
+                            if widgets::primary_button(ui, "保存智能歌单").clicked() {
+                                save = true;
+                            }
+                        });
                         if widgets::secondary_button(ui, "取消").clicked() {
                             cancel = true;
                         }
