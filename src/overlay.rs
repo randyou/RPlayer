@@ -95,6 +95,7 @@ pub fn show_lyrics(
         .with_resizable(false)
         .with_inner_size(LYRICS_SIZE)
         .with_min_inner_size(LYRICS_SIZE)
+        .with_max_inner_size(LYRICS_SIZE)
         .with_taskbar(false)
         .with_active(false);
     if let Some(position) = initial_position {
@@ -110,6 +111,15 @@ pub fn show_lyrics(
         }
 
         crate::platform::set_window_color_key("RPlayer 桌面歌词", true);
+        if let Some(rect) = ctx.input(|input| input.viewport().inner_rect) {
+            if (rect.width() - LYRICS_SIZE.x).abs() > 2.0
+                || (rect.height() - LYRICS_SIZE.y).abs() > 2.0
+            {
+                ctx.send_viewport_cmd(ViewportCommand::InnerSize(LYRICS_SIZE));
+            }
+        }
+        let previous_theme = theme::preset();
+        theme::set_preset(crate::theme::ThemePreset::Forest);
         let snapshot = state.lock().map(|state| state.clone()).unwrap_or_default();
         let mut close = false;
         egui::CentralPanel::default()
@@ -121,7 +131,11 @@ pub fn show_lyrics(
                 let hover = snapshot.lyrics_opacity <= 0.001
                     && crate::platform::cursor_in_window("RPlayer 桌面歌词");
                 let panel_alpha = if snapshot.lyrics_opacity <= 0.001 {
-                    if hover { 0.16 } else { 0.0 }
+                    if hover {
+                        0.78
+                    } else {
+                        0.0
+                    }
                 } else {
                     snapshot.lyrics_opacity.clamp(0.0, 1.0)
                 };
@@ -169,7 +183,7 @@ pub fn show_lyrics(
                     );
                 }
 
-                let shadow = theme::white_alpha(0.0);
+                let shadow = theme::black_alpha(0.62);
                 let center_x = capsule.center().x;
 
                 for _ in 0..text_passes {
@@ -265,10 +279,46 @@ pub fn show_lyrics(
                     Sense::click_and_drag(),
                 );
 
-                let close_rect = Rect::from_min_size(
-                    Pos2::new(capsule.right() - 36.0, capsule.top() + 10.0),
+                let locked = snapshot.lyrics_locked;
+                let lock_rect = Rect::from_min_size(
+                    Pos2::new(capsule.right() - 64.0, capsule.top() + 10.0),
                     Vec2::splat(24.0),
                 );
+                let lock_response =
+                    ui.interact(lock_rect, Id::new("lyrics-lock"), Sense::click());
+                if lock_response.hovered() && panel_alpha > 0.0 {
+                    ui.painter().circle_filled(
+                        lock_rect.center(),
+                        12.0,
+                        with_alpha(theme::white_alpha(0.10), panel_alpha),
+                    );
+                }
+                icons::paint(
+                    ui.painter(),
+                    lock_rect.shrink(6.0),
+                    Icon::Lock,
+                    with_alpha(
+                        if lock_response.hovered() {
+                            theme::c().text
+                        } else {
+                            theme::c().muted
+                        },
+                        panel_alpha,
+                    ),
+                );
+                if lock_response.clicked() {
+                    if let Ok(mut queue) = commands.lock() {
+                        queue.push(OverlayCommand::SetLyricsLocked(!locked));
+                    }
+                }
+                let close_rect = if locked {
+                    Rect::NOTHING
+                } else {
+                    Rect::from_min_size(
+                        Pos2::new(capsule.right() - 36.0, capsule.top() + 10.0),
+                        Vec2::splat(24.0),
+                    )
+                };
                 let close_response = ui.interact(close_rect, Id::new("lyrics-close"), Sense::click());
                 let close_hovered = close_response.hovered();
                 if close_hovered && panel_alpha > 0.0 {
@@ -294,16 +344,40 @@ pub fn show_lyrics(
                 if close_response.clicked() {
                     close = true;
                 }
+                if locked && panel_alpha > 0.02 {
+                    let lock_rect = Rect::from_min_size(
+                        Pos2::new(capsule.right() - 154.0, capsule.top() + 8.0),
+                        Vec2::splat(18.0),
+                    );
+                    icons::paint(
+                        ui.painter(),
+                        lock_rect,
+                        Icon::Lock,
+                        with_alpha(theme::c().muted, panel_alpha),
+                    );
+                    ui.painter().text(
+                        Pos2::new(capsule.right() - 96.0, capsule.top() + 17.0),
+                        Align2::RIGHT_CENTER,
+                        "已锁定 · 在设置中解锁",
+                        FontId::proportional(9.5),
+                        with_alpha(theme::c().muted, panel_alpha),
+                    );
+                }
 
                 let drag = ui.interact(
                     Rect::from_min_max(
-                        capsule.min,
-                        Pos2::new(capsule.right() - 44.0, capsule.bottom()),
+                        Pos2::new(capsule.left() + 44.0, capsule.top() + 34.0),
+                        Pos2::new(capsule.right() - 100.0, capsule.bottom()),
                     ),
                     Id::new("lyrics-drag"),
-                    Sense::drag(),
+                    Sense::click_and_drag(),
                 );
-                if drag.dragged() && !snapshot.lyrics_locked {
+                if drag.double_clicked() && locked {
+                    if let Ok(mut queue) = commands.lock() {
+                        queue.push(OverlayCommand::SetLyricsLocked(false));
+                    }
+                }
+                if drag.dragged() && !locked {
                     ctx.send_viewport_cmd(ViewportCommand::StartDrag);
                 }
                 if drag.drag_stopped() {
@@ -315,10 +389,6 @@ pub fn show_lyrics(
                         }
                     }
                 }
-                let mut opacity = snapshot.lyrics_opacity;
-                let mut text_opacity = snapshot.lyrics_text_opacity;
-                let mut font = snapshot.lyrics_font;
-                let mut locked = snapshot.lyrics_locked;
                 drag.on_hover_cursor(if snapshot.lyrics_locked {
                     egui::CursorIcon::Default
                 } else {
@@ -327,74 +397,17 @@ pub fn show_lyrics(
                     .context_menu(|ui| {
                         menu::begin(ui);
                         menu::heading(ui, "桌面歌词");
-                        ui.label(
-                            RichText::new("面板不透明度")
-                                .size(11.0)
-                                .color(theme::c().muted),
-                        );
-                        let response = ui.add(
-                            egui::Slider::new(&mut opacity, 0.0..=1.0)
-                                .show_value(false)
-                                .trailing_fill(true),
-                        );
-                        ui.label(
-                            RichText::new(format!("{:.0}%", opacity * 100.0))
-                                .size(10.0)
-                                .color(theme::c().faint),
-                        );
-                        if response.changed() {
+                        if menu::item(ui, Some(Icon::Lock), "锁定位置", None, false)
+                            .clicked()
+                        {
                             if let Ok(mut queue) = commands.lock() {
-                                queue.push(OverlayCommand::SetLyricsOpacity(opacity));
+                                queue.push(OverlayCommand::SetLyricsLocked(true));
                             }
-                        }
-                        ui.add_space(4.0);
-                        menu::separator(ui);
-                        ui.label(
-                            RichText::new("歌词文字不透明度")
-                                .size(11.0)
-                                .color(theme::c().muted),
-                        );
-                        let text_response = ui.add(
-                            egui::Slider::new(&mut text_opacity, 0.0..=1.0)
-                                .show_value(false)
-                                .trailing_fill(true),
-                        );
-                        ui.label(
-                            RichText::new(format!("{:.0}%", text_opacity * 100.0))
-                                .size(10.0)
-                                .color(theme::c().faint),
-                        );
-                        if text_response.changed() {
-                            if let Ok(mut queue) = commands.lock() {
-                                queue.push(OverlayCommand::SetLyricsTextOpacity(
-                                    text_opacity,
-                                ));
-                            }
-                        }
-                        ui.add_space(5.0);
-                        ui.label(
-                            RichText::new("字号")
-                                .size(11.0)
-                                .color(theme::c().muted),
-                        );
-                        let font_response = ui.add(
-                            egui::Slider::new(&mut font, 18.0..=40.0)
-                                .show_value(true)
-                                .trailing_fill(true),
-                        );
-                        if font_response.changed() {
-                            if let Ok(mut queue) = commands.lock() {
-                                queue.push(OverlayCommand::SetLyricsFont(font));
-                            }
+                            ui.close_menu();
                         }
                         menu::separator(ui);
-                        if ui.checkbox(&mut locked, "锁定位置").changed() {
-                            if let Ok(mut queue) = commands.lock() {
-                                queue.push(OverlayCommand::SetLyricsLocked(locked));
-                            }
-                        }
-                        menu::separator(ui);
-                        if menu::item(ui, Some(Icon::Close), "关闭桌面歌词", None, true).clicked()
+                        if menu::item(ui, Some(Icon::Close), "关闭桌面歌词", None, true)
+                            .clicked()
                         {
                             close = true;
                             ui.close_menu();
@@ -407,11 +420,15 @@ pub fn show_lyrics(
                 let was_open = ctx
                     .data(|data| data.get_temp::<bool>(controls_id))
                     .unwrap_or(false);
-                let mut controls_open = was_open;
-                let button_rect = Rect::from_min_size(
-                    Pos2::new(capsule.left() + 10.0, capsule.top() + 7.0),
-                    Vec2::splat(24.0),
-                );
+                let mut controls_open = was_open && !locked;
+                let button_rect = if locked {
+                    Rect::NOTHING
+                } else {
+                    Rect::from_min_size(
+                        Pos2::new(capsule.left() + 10.0, capsule.top() + 7.0),
+                        Vec2::splat(24.0),
+                    )
+                };
                 let button = ui.interact(
                     button_rect,
                     Id::new("lyrics-opacity-button"),
@@ -518,6 +535,7 @@ pub fn show_lyrics(
                 }
             });
 
+        theme::set_preset(previous_theme);
         if close {
             if let Ok(mut queue) = commands.lock() {
                 queue.push(OverlayCommand::CloseLyrics);
@@ -547,6 +565,7 @@ pub fn show_mini(
         .with_resizable(false)
         .with_inner_size(MINI_SIZE)
         .with_min_inner_size(MINI_SIZE)
+        .with_max_inner_size(MINI_SIZE)
         .with_taskbar(false);
     if let Some(position) = initial_position {
         builder = builder.with_position(position);
@@ -561,6 +580,13 @@ pub fn show_mini(
         }
 
         let snapshot = state.lock().map(|state| state.clone()).unwrap_or_default();
+        if let Some(rect) = ctx.input(|input| input.viewport().inner_rect) {
+            if (rect.width() - MINI_SIZE.x).abs() > 2.0
+                || (rect.height() - MINI_SIZE.y).abs() > 2.0
+            {
+                ctx.send_viewport_cmd(ViewportCommand::InnerSize(MINI_SIZE));
+            }
+        }
         let mut close = false;
         let mut open_main = false;
         let previous_theme = theme::preset();

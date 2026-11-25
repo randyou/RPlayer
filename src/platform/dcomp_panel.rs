@@ -66,6 +66,7 @@ fn panel() -> &'static Mutex<Option<Panel>> {
     PANEL.get_or_init(|| Mutex::new(None))
 }
 
+
 fn wide(value: &str) -> Vec<u16> {
     value.encode_utf16().chain(std::iter::once(0)).collect()
 }
@@ -93,8 +94,26 @@ unsafe extern "system" fn panel_proc(
         let _ = unsafe { GetClientRect(hwnd, &mut rect) };
         let width = rect.right - rect.left;
         let controls = (point.x < 230 && point.y < 130)
-            || (point.x > width - 56 && point.y < 46);
+            || (point.x > width - 110 && point.y < 46);
         return LRESULT(1);
+    }
+    if msg == 0x0203 || msg == 0x0204 {
+        let owner = PANEL_OWNER.load(std::sync::atomic::Ordering::SeqCst);
+        if owner != 0 {
+            let x = (lparam.0 as i32) & 0xFFFF;
+            let y = ((lparam.0 as i32) >> 16) & 0xFFFF;
+            let owner_hwnd = HWND(owner as *mut core::ffi::c_void);
+            let packed = (((y as isize) << 16) | (x as isize)) as isize;
+            unsafe {
+                let _ = PostMessageW(
+                    owner_hwnd,
+                    msg,
+                    windows::Win32::Foundation::WPARAM(0),
+                    windows::Win32::Foundation::LPARAM(packed),
+                );
+            }
+            return LRESULT(0);
+        }
     }
     if msg == 0x0201 {
         let owner = PANEL_OWNER.load(std::sync::atomic::Ordering::SeqCst);
@@ -104,7 +123,7 @@ unsafe extern "system" fn panel_proc(
             let mut rect = windows::Win32::Foundation::RECT::default();
             let _ = unsafe { GetClientRect(hwnd, &mut rect) };
             let width = rect.right - rect.left;
-            let controls = (x < 230 && y < 130) || (x > width - 56 && y < 46);
+            let controls = (x < 230 && y < 130) || (x > width - 110 && y < 46);
             if controls {
                 let owner_hwnd = HWND(owner as *mut core::ffi::c_void);
                 let packed = (((y as isize) << 16) | (x as isize)) as isize;
@@ -169,7 +188,7 @@ fn create_window() -> Option<HWND> {
     let module = unsafe { GetModuleHandleW(PCWSTR::null()).ok()? };
     unsafe {
         let wc = WNDCLASSW {
-            style: windows::Win32::UI::WindowsAndMessaging::WNDCLASS_STYLES(0),
+            style: windows::Win32::UI::WindowsAndMessaging::WNDCLASS_STYLES(0x0008),
             lpfnWndProc: Some(panel_proc),
             cbClsExtra: 0,
             cbWndExtra: 0,

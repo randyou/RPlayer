@@ -326,6 +326,11 @@ impl RPlayerApp {
     }
 
     pub(super) fn queue_window(&mut self, ctx: &egui::Context) {
+        let slide = ctx.animate_bool_with_time(
+            egui::Id::new("rplayer-queue-motion"),
+            self.queue_open,
+            crate::ui::motion::PAGE,
+        );
         if !self.queue_open {
             return;
         }
@@ -344,7 +349,10 @@ impl RPlayerApp {
             .id(egui::Id::new("rplayer-queue-window"))
             .anchor(
                 Align2::RIGHT_TOP,
-                Vec2::new(0.0, crate::ui::tokens::TOPBAR_HEIGHT),
+                Vec2::new(
+                    (1.0 - slide) * 36.0,
+                    crate::ui::tokens::TOPBAR_HEIGHT,
+                ),
             )
             .title_bar(false)
             .resizable(false)
