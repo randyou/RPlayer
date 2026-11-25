@@ -242,3 +242,9 @@ M4 当前完成项：
 - [REGRESSION_LOG.md](REGRESSION_LOG.md)：改动→受影响界面→回归结果。
 - [DESIGN_GAPS.md](DESIGN_GAPS.md)：10 项缺失设计稿状态。
 
+
+## v2.0.9 桌面歌词设置入口
+
+- 齿轮弹层新增“打开桌面歌词设置”，与右键菜单共用 `OpenLyricsSettings`。
+- 截图 `v209-lyrics-gear.png`：弹层与按钮不裁切。
+- 齿轮按钮到设置页的完整点击链路待回归。

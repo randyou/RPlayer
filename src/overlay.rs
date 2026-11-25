@@ -520,6 +520,13 @@ pub fn show_lyrics(
                                             ));
                                         }
                                     }
+                                    ui.add_space(4.0);
+                                    if widgets::secondary_button(ui, "打开桌面歌词设置").clicked() {
+                                        if let Ok(mut queue) = commands.lock() {
+                                            queue.push(OverlayCommand::OpenLyricsSettings);
+                                        }
+                                        controls_open = false;
+                                    }
                                 });
                         });
                     popup_rect = area.response.rect;
