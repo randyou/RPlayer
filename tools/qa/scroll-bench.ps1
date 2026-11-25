@@ -25,6 +25,9 @@ $scrollSec = $sw.Elapsed.TotalSeconds
 "scroll-seconds {0:N1}" -f $scrollSec
 Start-Sleep -Milliseconds 800
 $frames = Get-Content $log | Where-Object { $_ -match '^\d' } | ForEach-Object { [double](($_ -split "`t")[0]) }
+# Drop the warm-up frames: the very first `update` pays for the font atlas and
+# shader compilation (100-250ms) and would poison `max` and the P95 tail.
+$frames = $frames | Select-Object -Skip 8
 $sorted = $frames | Sort-Object
 $p50 = $sorted[[int]($sorted.Count * 0.50)]
 $p95 = $sorted[[int]($sorted.Count * 0.95)]

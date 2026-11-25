@@ -264,6 +264,10 @@ pub struct RPlayerApp {
     /// with the `update` build time in ms plus the repaint causes, used by the
     /// 10k scroll performance baseline.
     frame_log: Option<std::fs::File>,
+    /// Development aid: `RPLAYER_SECTION_LOG=<path>` appends one line per
+    /// frame with the time spent in each panel group, so a slow frame can be
+    /// attributed without a profiler.
+    section_log: Option<std::fs::File>,
     /// Last `view_cache_key` plus its sorted ids. `visible_ids` filters and
     /// sorts the whole library, so it is only rebuilt when that key changes.
     visible_ids_cache: Option<(u64, Vec<u64>)>,
@@ -271,6 +275,9 @@ pub struct RPlayerApp {
     /// Grouping 10k tracks every frame used to dominate the frame budget.
     nav_counts_cache: Option<(u64, usize, usize)>,
     mini_cache: Arc<Mutex<overlay::MiniCache>>,
+    /// Epoch for the frame log's timestamp column, so frame intervals can be
+    /// derived (the log otherwise only records the UI build time).
+    started: std::time::Instant,
     lyrics_placed: bool,
     mini_placed: bool,
     lyrics_region: bool,
@@ -429,9 +436,13 @@ impl RPlayerApp {
             frame_log: std::env::var("RPLAYER_FRAME_LOG")
                 .ok()
                 .and_then(|path| std::fs::File::create(path).ok()),
+            section_log: std::env::var("RPLAYER_SECTION_LOG")
+                .ok()
+                .and_then(|path| std::fs::File::create(path).ok()),
             visible_ids_cache: None,
             nav_counts_cache: None,
             mini_cache: Arc::new(Mutex::new(overlay::MiniCache::default())),
+            started: std::time::Instant::now(),
             lyrics_placed: false,
             mini_placed: false,
             lyrics_region: false,
@@ -3248,8 +3259,9 @@ impl eframe::App for RPlayerApp {
                 .collect();
             let _ = writeln!(
                 file,
-                "{:.2}\t{}",
+                "{:.2}\t{:.2}\t{}",
                 started.elapsed().as_secs_f64() * 1000.0,
+                self.started.elapsed().as_secs_f64() * 1000.0,
                 causes.join(" | ")
             );
         }
@@ -3361,11 +3373,18 @@ impl RPlayerApp {
         let rail_visible = self.now_rail_open
             && self.current.is_some()
             && Self::rail_available(ctx);
+        let mut lap = std::time::Instant::now();
         self.player_bar(ctx);
         self.sidebar_panel(ctx);
         self.topbar_panel(ctx);
+        let t_chrome = lap.elapsed().as_secs_f64() * 1000.0;
+        lap = std::time::Instant::now();
         self.now_rail_panel(ctx);
+        let t_rail = lap.elapsed().as_secs_f64() * 1000.0;
+        lap = std::time::Instant::now();
         self.central_panel(ctx, &ids, total_seconds);
+        let t_list = lap.elapsed().as_secs_f64() * 1000.0;
+        lap = std::time::Instant::now();
         if !rail_visible {
             self.queue_window(ctx);
         }
@@ -3380,6 +3399,14 @@ impl RPlayerApp {
         self.show_tray_menu(ctx);
         lyrics_edit::show(self, ctx);
         self.command_palette(ctx);
+        let t_tail = lap.elapsed().as_secs_f64() * 1000.0;
+        if let Some(file) = &mut self.section_log {
+            use std::io::Write as _;
+            let _ = writeln!(
+                file,
+                "{t_chrome:.2}\t{t_rail:.2}\t{t_list:.2}\t{t_tail:.2}"
+            );
+        }
         self.flush_prefs(ctx);
         self.request_repaint(ctx);
     }
@@ -3522,3 +3549,4 @@ mod play_mode_tests {
         assert!(!PlayMode::Shuffle.repeats_all());
     }
 }
+
