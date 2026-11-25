@@ -235,3 +235,10 @@ M4 当前完成项：
 - [SURFACE_MATRIX.md](SURFACE_MATRIX.md)：53 个设计面，47 已完成 / 6 部分 / 0 未验收。
 - [V2.0.6_PLAN.md](../../V2.0.6_PLAN.md)：DPI 100–200% 与混合屏测试表、10k 曲库性能协议。
 - 本会话仅实机覆盖 100% 缩放；125% 以上与 10k 曲库保持待验收。
+
+## v2.0.8 桌面歌词菜单与回归流程
+
+- 桌面歌词右键菜单新增“桌面歌词设置…”，切到设置第二页。`v208-settings-lyrics.png` 已回归。
+- [REGRESSION_LOG.md](REGRESSION_LOG.md)：改动→受影响界面→回归结果。
+- [DESIGN_GAPS.md](DESIGN_GAPS.md)：10 项缺失设计稿状态。
+

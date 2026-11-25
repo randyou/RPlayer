@@ -65,6 +65,7 @@ pub enum OverlayCommand {
     CloseLyrics,
     CloseMini,
     OpenMain,
+    OpenLyricsSettings,
 }
 
 pub fn lyrics_viewport() -> ViewportId {
@@ -402,6 +403,14 @@ pub fn show_lyrics(
                         {
                             if let Ok(mut queue) = commands.lock() {
                                 queue.push(OverlayCommand::SetLyricsLocked(true));
+                            }
+                            ui.close_menu();
+                        }
+                        if menu::item(ui, Some(Icon::Settings), "桌面歌词设置…", None, false)
+                            .clicked()
+                        {
+                            if let Ok(mut queue) = commands.lock() {
+                                queue.push(OverlayCommand::OpenLyricsSettings);
                             }
                             ui.close_menu();
                         }

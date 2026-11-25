@@ -1902,6 +1902,16 @@ impl RPlayerApp {
                     ctx.send_viewport_cmd_to(egui::ViewportId::ROOT, ViewportCommand::Visible(true));
                     ctx.send_viewport_cmd_to(egui::ViewportId::ROOT, ViewportCommand::Focus);
                 }
+                OverlayCommand::OpenLyricsSettings => {
+                    self.settings_open = true;
+                    self.settings_tab = 1;
+                    ctx.send_viewport_cmd_to(
+                        egui::ViewportId::ROOT,
+                        ViewportCommand::Minimized(false),
+                    );
+                    ctx.send_viewport_cmd_to(egui::ViewportId::ROOT, ViewportCommand::Visible(true));
+                    ctx.send_viewport_cmd_to(egui::ViewportId::ROOT, ViewportCommand::Focus);
+                }
                 OverlayCommand::OpenMain => {
                     self.mini_open = false;
                     self.mini_viewport_active = false;
