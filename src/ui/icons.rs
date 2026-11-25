@@ -33,6 +33,8 @@ pub enum Icon {
     ChevronRight,
     Trash,
     Edit,
+    Warning,
+    Duplicate,
     Clock,
     Disc,
     Album,
@@ -272,6 +274,18 @@ pub fn paint(painter: &Painter, rect: Rect, icon: Icon, color: Color32) {
                 (0.43, 0.69),
                 (0.25, 0.75),
             ]);
+        }
+        Icon::Warning => {
+            c.polyline(&[(0.50, 0.16), (0.86, 0.80), (0.14, 0.80), (0.50, 0.16)]);
+            c.line((0.50, 0.38), (0.50, 0.58));
+            c.disc(0.50, 0.69, 0.045);
+        }
+        Icon::Duplicate => {
+            c.polyline(&[(0.16, 0.30), (0.16, 0.16), (0.58, 0.16), (0.58, 0.30)]);
+            c.polyline(&[(0.58, 0.16), (0.84, 0.16), (0.84, 0.72), (0.58, 0.72)]);
+            c.polyline(&[(0.16, 0.30), (0.16, 0.84), (0.58, 0.84), (0.58, 0.30)]);
+            c.polyline(&[(0.16, 0.30), (0.58, 0.30), (0.58, 0.72)]);
+            c.polyline(&[(0.58, 0.84), (0.84, 0.84), (0.84, 0.72)]);
         }
         Icon::Clock => {
             c.ring(0.50, 0.50, 0.33);

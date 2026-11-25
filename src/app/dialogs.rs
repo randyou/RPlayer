@@ -4,8 +4,8 @@ use std::path::PathBuf;
 
 use eframe::egui;
 use egui::{
-    Align, Button, Color32, CornerRadius, FontId, Frame, Id, Label, Layout, Margin, RichText,
-    ScrollArea, Sense, Stroke, TextEdit, Ui, Vec2,
+    Align, Align2, Button, Color32, CornerRadius, CursorIcon, FontId, Frame, Id, Label, Layout,
+    Margin, Pos2, Rect, RichText, ScrollArea, Sense, Stroke, TextEdit, Ui, Vec2,
 };
 
 use super::{Dialog, RPlayerApp};
@@ -122,6 +122,14 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
     }
 
     let mut outcome = Outcome::None;
+    // Keep candidates must be resolved before pp.dialog is mutably borrowed.
+    let dup_keeps: Vec<Option<u64>> = match &app.dialog {
+        Dialog::Duplicates { groups } => groups
+            .iter()
+            .map(|group| duplicate_keep(app, &group.track_ids))
+            .collect(),
+        _ => Vec::new(),
+    };
 
     let modal = egui::Modal::new(Id::new("rplayer-modal"))
         .backdrop_color(crate::theme::scrim((175.0 * enter) as u8))
@@ -322,13 +330,39 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                 }
 
                 Dialog::Duplicates { groups } => {
-                    ui.set_width(560.0);
-                    dialog_header(
-                        ui,
-                        "重复歌曲",
-                        "同名、同艺术家且时长相差不超过 2 秒的歌曲。移除只删曲库记录，不删除磁盘文件。",
-                    );
-                    ui.add_space(12.0);
+                    ui.set_width(680.0);
+                    let group_count = groups.len();
+                    let file_count: usize = groups.iter().map(|g| g.track_ids.len()).sum();
+                    ui.horizontal(|ui| {
+                        ui.vertical(|ui| {
+                            ui.label(
+                                RichText::new("DUPLICATES")
+                                    .font(crate::ui::tokens::mono(8.5))
+                                    .color(theme::c().faint),
+                            );
+                            ui.add_space(3.0);
+                            ui.label(
+                                RichText::new("重复歌曲")
+                                    .font(crate::ui::tokens::serif(26.0))
+                                    .color(theme::c().text),
+                            );
+                            ui.add_space(2.0);
+                            ui.label(
+                                RichText::new(format!(
+                                    "{group_count} 组 · {file_count} 个文件候选 · 同一标题、艺术家且时长相差不超过 2 秒"
+                                ))
+                                .size(10.0)
+                                .color(theme::c().muted),
+                            );
+                        });
+                        ui.with_layout(Layout::right_to_left(Align::Min), |ui| {
+                            if widgets::icon_button(ui, Icon::Close, 22.0, "关闭").clicked() {
+                                outcome = Outcome::Close;
+                            }
+                        });
+                    });
+                    ui.add_space(10.0);
+
                     if groups.is_empty() {
                         ui.label(
                             RichText::new("没有发现重复歌曲")
@@ -336,148 +370,233 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                                 .color(theme::c().muted),
                         );
                     } else {
-                        ui.label(
-                            RichText::new(format!("找到 {} 组重复歌曲", groups.len()))
-                                .size(10.5)
-                                .color(theme::c().muted),
-                        );
-                        ui.add_space(6.0);
-                        ScrollArea::vertical().max_height(400.0).show(ui, |ui| {
-                            for group in groups.iter() {
-                                let title = group
-                                    .track_ids
-                                    .first()
-                                    .and_then(|id| app.library.track(*id))
-                                    .map(|track| track.title.clone())
-                                    .unwrap_or_else(|| "重复歌曲".to_string());
-                                Frame::NONE
-                                    .fill(theme::c().card)
-                                    .stroke(Stroke::new(1.0_f32, theme::c().border_soft))
-                                    .corner_radius(CornerRadius::same(10))
-                                    .inner_margin(Margin::symmetric(10, 8))
-                                    .show(ui, |ui| {
-                                        ui.horizontal(|ui| {
-                                            ui.label(
-                                                RichText::new(&title)
-                                                    .size(12.0)
-                                                    .strong()
-                                                    .color(theme::c().text),
+                        ScrollArea::vertical()
+                            .id_salt("duplicate-groups")
+                            .max_height(196.0)
+                            .auto_shrink([false, true])
+                            .show(ui, |ui| {
+                                for (gi, group) in groups.iter().enumerate() {
+                                    let keep = dup_keeps.get(gi).copied().flatten();
+                                    let Some(keep) = keep else { continue };
+                                    let title = app
+                                        .library
+                                        .track(keep)
+                                        .map(|t| t.title.clone())
+                                        .unwrap_or_else(|| "重复歌曲".to_string());
+                                    let artist = app
+                                        .library
+                                        .track(keep)
+                                        .map(|t| t.artist.clone())
+                                        .unwrap_or_default();
+                                    let head = if artist.trim().is_empty() {
+                                        title.clone()
+                                    } else {
+                                        format!("{title} — {artist}")
+                                    };
+
+                                    Frame::NONE
+                                        .fill(theme::c().card)
+                                        .stroke(Stroke::new(1.0_f32, theme::c().border_soft))
+                                        .corner_radius(CornerRadius::same(10))
+                                        .inner_margin(Margin::same(0))
+                                        .show(ui, |ui| {
+                                            ui.set_width(ui.available_width());
+                                            // Group head.
+                                            let (head_rect, _) = ui.allocate_exact_size(
+                                                Vec2::new(ui.available_width(), 34.0),
+                                                Sense::hover(),
                                             );
-                                            ui.label(
-                                                RichText::new(format!(
-                                                    "{} 首",
-                                                    group.track_ids.len()
-                                                ))
-                                                .size(10.0)
-                                                .color(theme::c().muted),
+                                            ui.painter().text(
+                                                Pos2::new(head_rect.left() + 14.0, head_rect.center().y),
+                                                Align2::LEFT_CENTER,
+                                                &head,
+                                                crate::ui::tokens::serif(12.5),
+                                                theme::c().text,
                                             );
-                                            ui.with_layout(
-                                                Layout::right_to_left(Align::Center),
-                                                |ui| {
-                                                    if widgets::text_button(ui, "忽略本组")
-                                                        .clicked()
-                                                    {
-                                                        outcome = Outcome::IgnoreDuplicates(
-                                                            group.track_ids.clone(),
+                                            ui.painter().text(
+                                                Pos2::new(head_rect.right() - 14.0, head_rect.center().y),
+                                                Align2::RIGHT_CENTER,
+                                                format!("{} 个文件", group.track_ids.len()),
+                                                crate::ui::tokens::mono(8.5),
+                                                theme::c().faint,
+                                            );
+                                            ui.painter().hline(
+                                                head_rect.x_range(),
+                                                head_rect.bottom(),
+                                                Stroke::new(1.0_f32, theme::c().border_soft),
+                                            );
+
+                                            let mut order = group.track_ids.clone();
+                                            order.sort_by_key(|id| (*id != keep, *id));
+                                            for id in &order {
+                                                let Some(track) = app.library.track(*id) else {
+                                                    continue;
+                                                };
+                                                let is_keep = *id == keep;
+                                                let row_h = 42.0;
+                                                let (row, resp) = ui.allocate_exact_size(
+                                                    Vec2::new(ui.available_width(), row_h),
+                                                    Sense::click(),
+                                                );
+                                                if is_keep {
+                                                    ui.painter().rect_filled(
+                                                        row,
+                                                        CornerRadius::ZERO,
+                                                        theme::accent_alpha(0.08),
+                                                    );
+                                                    ui.painter().rect_filled(
+                                                        Rect::from_min_size(
+                                                            row.left_top(),
+                                                            Vec2::new(2.0, row.height()),
+                                                        ),
+                                                        CornerRadius::ZERO,
+                                                        theme::c().accent,
+                                                    );
+                                                }
+                                                let name = track
+                                                    .path
+                                                    .file_name()
+                                                    .map(|n| n.to_string_lossy().to_string())
+                                                    .unwrap_or_default();
+                                                ui.painter().text(
+                                                    Pos2::new(row.left() + 16.0, row.top() + 5.0),
+                                                    Align2::LEFT_TOP,
+                                                    &name,
+                                                    crate::ui::tokens::mono(10.5),
+                                                    theme::c().text,
+                                                );
+                                                ui.painter().text(
+                                                    Pos2::new(row.left() + 16.0, row.bottom() - 5.0),
+                                                    Align2::LEFT_BOTTOM,
+                                                    format!(
+                                                        "{} · {} · {}",
+                                                        track.format_label(),
+                                                        crate::model::format_duration(track.duration),
+                                                        track
+                                                            .path
+                                                            .parent()
+                                                            .map(|p| p.display().to_string())
+                                                            .unwrap_or_default()
+                                                    ),
+                                                    crate::ui::tokens::mono(8.0),
+                                                    theme::c().faint,
+                                                );
+                                                ui.painter().text(
+                                                    Pos2::new(row.right() - 16.0, row.center().y),
+                                                    Align2::RIGHT_CENTER,
+                                                    if is_keep { "保留" } else { "忽略" },
+                                                    crate::ui::tokens::mono(8.5),
+                                                    if is_keep {
+                                                        theme::c().accent
+                                                    } else {
+                                                        theme::c().faint
+                                                    },
+                                                );
+                                                let resp = resp.on_hover_cursor(CursorIcon::PointingHand);
+                                                resp.widget_info(|| {
+                                                    egui::WidgetInfo::labeled(
+                                                        egui::WidgetType::Button,
+                                                        is_keep,
+                                                        format!(
+                                                            "{}：{}",
+                                                            if is_keep { "保留" } else { "忽略" },
+                                                            track.path.display()
+                                                        ),
+                                                    )
+                                                });
+                                                if resp.clicked() {
+                                                    outcome = Outcome::KeepDuplicate {
+                                                        keep: *id,
+                                                        group: group.track_ids.clone(),
+                                                    };
+                                                }
+                                                ui.painter().hline(
+                                                    row.x_range(),
+                                                    row.bottom(),
+                                                    Stroke::new(1.0_f32, theme::c().border_soft),
+                                                );
+                                            }
+
+                                            // Card footer: group actions.
+                                            ui.add_space(6.0);
+                                            ui.horizontal(|ui| {
+                                                ui.add_space(10.0);
+                                                if widgets::secondary_button_sized(ui, "仅保留此首", 96.0)
+                                                    .clicked()
+                                                {
+                                                    outcome = Outcome::KeepDuplicate {
+                                                        keep,
+                                                        group: group.track_ids.clone(),
+                                                    };
+                                                }
+                                                if widgets::text_button(ui, "定位").clicked() {
+                                                    if let Some(track) = app.library.track(keep) {
+                                                        outcome = Outcome::RevealDuplicate(
+                                                            track
+                                                                .cue_source
+                                                                .clone()
+                                                                .unwrap_or_else(|| {
+                                                                    track.path.clone()
+                                                                }),
                                                         );
                                                     }
-                                                },
-                                            );
-                                        });
-                                        ui.add_space(4.0);
-                                        for id in &group.track_ids {
-                                            let Some(track) = app.library.track(*id) else {
-                                                continue;
-                                            };
-                                            ui.horizontal(|ui| {
-                                                ui.vertical(|ui| {
-                                                    ui.label(
-                                                        RichText::new(format!(
-                                                            "{} · {} · {} · {}",
-                                                            track.artist,
-                                                            track.album,
-                                                            track.format_label(),
-                                                            crate::model::format_duration(
-                                                                track.duration
-                                                            )
-                                                        ))
-                                                        .size(10.0)
-                                                        .color(theme::c().muted),
-                                                    );
-                                                    ui.add(
-                                                        Label::new(
-                                                            RichText::new(
-                                                                track.path.display().to_string(),
-                                                            )
-                                                            .size(9.0)
-                                                            .color(theme::c().faint),
-                                                        )
-                                                        .truncate(),
-                                                    );
-                                                });
+                                                }
                                                 ui.with_layout(
                                                     Layout::right_to_left(Align::Center),
                                                     |ui| {
-                                                        let keep = widgets::secondary_button(
-                                                            ui,
-                                                            "仅保留此首",
-                                                        );
-                                                        keep.widget_info(|| {
-                                                            egui::WidgetInfo::labeled(
-                                                                egui::WidgetType::Button,
-                                                                true,
-                                                                format!(
-                                                                    "仅保留：{}（{}）",
-                                                                    track.title,
-                                                                    track.path.display()
-                                                                ),
-                                                            )
-                                                        });
-                                                        if keep.clicked() {
-                                                            outcome = Outcome::KeepDuplicate {
-                                                                keep: *id,
-                                                                group: group.track_ids.clone(),
-                                                            };
-                                                        }
-                                                        let locate =
-                                                            widgets::text_button(ui, "定位");
-                                                        locate.widget_info(|| {
-                                                            egui::WidgetInfo::labeled(
-                                                                egui::WidgetType::Button,
-                                                                true,
-                                                                format!(
-                                                                    "在文件夹中显示：{}",
-                                                                    track.path.display()
-                                                                ),
-                                                            )
-                                                        });
-                                                        if locate.clicked() {
-                                                            outcome = Outcome::RevealDuplicate(
-                                                                track
-                                                                    .cue_source
-                                                                    .clone()
-                                                                    .unwrap_or_else(|| {
-                                                                        track.path.clone()
-                                                                    }),
+                                                        ui.add_space(10.0);
+                                                        if widgets::text_button(ui, "忽略本组")
+                                                            .clicked()
+                                                        {
+                                                            outcome = Outcome::IgnoreDuplicates(
+                                                                group.track_ids.clone(),
                                                             );
                                                         }
                                                     },
                                                 );
                                             });
-                                            ui.add_space(2.0);
+                                            ui.add_space(8.0);
+                                        });
+                                    ui.add_space(6.0);
+                                }
+                            });
+                    }
+
+                    ui.add_space(8.0);
+                    ui.horizontal(|ui| {
+                        ui.label(
+                            RichText::new("只删除重复的文件记录，其余移出曲库，不删除磁盘文件。")
+                                .size(9.5)
+                                .color(theme::c().faint),
+                        );
+                        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                            if let Some(group) = groups.first() {
+                                let extra = group.track_ids.len().saturating_sub(1);
+                                if extra > 0 {
+                                    let keep = dup_keeps.first().copied().flatten();
+                                    if let Some(keep) = keep {
+                                        if widgets::danger_button(
+                                            ui,
+                                            &format!("删除 {extra} 个重复项"),
+                                        )
+                                        .clicked()
+                                        {
+                                            outcome = Outcome::KeepDuplicate {
+                                                keep,
+                                                group: group.track_ids.clone(),
+                                            };
                                         }
-                                    });
-                                ui.add_space(5.0);
+                                    }
+                                }
+                            }
+                            ui.add_space(6.0);
+                            if widgets::secondary_button_sized(ui, "取消", 64.0).clicked() {
+                                outcome = Outcome::Close;
                             }
                         });
-                    }
-                    ui.add_space(12.0);
-                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        if widgets::primary_button(ui, "关闭").clicked() {
-                            outcome = Outcome::Close;
-                        }
                     });
                 }
+
                 Dialog::LyricsMatch {
                     id,
                     title,
@@ -911,6 +1030,27 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
     if app.dialog == Dialog::None {
         app.restore_dialog_focus(ctx);
     }
+}
+
+/// Default keep candidate for a duplicate group: prefer lossless formats,
+/// then the oldest library entry, then the shortest path.
+fn duplicate_keep(app: &RPlayerApp, ids: &[u64]) -> Option<u64> {
+    ids.iter().copied().min_by_key(|id| {
+        let Some(track) = app.library.track(*id) else {
+            return (2u8, u64::MAX, usize::MAX);
+        };
+        let ext = track
+            .path
+            .extension()
+            .map(|e| e.to_string_lossy().to_ascii_lowercase())
+            .unwrap_or_default();
+        let lossless = if matches!(ext.as_str(), "flac" | "wav" | "aiff" | "alac") {
+            0u8
+        } else {
+            1u8
+        };
+        (lossless, track.added_at, track.path.as_os_str().len())
+    })
 }
 
 fn dialog_header(ui: &mut Ui, title: &str, subtitle: &str) {

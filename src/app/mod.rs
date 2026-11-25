@@ -209,6 +209,8 @@ pub struct RPlayerApp {
     health_report: Option<crate::health::HealthReport>,
     health_rx: Option<Receiver<crate::health::HealthReport>>,
     health_checking: bool,
+    /// Which health stat card is drilled into, if any.
+    health_pane: Option<health::HealthPane>,
     #[cfg(target_os = "windows")]
     tray: Option<crate::platform::tray::Tray>,
     /// True when a background heartbeat already pokes the UI, so the idle path
@@ -401,6 +403,7 @@ impl RPlayerApp {
             health_report: None,
             health_rx: None,
             health_checking: false,
+            health_pane: None,
             #[cfg(target_os = "windows")]
             tray: None,
             tray_heartbeat: false,
