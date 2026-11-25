@@ -259,3 +259,9 @@ M4 当前完成项：
 - 新增面板/文字对比度断言。
 - Paper 菜单截图 `v211-menu-paper.png`。
 
+
+## v2.0.14 失败态
+- `v2014-offline.png`：离线页本地可用清单 + 本次补全警告 + 两个出口。
+- `v2014-online.png`：超时失败卡与重试按钮；未失败时显示没有待处理的失败。
+- 失败分类映射：NotFound / Timeout / RateLimited / Offline。
+- 回归：设置六页切换正常，播放与曲库不受影响；70 tests。

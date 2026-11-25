@@ -5,7 +5,7 @@ use egui::{
     Align, Align2, CornerRadius, FontId, Frame, Layout, Pos2, RichText, Sense, Stroke, Vec2,
 };
 
-use super::RPlayerApp;
+use super::{NetFailure, RPlayerApp};
 use crate::theme::{self, ThemePreset};
 use crate::ui::icons::{self, Icon};
 use crate::ui::widgets;
@@ -516,6 +516,109 @@ impl RPlayerApp {
                         );
                     });
 
+                ui.add_space(10.0);
+                Frame::NONE
+                    .fill(theme::c().card)
+                    .stroke(Stroke::new(1.0_f32, theme::c().border_soft))
+                    .corner_radius(CornerRadius::same(12))
+                    .inner_margin(egui::Margin::symmetric(12, 10))
+                    .show(ui, |ui| {
+                        ui.label(
+                            RichText::new("本地可用")
+                                .size(10.0)
+                                .color(theme::c().muted),
+                        );
+                        ui.add_space(4.0);
+                        for line in [
+                            "本地曲库与播放队列可用",
+                            "已缓存的封面与歌词可读",
+                            "播放与进度不受网络影响",
+                        ] {
+                            ui.horizontal(|ui| {
+                                let (rect, _) = ui.allocate_exact_size(
+                                    Vec2::splat(12.0),
+                                    Sense::hover(),
+                                );
+                                icons::paint(
+                                    ui.painter(),
+                                    rect,
+                                    Icon::Check,
+                                    theme::c().accent,
+                                );
+                                ui.label(
+                                    RichText::new(line)
+                                        .size(11.0)
+                                        .color(theme::c().text),
+                                );
+                            });
+                        }
+                    });
+
+                if offline_mode {
+                    ui.add_space(10.0);
+                    Frame::NONE
+                        .fill(theme::signal_soft())
+                        .stroke(Stroke::new(1.0_f32, theme::with_alpha(theme::signal(), 0.30)))
+                        .corner_radius(CornerRadius::same(12))
+                        .inner_margin(egui::Margin::symmetric(12, 10))
+                        .show(ui, |ui| {
+                            ui.horizontal(|ui| {
+                                ui.label(
+                                    RichText::new("本次补全没有完成")
+                                        .size(12.0)
+                                        .color(theme::signal()),
+                                );
+                                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                                    ui.label(
+                                        RichText::new("OFFLINE")
+                                            .font(crate::ui::tokens::mono(8.5))
+                                            .color(theme::signal()),
+                                    );
+                                });
+                            });
+                            ui.add_space(4.0);
+                            ui.label(
+                                RichText::new(
+                                    "当前是离线模式。这首歌曲没有本地封面，但播放不受影响。",
+                                )
+                                .size(10.5)
+                                .color(theme::c().muted),
+                            );
+                            ui.add_space(8.0);
+                            ui.horizontal(|ui| {
+                                if ui
+                                    .add(
+                                        egui::Button::new(
+                                            RichText::new("本次联网")
+                                                .size(11.0)
+                                                .color(theme::c().on_accent),
+                                        )
+                                        .fill(theme::c().accent)
+                                        .corner_radius(8)
+                                        .min_size(Vec2::new(0.0, 28.0)),
+                                    )
+                                    .clicked()
+                                {
+                                    offline_mode = false;
+                                    if self.current.is_some() {
+                                        download = true;
+                                    }
+                                }
+                                let _ = ui.add(
+                                    egui::Button::new(
+                                        RichText::new("保持离线")
+                                            .size(11.0)
+                                            .color(theme::c().muted),
+                                    )
+                                    .fill(theme::c().card)
+                                    .stroke(Stroke::new(1.0_f32, theme::c().border))
+                                    .corner_radius(8)
+                                    .min_size(Vec2::new(0.0, 28.0)),
+                                );
+                            });
+                        });
+                }
+
                 }
 
                 if self.settings_tab == 4 {
@@ -625,6 +728,105 @@ impl RPlayerApp {
                                 }
                             });
                         });
+                    });
+
+                ui.add_space(12.0);
+                section(ui, "最近一次联网");
+                let failure = self.last_net_failure;
+                Frame::NONE
+                    .fill(if failure.is_some() {
+                        theme::signal_soft()
+                    } else {
+                        theme::c().card
+                    })
+                    .stroke(Stroke::new(1.0_f32, theme::c().border_soft))
+                    .corner_radius(CornerRadius::same(12))
+                    .inner_margin(egui::Margin::symmetric(12, 10))
+                    .show(ui, |ui| {
+                        let (title, detail) = match failure {
+                            None => (
+                                "没有待处理的失败",
+                                "自动匹配封面或歌词失败时，这里会给出一个可以继续的动作。",
+                            ),
+                            Some(NetFailure::NotFound) => (
+                                "没有找到匹配的内容",
+                                "本地曲库、播放和已缓存内容都没有变化。可以换用文件名或手动选择。",
+                            ),
+                            Some(NetFailure::Timeout) => (
+                                "请求超时",
+                                "网络在超时时间内没有响应；本地内容和缓存仍然可用。",
+                            ),
+                            Some(NetFailure::RateLimited) => (
+                                "请求过于频繁",
+                                "服务暂时限制了请求；稍后再试，当前播放不受影响。",
+                            ),
+                            Some(NetFailure::Offline) => (
+                                "当前离线",
+                                "这是手动发起的联网请求；可以保持离线，或仅本次联网。",
+                            ),
+                        };
+                        ui.horizontal(|ui| {
+                            ui.label(
+                                RichText::new(title)
+                                    .size(12.0)
+                                    .color(if failure.is_some() {
+                                        theme::signal()
+                                    } else {
+                                        theme::c().text
+                                    }),
+                            );
+                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                                if failure.is_some() {
+                                    ui.label(
+                                        RichText::new("LAST REQUEST")
+                                            .font(crate::ui::tokens::mono(8.5))
+                                            .color(theme::c().faint),
+                                    );
+                                }
+                            });
+                        });
+                        ui.add_space(4.0);
+                        ui.label(
+                            RichText::new(detail)
+                                .size(10.5)
+                                .color(theme::c().muted),
+                        );
+                        if failure.is_some() {
+                            ui.add_space(8.0);
+                            ui.horizontal(|ui| {
+                                if failure == Some(NetFailure::RateLimited) {
+                                    let _ = ui.add_enabled(
+                                        false,
+                                        egui::Button::new(
+                                            RichText::new("稍后重试")
+                                                .size(11.0)
+                                                .color(theme::c().faint),
+                                        )
+                                        .fill(theme::c().card)
+                                        .stroke(Stroke::new(1.0_f32, theme::c().border))
+                                        .corner_radius(8)
+                                        .min_size(Vec2::new(0.0, 28.0)),
+                                    );
+                                } else if ui
+                                    .add(
+                                        egui::Button::new(
+                                            RichText::new("重试当前歌词")
+                                                .size(11.0)
+                                                .color(theme::c().on_accent),
+                                        )
+                                        .fill(theme::c().accent)
+                                        .corner_radius(8)
+                                        .min_size(Vec2::new(0.0, 28.0)),
+                                    )
+                                    .clicked()
+                                {
+                                    offline_mode = false;
+                                    if self.current.is_some() {
+                                        download = true;
+                                    }
+                                }
+                            });
+                        }
                     });
 
                 }

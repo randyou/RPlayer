@@ -188,6 +188,14 @@ pub(super) struct Toast {
     created: Instant,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum NetFailure {
+    NotFound,
+    Timeout,
+    RateLimited,
+    Offline,
+}
+
 pub struct RPlayerApp {
     library: Library,
     stats: crate::stats::PlaybackStats,
@@ -301,6 +309,7 @@ pub struct RPlayerApp {
     lyrics_rx: Receiver<LyricsFetchEvent>,
     lyrics_fetching: Option<u64>,
     lyrics_attempted: HashSet<u64>,
+    last_net_failure: Option<NetFailure>,
     prefs_dirty: bool,
 }
 
@@ -448,6 +457,7 @@ impl RPlayerApp {
             lyrics_rx,
             lyrics_fetching: None,
             lyrics_attempted: HashSet::new(),
+            last_net_failure: None,
             prefs_dirty: false,
         };
 
@@ -1704,6 +1714,7 @@ impl RPlayerApp {
 
             match event.result {
                 Ok(result) => {
+                    self.last_net_failure = None;
                     let lyrics = crate::lyrics::parse_lrc(&result.text);
                     if lyrics.is_empty() {
                         if event.manual {
@@ -1727,6 +1738,21 @@ impl RPlayerApp {
                     }
                 }
                 Err(error) => {
+                    self.last_net_failure = Some(match &error {
+                        crate::lyrics_fetch::FetchError::NotFound => NetFailure::NotFound,
+                        crate::lyrics_fetch::FetchError::Network(message) => {
+                            let lower = message.to_lowercase();
+                            if lower.contains("429")
+                                || lower.contains("too many")
+                                || lower.contains("rate limit")
+                            {
+                                NetFailure::RateLimited
+                            } else {
+                                NetFailure::Timeout
+                            }
+                        }
+                        crate::lyrics_fetch::FetchError::Parse(_) => NetFailure::Timeout,
+                    });
                     if event.manual {
                         self.toast(format!("歌词下载失败：{error}"), ToastKind::Error);
                     }
