@@ -1,6 +1,6 @@
 # RPlayer v2 设计面验收矩阵
 
-基线：v2.0.14。状态：`已完成` / `部分` / `未验收`。
+基线：v2.0.17。状态：`已完成` / `部分` / `未验收`。
 本矩阵只记录可核对的证据；没有截图或代码证据的面不写“已完成”。
 
 ## 视图（11）
@@ -23,14 +23,14 @@
 
 | 设计面 | 代码 | 状态 | 证据 / 剩余 |
 | --- | --- | --- | --- |
-| 窗口标题栏 | `src/app/topbar.rs` | 已完成 | `v2012-shell.png`；顶边 6px 拖动、侧/底缩放 |
+| 窗口标题栏 | `src/app/topbar.rs` | 已完成 | `v2012-shell.png`；顶边只拖动不缩放（顶边缩放按设计不适用），侧/底用 `SetWindowPos` 缩放 |
 | 侧边导航 | `src/app/sidebar.rs` | 已完成 | 236px、深色、分组计数 |
 | 底部播放条 | `src/app/player_bar.rs` | 已完成 | 92px、48 封面、三组动作 |
 | 正在播放侧栏 | `src/app/now_rail.rs` | 已完成 | 300px，≥1280 显示 |
 | 播放队列 | `src/app/player_bar.rs` | 已完成 | `v2-queue.png`，360px 右抽屉 |
 | 命令面板 | `src/app/command_palette.rs` | 已完成 | `v2-palette.png`，分组/键盘滚动 |
 | 轻提示 | `src/app/mod.rs` | 已完成 | 底部居中 toast |
-| 多选操作条 | `src/app/library_view.rs` | 已完成 | 批量模式深色条 |
+| 多选操作条 | `src/app/library_view.rs` | 已完成 | `v2017-batch-0.png` / `v2017-batch-3.png` / `v2017-batch-large.png` / `v2017-batch-crossview.png`；0 / 3 / ≥20 三态 + 跨视图“另有 N 首不在当前视图” |
 
 ## 反馈与状态（2）
 
@@ -46,7 +46,7 @@
 | 桌面歌词 · 默认 | `src/overlay.rs` | 已完成 | `v202-lyrics-default.png` |
 | 桌面歌词 · 悬停 | `src/overlay.rs` | 已完成 | `v202-lyrics-hover.png`，0.78 深色面板 |
 | 桌面歌词 · 锁定 | `src/overlay.rs` | 已完成 | `v202-lyrics-locked.png`，提示走设置 |
-| 桌面歌词 · 无歌词 | `src/overlay.rs` | 部分 | 空态 CTA 已实现；旧歌词残留导致截图未复验 |
+| 桌面歌词 · 无歌词 | `src/overlay.rs` | 已完成 | `v2017-lyrics-empty.png`；空态 CTA + 切歌回归无上一首残留 |
 | 迷你播放器 · 经典 | `src/overlay.rs` | 已完成 | `v2-mini.png`，410×146 |
 | 迷你播放器 · 紧凑 | `src/overlay.rs` | 已完成 | 同窗口切换，保留 |
 | 系统托盘菜单 | `src/platform/tray.rs` | 已完成 | 原生 Win32 菜单，按系统样式 |
@@ -100,8 +100,9 @@
 
 ## 汇总
 
-- 53 个设计面；已完成 49，部分 4，未验收 0。
-- 部分项集中在：智能歌单规则行、顶边缩放。
+- 53 个设计面；已完成 52，部分 1，未验收 0。
+- 唯一的 `部分` 项：智能歌单规则行的拖拽（规则行排版 v2.0.16 已收口）。
+- 顶边缩放按设计不适用：标题栏顶边只做窗口拖动，侧/底边用 `SetWindowPos` 缩放（v2.0.13 定案，v2.0.17 在矩阵内正式收口）。
 - 7 个系统原生面：托盘、文件选择器、系统消息框、对话框标题栏、滚动条、IME、窗口阴影；按系统控件验收，不纳入自绘。
 
 
@@ -109,5 +110,5 @@
 
 ## 设计补充
 
-智能歌单规则行、标题栏顶边、离线/在线设置的缺失状态已在 [`DESIGN_GAP_SPEC.md`](DESIGN_GAP_SPEC.md) 定稿，画板证据为 `design-gap-*.png`。矩阵中的 `部分` 状态保持不变，待实现按补充稿落地并通过验收截图后再改为 `已完成`。
+智能歌单规则行、标题栏顶边、离线/在线设置的缺失状态已在 [`DESIGN_GAP_SPEC.md`](DESIGN_GAP_SPEC.md) 定稿，画板证据为 `design-gap-*.png`。其中标题栏顶边按设计不适用（只拖动不缩放）已在 v2.0.17 收口；智能歌单规则行排版已落地，仍缺拖拽，保持 `部分` 待 v2.1.0 终验。
 

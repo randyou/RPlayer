@@ -71,6 +71,35 @@ fn wide(value: &str) -> Vec<u16> {
     value.encode_utf16().chain(std::iter::once(0)).collect()
 }
 
+/// True when the cursor sits inside the rounded capsule the panel actually
+/// paints. Everything outside it is invisible and must stay click-through.
+unsafe fn capsule_hit(hwnd: HWND, rect: RECT) -> bool {
+    let mut point = POINT::default();
+    if GetCursorPos(&mut point).is_err() {
+        return true;
+    }
+    // The panel window is borderless, so window origin == client origin.
+    let mut window = RECT::default();
+    if GetWindowRect(hwnd, &mut window).is_err() {
+        return true;
+    }
+    let x = (point.x - window.left) as f32;
+    let y = (point.y - window.top) as f32;
+    let radius = 18.0_f32;
+    let left = rect.left as f32;
+    let top = rect.top as f32;
+    let right = rect.right as f32;
+    let bottom = rect.bottom as f32;
+    if x < left || y < top || x > right || y > bottom {
+        return false;
+    }
+    let cx = x.clamp(left + radius, right - radius);
+    let cy = y.clamp(top + radius, bottom - radius);
+    let dx = x - cx;
+    let dy = y - cy;
+    dx * dx + dy * dy <= radius * radius
+}
+
 unsafe extern "system" fn panel_proc(
     hwnd: HWND,
     msg: u32,
@@ -80,22 +109,16 @@ unsafe extern "system" fn panel_proc(
     if msg == WM_ERASEBKGND {
         return LRESULT(1);
     }
-    #[link(name = "user32")]
-    extern "system" {
-        fn ScreenToClient(hwnd: HWND, point: *mut windows::Win32::Foundation::POINT) -> i32;
-    }
     if msg == 0x0084 {
-        let mut point = windows::Win32::Foundation::POINT {
-            x: (lparam.0 as i32) & 0xFFFF,
-            y: ((lparam.0 as i32) >> 16) & 0xFFFF,
-        };
+        // WM_NCHITTEST. Only the rounded capsule is part of the panel; the
+        // margin the window is created with must stay click-through so it never
+        // swallows clicks aimed at the window underneath.
         let mut rect = windows::Win32::Foundation::RECT::default();
-        let _ = unsafe { ScreenToClient(hwnd, &mut point) };
         let _ = unsafe { GetClientRect(hwnd, &mut rect) };
-        let width = rect.right - rect.left;
-        let controls = (point.x < 230 && point.y < 130)
-            || (point.x > width - 110 && point.y < 46);
-        return LRESULT(1);
+        return LRESULT(match unsafe { capsule_hit(hwnd, rect) } {
+            true => 1,   // HTCLIENT
+            false => -1, // HTTRANSPARENT
+        });
     }
     if msg == 0x0203 || msg == 0x0204 {
         let owner = PANEL_OWNER.load(std::sync::atomic::Ordering::SeqCst);
@@ -118,10 +141,13 @@ unsafe extern "system" fn panel_proc(
     if msg == 0x0201 {
         let owner = PANEL_OWNER.load(std::sync::atomic::Ordering::SeqCst);
         if owner != 0 {
-            let x = (lparam.0 as i32) & 0xFFFF;
-            let y = ((lparam.0 as i32) >> 16) & 0xFFFF;
             let mut rect = windows::Win32::Foundation::RECT::default();
             let _ = unsafe { GetClientRect(hwnd, &mut rect) };
+            if unsafe { !capsule_hit(hwnd, rect) } {
+                return LRESULT(-1);
+            }
+            let x = (lparam.0 as i32) & 0xFFFF;
+            let y = ((lparam.0 as i32) >> 16) & 0xFFFF;
             let width = rect.right - rect.left;
             let controls = (x < 230 && y < 130) || (x > width - 110 && y < 46);
             if controls {

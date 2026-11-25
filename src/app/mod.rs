@@ -245,6 +245,10 @@ pub struct RPlayerApp {
     cover_attempted: HashSet<String>,
     overlay_state: Arc<Mutex<OverlayState>>,
     overlay_commands: Arc<Mutex<Vec<OverlayCommand>>>,
+    /// Hash of the last published overlay content. Used to wake the overlay
+    /// viewports explicitly when something visible changes, instead of relying
+    /// on their own 33 ms paint timer.
+    overlay_sync_key: u64,
     mini_cache: Arc<Mutex<overlay::MiniCache>>,
     lyrics_placed: bool,
     mini_placed: bool,
@@ -393,6 +397,7 @@ impl RPlayerApp {
             cover_attempted: HashSet::new(),
             overlay_state: Arc::new(Mutex::new(OverlayState::default())),
             overlay_commands: Arc::new(Mutex::new(Vec::new())),
+            overlay_sync_key: 0,
             mini_cache: Arc::new(Mutex::new(overlay::MiniCache::default())),
             lyrics_placed: false,
             mini_placed: false,
@@ -1773,7 +1778,7 @@ impl RPlayerApp {
     // Overlay windows (desktop lyrics + mini player)
     // ---------------------------------------------------------------------
 
-    fn sync_overlay(&self) {
+    fn sync_overlay(&mut self) -> bool {
         let track = self.current.and_then(|id| self.library.track(id));
         let position = self.current_position();
         let favorite = self
@@ -1841,7 +1846,15 @@ impl RPlayerApp {
         }
 
         if let Ok(mut shared) = self.overlay_state.lock() {
-            *shared = state;
+            *shared = state.clone();
+        }
+
+        let key = overlay_content_key(&state);
+        if key == self.overlay_sync_key {
+            false
+        } else {
+            self.overlay_sync_key = key;
+            true
         }
     }
 
@@ -2148,8 +2161,8 @@ impl RPlayerApp {
         self.selected = None;
         self.table_focus = restore_focus;
         self.table_restore = restore_table;
-        self.batch_mode = false;
-        self.checked.clear();
+        // GAP 09: a cross-view selection survives switching views; only the
+        // in-table anchor is dropped so a later Shift range starts fresh.
         self.selection_anchor = None;
         self.album_focus = None;
         self.artist_focus = None;
@@ -2310,10 +2323,25 @@ impl RPlayerApp {
             .playlist(playlist_id)
             .map(|playlist| playlist.name.clone())
             .unwrap_or_default();
-        self.toast(
-            format!("已添加 {added} 首歌曲到「{name}」"),
-            ToastKind::Success,
-        );
+        let total = ids.len();
+        // A silent "0 首" toast reads like a failure; say what actually happened.
+        let (message, kind) = if added == 0 {
+            (format!("这 {total} 首已在「{name}」中"), ToastKind::Info)
+        } else if added < total {
+            (
+                format!(
+                    "已添加 {added} 首到「{name}」，{} 首已存在",
+                    total - added
+                ),
+                ToastKind::Success,
+            )
+        } else {
+            (
+                format!("已添加 {added} 首歌曲到「{name}」"),
+                ToastKind::Success,
+            )
+        };
+        self.toast(message, kind);
     }
 
     fn batch_remove_from_current(&mut self) {
@@ -3119,7 +3147,18 @@ impl eframe::App for RPlayerApp {
             self.smtc = crate::platform::smtc_client::SmtcClient::new();
         }
         self.tick_session();
-        self.sync_overlay();
+        if self.sync_overlay() {
+            // The overlay windows paint on their own 33 ms timer, but that timer
+            // is not a guarantee: wake both viewports explicitly whenever the
+            // published snapshot changes so a new track or lyric line can never
+            // be left behind on screen.
+            if self.lyrics_viewport_active {
+                ctx.request_repaint_of(overlay::lyrics_viewport());
+            }
+            if self.mini_viewport_active {
+                ctx.request_repaint_of(overlay::mini_viewport());
+            }
+        }
 
         let dropped: Vec<PathBuf> = ctx.input(|i| {
             i.raw
@@ -3280,6 +3319,34 @@ fn path_is_under(folder: &Path, file: &Path) -> bool {
     }
     let prefix = format!("{folder}/");
     file.starts_with(&prefix)
+}
+
+/// Hash of everything the overlay windows actually draw.
+///
+/// Playback position is deliberately excluded: lyric lines already encode it,
+/// and position ticks every frame, which would defeat change detection.
+fn overlay_content_key(state: &OverlayState) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    state.has_track.hash(&mut hasher);
+    state.title.hash(&mut hasher);
+    state.artist.hash(&mut hasher);
+    state.playing.hash(&mut hasher);
+    state.favorite.hash(&mut hasher);
+    state.lyric_previous.hash(&mut hasher);
+    state.lyric_current.hash(&mut hasher);
+    state.lyric_next.hash(&mut hasher);
+    state.has_lyrics.hash(&mut hasher);
+    state.lyrics_opacity.to_bits().hash(&mut hasher);
+    state.lyrics_text_opacity.to_bits().hash(&mut hasher);
+    state.lyrics_font.to_bits().hash(&mut hasher);
+    state.lyrics_locked.hash(&mut hasher);
+    state.mini_style.hash(&mut hasher);
+    state.mini_on_top.hash(&mut hasher);
+    state.mini_snap.hash(&mut hasher);
+    state.desktop_lyrics_open.hash(&mut hasher);
+    state.cover_id.hash(&mut hasher);
+    hasher.finish()
 }
 
 #[cfg(test)]
