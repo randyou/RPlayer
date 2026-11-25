@@ -80,3 +80,15 @@
 | 托盘菜单四角有黑色直角 | eframe 每个 viewport 先用 panel fill 清屏，透明弹窗丢不掉这层底色，圆角卡片外就露出方形底色 | `platform::set_rounded_region(title, radius)`：`CreateRoundRectRgn` + `SetWindowRgn`，弹窗每帧裁圆角 | 截图放大左上角，直角消失（`tray-round2-screen.png`） |
 | 桌面歌词打开时主窗拖不动 | `enable_lyrics_native_drag` 的 `LYRICS_OLD_PROC` 一次性闩锁：歌词窗口关闭再打开是新 HWND，子类化没重装，整条 860×158 全部返回 `HTCLIENT`，把下面主窗的拖动区吃掉 | 同函数改为按 `LYRICS_TARGET` 比对 HWND，窗口换了就重装子类；`WM_NCHITTEST` 在胶囊外返回 `HTTRANSPARENT`，胶囊内 `HTCAPTION` | `SendMessageW(WM_NCHITTEST)` 探针：胶囊中心 2、胶囊外 −1（`lyr-fix-*`） |
 | 歌词面板调节/拖动有延迟 | 系统模态移动循环期间事件循环不重绘，DComp 胶囊是独立 HWND，跟着 `WM_MOVE` 才更新，于是拖的时候背景追不上文字 | `WM_ENTERSIZEMOVE` 隐藏胶囊、`WM_EXITSIZEMOVE` 再显示（`dcomp_panel::set_visible`） | 需人工拖动复验 |
+
+## v2.1.0 验收反馈 · 拖动问题二次定位（前台归属）
+
+第一次修复只解决了「歌词窗盖住标题栏时点击落空」，用户复报「开歌词仍拖不动」，继续查后确认还有一层原因：
+
+| 现象 | 根因 | 修法 | 验证 |
+| --- | --- | --- | --- |
+| 歌词窗开着时主窗纹丝不动，但探针显示 `drag.drag_started()` 已触发、`StartDrag` 已发出 | 歌词覆盖层在**创建瞬间**被系统授予前台（`GetForegroundWindow()` 返回 `RPlayer 桌面歌词`，`ex=0x80C0118` 已含 `WS_EX_NOACTIVATE`，说明不是点击激活）。覆盖层持有前台时，主窗第一次按下被系统吃掉用于激活，`window.drag_window()` 不生效 | 歌词窗子类化补 `WM_MOUSEACTIVATE → MA_NOACTIVATE`；`show_overlays` 每帧调 `release_overlay_foreground("RPlayer 桌面歌词")`，前台若不是主窗且标题匹配就 `SetForegroundWindow(主窗)` | `fg` 由 `RPlayer 桌面歌词` 变回 `Last Dance — 徐薇 · RPlayer`；`tools/scratch/drag-test.ps1` 单次手势把主窗从 (389,281) 拖到 (293,229) |
+| 交还前台写了却完全不生效（探针无 handback 记录） | `main_window_handle()` 第一段是「先取 `GetForegroundWindow()`，属于本进程就直接返回」，而前台正是歌词窗 → 判定「前台 == 主窗」，每帧提前 return | 新增 `MAIN_CACHE` + `cache_main_window()`：枚举本进程可见窗口，取面积最大且标题不含「桌面歌词 / 托盘菜单 / 迷你播放器」者，并设 30 万像素面积下限（否则首帧会缓存 winit 的 6×6 事件窗）；`main_window_handle()` 优先读缓存，应用每帧调用一次（未命中会重试） | 修正前后探针：`main=6×6 空窗` → `main=` 真实播放器 HWND |
+| 暂停时歌词面板调节仍有半拍延迟 | 面板块节流 500ms（播放中 33ms） | 暂停态改 250ms | 拖动歌词条 (679,727) → (739,607)，胶囊与文字同步（`lyr-after-screen.png`） |
+
+同一轮顺带确认：`WindowFromPoint` 会正确命中主窗；主窗 `ex=0x40110`（无 `WS_EX_NOACTIVATE`），所以此前「主窗被加了 NOACTIVATE」的猜测不成立。

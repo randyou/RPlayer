@@ -41,6 +41,92 @@ pub fn ensure_aumid_shortcut() {
         .creation_flags(0x0800_0000);
     let _ = command.spawn();
 }
+/// Remembers the player window so later lookups do not mistake an
+/// always-on-top overlay (lyrics strip, tray popup, mini player) for it. The
+/// player is the largest visible window of this process whose title is not one
+/// of the overlay titles; a cached handle that stopped existing is refreshed.
+#[cfg(target_os = "windows")]
+pub fn cache_main_window() -> isize {
+    use std::sync::atomic::{AtomicIsize, Ordering};
+    use winapi::shared::windef::RECT;
+    use winapi::um::winuser::{
+        EnumWindows, GetWindowRect, GetWindowTextW, GetWindowThreadProcessId, IsWindow,
+        IsWindowVisible,
+    };
+
+    static BEST: AtomicIsize = AtomicIsize::new(0);
+    static AREA: AtomicIsize = AtomicIsize::new(0);
+    static PID: AtomicIsize = AtomicIsize::new(0);
+
+    let cached = MAIN_CACHE.load(Ordering::SeqCst);
+    if cached != 0 && unsafe { IsWindow(cached as _) } != 0 {
+        return cached;
+    }
+
+    unsafe extern "system" fn callback(hwnd: winapi::shared::windef::HWND, _: isize) -> i32 {
+        let mut owner = 0u32;
+        unsafe { GetWindowThreadProcessId(hwnd, &mut owner) };
+        if owner as isize != PID.load(Ordering::SeqCst)
+            || unsafe { IsWindowVisible(hwnd) } == 0
+        {
+            return 1;
+        }
+        let mut title = [0u16; 128];
+        let len = unsafe { GetWindowTextW(hwnd, title.as_mut_ptr(), title.len() as i32) };
+        let title = String::from_utf16_lossy(&title[..len.max(0) as usize]);
+        if title.contains("桌面歌词") || title.contains("托盘菜单") || title.contains("迷你播放器")
+        {
+            return 1;
+        }
+        let mut rect: RECT = unsafe { std::mem::zeroed() };
+        if unsafe { GetWindowRect(hwnd, &mut rect) } == 0 {
+            return 1;
+        }
+        let area = ((rect.right - rect.left).max(0) as isize)
+            * ((rect.bottom - rect.top).max(0) as isize);
+        // Ignore helper windows (winit's event target is 6x6); the player is
+        // always a real window, so wait until one shows up instead of caching
+        // whatever is on screen during the first frame.
+        if area < 300_000 {
+            return 1;
+        }
+        if area > AREA.load(Ordering::SeqCst) {
+            AREA.store(area, Ordering::SeqCst);
+            BEST.store(hwnd as isize, Ordering::SeqCst);
+        }
+        1
+    }
+
+    PID.store(std::process::id() as isize, Ordering::SeqCst);
+    BEST.store(0, Ordering::SeqCst);
+    AREA.store(0, Ordering::SeqCst);
+    unsafe {
+        EnumWindows(Some(callback), 0);
+    }
+    let found = BEST.load(Ordering::SeqCst);
+    if found != 0 {
+        MAIN_CACHE.store(found, Ordering::SeqCst);
+    }
+    found
+}
+
+#[cfg(target_os = "windows")]
+fn cached_main_window() -> Option<isize> {
+    use std::sync::atomic::Ordering;
+    #[link(name = "user32")]
+    extern "system" {
+        fn IsWindow(hwnd: isize) -> i32;
+    }
+    let hwnd = MAIN_CACHE.load(Ordering::SeqCst);
+    if hwnd != 0 && unsafe { IsWindow(hwnd) } != 0 {
+        Some(hwnd)
+    } else {
+        None
+    }
+}
+
+static MAIN_CACHE: std::sync::atomic::AtomicIsize = std::sync::atomic::AtomicIsize::new(0);
+
 #[cfg(target_os = "windows")]
 pub mod tray;
 
@@ -82,6 +168,9 @@ pub fn main_window_handle() -> Option<isize> {
 
     let process = std::process::id() as isize;
     PID.store(process, Ordering::SeqCst);
+    if let Some(cached) = cached_main_window() {
+        return Some(cached);
+    }
     let foreground = unsafe { GetForegroundWindow() };
     if !foreground.is_null() {
         let mut owner = 0u32;
@@ -356,6 +445,7 @@ pub fn set_window_color_key(title: &str, enabled: bool) -> bool {
 
     const GWL_EXSTYLE: i32 = -20;
     const WS_EX_LAYERED: isize = 0x0008_0000;
+    const WS_EX_NOACTIVATE: isize = 0x0800_0000;
     const LWA_ALPHA: u32 = 0x0000_0002;
     const LWA_COLORKEY: u32 = 0x0000_0001;
     const SWP_NOMOVE: u32 = 0x0002;
@@ -371,8 +461,15 @@ pub fn set_window_color_key(title: &str, enabled: bool) -> bool {
         return false;
     }
     let style = unsafe { GetWindowLongPtrW(hwnd, GWL_EXSTYLE) };
-    if style & WS_EX_LAYERED == 0 {
-        unsafe { SetWindowLongPtrW(hwnd, GWL_EXSTYLE, style | WS_EX_LAYERED) };
+    // An always-on-top overlay must never take activation: while it held the
+    // foreground, the first press on the player's title bar only activated the
+    // player again and the drag gesture was swallowed (v2.1.0 issue #2).
+    let mut next = style | WS_EX_NOACTIVATE;
+    if next & WS_EX_LAYERED == 0 {
+        next |= WS_EX_LAYERED;
+    }
+    if next != style {
+        unsafe { SetWindowLongPtrW(hwnd, GWL_EXSTYLE, next) };
     }
     unsafe {
         let result = if enabled {
@@ -414,6 +511,73 @@ pub fn set_window_color_key(title: &str, enabled: bool) -> bool {
         );
         result
     }
+}
+
+/// Brings the player window back to the foreground. Used right after an
+/// overlay appears, because Windows hands the foreground to the new window
+/// even when it never activates (v2.1.0 issue #2).
+#[cfg(target_os = "windows")]
+pub fn focus_main_window() {
+    #[link(name = "user32")]
+    extern "system" {
+        fn SetForegroundWindow(hwnd: isize) -> i32;
+        fn GetForegroundWindow() -> isize;
+    }
+
+    if let Some(main) = main_window_handle() {
+        if main != 0 {
+            let ok = unsafe { SetForegroundWindow(main) };
+            crate::platform::drag_probe(
+                "foreground",
+                &format!(
+                    "focus main={main} ok={ok} now={}",
+                    unsafe { GetForegroundWindow() }
+                ),
+            );
+        }
+    }
+}
+
+/// Windows hands the foreground to a freshly created top-level window even
+/// when it is non-activating. While that overlay owns the foreground the first
+/// press on the player's title bar is spent re-activating the player and the
+/// drag gesture is swallowed, so give it straight back.
+#[cfg(target_os = "windows")]
+pub fn release_overlay_foreground(title: &str) {
+    #[link(name = "user32")]
+    extern "system" {
+        fn GetForegroundWindow() -> isize;
+        fn GetWindowTextW(hwnd: isize, buf: *mut u16, count: i32) -> i32;
+        fn SetForegroundWindow(hwnd: isize) -> i32;
+    }
+
+    let Some(main) = main_window_handle() else {
+        crate::platform::drag_probe("foreground", "no-main");
+        return;
+    };
+    let fg = unsafe { GetForegroundWindow() };
+    if fg == 0 || fg == main {
+        return;
+    }
+    // Compare by title on the window that actually owns the foreground;
+    // FindWindow is unreliable while an older hidden overlay still exists.
+    let mut buf = [0u16; 64];
+    let len = unsafe { GetWindowTextW(fg, buf.as_mut_ptr(), buf.len() as i32) };
+    if len <= 0 {
+        return;
+    }
+    let current = String::from_utf16_lossy(&buf[..len as usize]);
+    if current != title {
+        return;
+    }
+    let ok = unsafe { SetForegroundWindow(main) };
+    crate::platform::drag_probe(
+        "foreground",
+        &format!(
+            "handback main={main} overlay={fg} ok={ok} now={}",
+            unsafe { GetForegroundWindow() }
+        ),
+    );
 }
 
 /// Disables the Windows 11 DWM border (and rounded corners) on an overlay.
@@ -847,7 +1011,9 @@ unsafe extern "system" fn lyrics_native_proc(
     #[link(name = "user32")]
     extern "system" {
         fn GetClientRect(hwnd: isize, rect: *mut RectI) -> i32;
+        fn GetWindowRect(hwnd: isize, rect: *mut RectI) -> i32;
         fn ScreenToClient(hwnd: isize, point: *mut PointI) -> i32;
+        fn ClientToScreen(hwnd: isize, point: *mut PointI) -> i32;
         fn CallWindowProcW(prev: isize, hwnd: isize, msg: u32, wp: usize, lp: isize) -> isize;
         fn DefWindowProcW(hwnd: isize, msg: u32, wp: usize, lp: isize) -> isize;
     }
@@ -881,7 +1047,54 @@ unsafe extern "system" fn lyrics_native_proc(
             && point.y >= inset
             && point.x <= width - inset
             && point.y <= height - inset;
-        return if inside { 2 } else { -1 }; // HTCAPTION: drag, HTTRANSPARENT: pass through.
+        if !inside {
+            return -1; // HTTRANSPARENT
+        }
+        // Never swallow the main window's own drag strip: when the overlay is
+        // parked over the title bar, a press there has to move the player, not
+        // the lyric strip. WM_NCHITTEST already reports screen coordinates.
+        let screen_point = PointI {
+            x: (lp as i32) & 0xFFFF,
+            y: ((lp as i32) >> 16) & 0xFFFF,
+        };
+        unsafe {
+            if let Some(main) = crate::platform::main_window_handle() {
+                let mut main_rect = RectI { left: 0, top: 0, right: 0, bottom: 0 };
+                if GetWindowRect(main, &mut main_rect) != 0 {
+                    let strip = main_rect.top + (crate::ui::tokens::TOPBAR_HEIGHT as i32);
+                    if screen_point.y >= main_rect.top
+                        && screen_point.y <= strip
+                        && screen_point.x >= main_rect.left
+                        && screen_point.x <= main_rect.right
+                    {
+                        return -1;
+                    }
+                }
+            }
+        }
+        return 2; // HTCAPTION: drag the lyric strip.
+    }
+    // The lyric strip is a non-activating overlay, but Windows still treats it
+    // as a normal window when clicked: the click activates the overlay, the
+    // player loses the foreground, and the very next title-bar press is spent
+    // re-activating the player instead of starting a drag (v2.1.0 issue #2).
+    if msg == 0x0021 {
+        return 3; // MA_NOACTIVATE
+    }
+    if msg == 0x0006 {
+        // WM_ACTIVATE: if something still activated us, hand the foreground
+        // back to the player immediately.
+        if (wp & 0xFFFF) != 0 {
+            if let Some(main) = crate::platform::main_window_handle() {
+                if main != 0 && main != hwnd {
+                    extern "system" {
+                        fn SetForegroundWindow(hwnd: isize) -> i32;
+                    }
+                    unsafe { SetForegroundWindow(main) };
+                }
+            }
+        }
+        return 0;
     }
     // The system runs a modal move loop while the caption is dragged, so the
     // event loop stops painting. Hide the DComp capsule for that window instead
@@ -901,6 +1114,18 @@ unsafe extern "system" fn lyrics_native_proc(
         } else {
             DefWindowProcW(hwnd, msg, wp, lp)
         }
+    }
+}
+
+/// Development aid: appends one line to `RPLAYER_DRAG_DEBUG` so a drag that
+/// never reaches the window manager can be told apart from one that does.
+pub fn drag_probe(id: &str, event: &str) {
+    let Ok(path) = std::env::var("RPLAYER_DRAG_DEBUG") else {
+        return;
+    };
+    use std::io::Write;
+    if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open(path) {
+        let _ = writeln!(file, "{event} {id}");
     }
 }
 

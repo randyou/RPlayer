@@ -2067,11 +2067,16 @@ impl RPlayerApp {
             );
             self.lyrics_placed = true;
             self.lyrics_viewport_active = true;
+            // A window that never activates can still be handed the foreground
+            // when it is created; while it holds it, dragging the player needs
+            // a throwaway click first (v2.1.0 issue #2).
+            crate::platform::release_overlay_foreground("RPlayer 桌面歌词");
             crate::platform::enable_lyrics_native_drag("RPlayer 桌面歌词");
             if !self.lyrics_region {
                 // DWM adds a dark 1px frame around borderless overlays on
                 // Windows 11; remove it (and the rounded corner preference).
                 crate::platform::set_window_borderless("RPlayer 桌面歌词");
+                crate::platform::focus_main_window();
                 self.lyrics_region = true;
             }
         } else if self.lyrics_viewport_active {
@@ -3271,6 +3276,13 @@ impl eframe::App for RPlayerApp {
 
 impl RPlayerApp {
     fn update_inner(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Remember the player HWND; the lyrics overlay is created non-activating
+        // but can still be handed the foreground, and then every "which window is
+        // the player?" lookup would answer with the overlay (v2.1.0 issue #2).
+        // This returns the cached handle straight away once it is known, so the
+        // enum scan only runs on the first frames where no player window exists
+        // yet.
+        crate::platform::cache_main_window();
         let minimized = ctx
             .input(|input| input.viewport().minimized)
             .unwrap_or(false);

@@ -297,6 +297,7 @@ impl RPlayerApp {
                         self.expanded = false;
                     }
                     if drag.drag_started() && !on_edge {
+                        crate::platform::drag_probe(id, "start");
                         ctx.send_viewport_cmd(ViewportCommand::StartDrag);
                     }
                     if drag.double_clicked() {

@@ -596,7 +596,10 @@ pub fn show_lyrics(
         }
         // Playing keeps a 30 fps tick so the lyric line can advance; paused
         // frames only need to react to explicit wakes from the main viewport.
-        let interval = if snapshot.playing { 33 } else { 500 };
+        // While paused the strip still has to follow drags and opacity/typography
+        // tweaks; 500 ms made those feel delayed, 250 ms keeps the window quiet
+        // without the controls trailing the pointer (v2.1.0 issue #3).
+        let interval = if snapshot.playing { 33 } else { 250 };
         ctx.request_repaint_after(std::time::Duration::from_millis(interval));
     });
 }
