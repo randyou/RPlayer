@@ -265,3 +265,11 @@
 **当前判断**：`egui-0.31.1/src/context.rs:1271-1277` 只在 `has_accesskit_action_request(id, Action::Click)` 为真、且 id 与 response.id 相同时把 `FAKE_PRIMARY_CLICKED` 置真；实测中键盘/焦点路径正常，动作请求没有落成点击。需要真人用 NVDA 或讲述人复验一次，确认是适配器没有转发 `Action::Click`，还是 egui 侧 id 映射问题——两者修法不同，不宜盲改。
 
 **下一步（v2.1.3）**：先用 NVDA 复现并抓 AccessKit 事件；若确认是适配器不转发，则在 `App::update` 里把 `Event::AccessKitActionRequest(Click)` 桥接成键盘 `Enter`（本轮试过一版，因无法验证而回滚，代码在提交历史里可查）。
+
+## J6 诊断记录（v2.1.2 之后，未修）
+
+覆盖层（`RPlayer 桌面歌词`）的 AccessKit 树只有 `window` 根节点、`children=0`，条上的收藏/下载/刷新/展开/齿轮全部不可达。
+
+本轮试过：在 `overlay.rs` 的 `show_viewport_deferred(lyrics_viewport(), …)` 闭包里首行调 `ctx.enable_accesskit()`（egui 0.31 提供该 API）。重建后 `agent-desktop snapshot --window-id w-<歌词窗>` 仍返回 `children=0` —— 说明次级 viewport 的 AccessKit 适配器没有被 eframe/winit 挂上，不是"没开开关"的问题。已回滚该改动。
+
+下一步（v2.1.3）：需要在 eframe 层给次级窗口创建独立的 AccessKit adapter（或把覆盖层控件做成真正的窗口级按钮），属于框架级改造，需单独立项评估。
