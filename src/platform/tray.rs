@@ -10,12 +10,13 @@
 
 use std::sync::{Mutex, OnceLock};
 
+use winapi::shared::guiddef::GUID;
 use winapi::shared::minwindef::{LPARAM, LRESULT, UINT, WPARAM};
 use winapi::shared::windef::{HICON, HWND, POINT};
 use winapi::um::libloaderapi::GetModuleHandleW;
 use winapi::um::shellapi::{
-    ExtractIconExW, Shell_NotifyIconW, NIF_ICON, NIF_MESSAGE, NIF_TIP, NIM_ADD, NIM_DELETE,
-    NIM_MODIFY, NOTIFYICONDATAW,
+    ExtractIconExW, Shell_NotifyIconW, NIF_GUID, NIF_ICON, NIF_MESSAGE, NIF_TIP, NIM_ADD,
+    NIM_DELETE, NIM_MODIFY, NOTIFYICONDATAW,
 };
 use winapi::um::winuser::{
     CreateWindowExW, DefWindowProcW, DestroyIcon, DestroyWindow, DispatchMessageW, GetCursorPos,
@@ -28,7 +29,21 @@ use winapi::um::winuser::{
 /// `WM_TRAY_TIP` (design gap D2: three states, 500 ms delay handled by us).
 static TRAY_TIP: OnceLock<Mutex<String>> = OnceLock::new();
 static TRAY_HWND: std::sync::atomic::AtomicIsize = std::sync::atomic::AtomicIsize::new(0);
+static TRAY_ICON: std::sync::atomic::AtomicIsize = std::sync::atomic::AtomicIsize::new(0);
 const WM_TRAY_TIP: UINT = WM_APP + 3;
+
+/// Fixed identity for the notification-area icon.
+///
+/// Without `NIF_GUID` the shell keys the icon to the executable image, so every
+/// rebuilt binary registers as a brand-new icon and Windows 11 drops it into
+/// the overflow flyout again - which reads as "the tray icon disappeared".
+/// A stable GUID keeps the user's "show in the notification area" choice.
+const TRAY_GUID: GUID = GUID {
+    Data1: 0x5A6D_3E19,
+    Data2: 0x8C24,
+    Data3: 0x4F7B,
+    Data4: [0x9B, 0x36, 0x2E, 0x51, 0x7A, 0x64, 0x0C, 0x11],
+};
 
 fn tip_slot() -> &'static Mutex<String> {
     TRAY_TIP.get_or_init(|| Mutex::new(String::from("RPlayer")))
@@ -249,28 +264,54 @@ unsafe fn create_tray_window() -> Option<HWND> {
     if icon.is_null() {
         icon = LoadIconW(std::ptr::null_mut(), IDI_APPLICATION);
     }
-
-    let mut data: NOTIFYICONDATAW = std::mem::zeroed();
-    data.cbSize = std::mem::size_of::<NOTIFYICONDATAW>() as u32;
-    data.hWnd = hwnd;
-    data.uID = 1;
-    data.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
-    data.uCallbackMessage = WM_TRAY;
-    data.hIcon = icon;
+    TRAY_ICON.store(icon as isize, std::sync::atomic::Ordering::Relaxed);
     TRAY_HWND.store(hwnd as isize, std::sync::atomic::Ordering::Relaxed);
-    let current = match tip_slot().lock() {
-        Ok(slot) => slot.clone(),
-        Err(_) => String::from("RPlayer"),
-    };
-    let tip = wide(&current);
-    let count = tip.len().min(data.szTip.len());
-    data.szTip[..count].copy_from_slice(&tip[..count]);
-    if Shell_NotifyIconW(NIM_ADD, &mut data) == 0 {
+    if !add_icon(hwnd) {
         DestroyWindow(hwnd);
         return None;
     }
     UpdateWindow(hwnd);
     Some(hwnd)
+}
+
+/// Shell message broadcast when Explorer (re)starts. Icons added before the
+/// restart are gone afterwards, so the tray has to re-register itself.
+fn taskbar_created_message() -> UINT {
+    use winapi::um::winuser::RegisterWindowMessageW;
+
+    static MSG: OnceLock<UINT> = OnceLock::new();
+    *MSG.get_or_init(|| {
+        let name = wide("TaskbarCreated");
+        unsafe { RegisterWindowMessageW(name.as_ptr()) }
+    })
+}
+
+/// Fills the identity fields shared by every `Shell_NotifyIconW` call.
+unsafe fn icon_data(hwnd: HWND, flags: UINT) -> NOTIFYICONDATAW {
+    let mut data: NOTIFYICONDATAW = std::mem::zeroed();
+    data.cbSize = std::mem::size_of::<NOTIFYICONDATAW>() as u32;
+    data.hWnd = hwnd;
+    data.uID = 0;
+    data.uFlags = flags | NIF_GUID;
+    data.guidItem = TRAY_GUID;
+    data
+}
+
+/// Adds (or re-adds) the icon under its stable GUID.
+fn add_icon(hwnd: HWND) -> bool {
+    unsafe {
+        let mut data = icon_data(hwnd, NIF_MESSAGE | NIF_ICON | NIF_TIP);
+        data.uCallbackMessage = WM_TRAY;
+        data.hIcon = TRAY_ICON.load(std::sync::atomic::Ordering::Relaxed) as HICON;
+        let current = match tip_slot().lock() {
+            Ok(slot) => slot.clone(),
+            Err(_) => String::from("RPlayer"),
+        };
+        let tip = wide(&current);
+        let count = tip.len().min(data.szTip.len());
+        data.szTip[..count].copy_from_slice(&tip[..count]);
+        Shell_NotifyIconW(NIM_ADD, &mut data) != 0
+    }
 }
 
 unsafe extern "system" fn wndproc(
@@ -300,24 +341,26 @@ unsafe extern "system" fn wndproc(
                 Ok(slot) => slot.clone(),
                 Err(_) => String::new(),
             };
-            let mut data: NOTIFYICONDATAW = std::mem::zeroed();
-            data.cbSize = std::mem::size_of::<NOTIFYICONDATAW>() as u32;
-            data.hWnd = hwnd;
-            data.uID = 1;
-            data.uFlags = NIF_TIP;
-            let tip = wide(&text);
-            let count = tip.len().min(data.szTip.len());
-            data.szTip[..count].copy_from_slice(&tip[..count]);
-            Shell_NotifyIconW(NIM_MODIFY, &mut data);
+            unsafe {
+                let mut data = icon_data(hwnd, NIF_TIP);
+                let tip = wide(&text);
+                let count = tip.len().min(data.szTip.len());
+                data.szTip[..count].copy_from_slice(&tip[..count]);
+                Shell_NotifyIconW(NIM_MODIFY, &mut data);
+            }
             0
         }
         WM_DESTROY => {
-            let mut data: NOTIFYICONDATAW = std::mem::zeroed();
-            data.cbSize = std::mem::size_of::<NOTIFYICONDATAW>() as u32;
-            data.hWnd = hwnd;
-            data.uID = 1;
-            Shell_NotifyIconW(NIM_DELETE, &mut data);
+            unsafe {
+                let mut data = icon_data(hwnd, 0);
+                Shell_NotifyIconW(NIM_DELETE, &mut data);
+            }
             PostQuitMessage(0);
+            0
+        }
+        _ if message == taskbar_created_message() => {
+            // Explorer restarted: every notification icon was dropped with it.
+            add_icon(hwnd);
             0
         }
         _ if message == show_request_message() => {
