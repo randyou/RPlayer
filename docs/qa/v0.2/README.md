@@ -229,3 +229,9 @@ M4 当前完成项：
 - [x] 歌词编辑器 `LYRICS EDITOR` 眉题与衬线标题。
 - [x] `cargo test --release`：70 passed；`cargo build --release` 通过。
 - [x] 智能歌单实时匹配预览卡。
+
+## v2.0.6 验收矩阵与 DPI / 性能基线
+
+- [SURFACE_MATRIX.md](SURFACE_MATRIX.md)：53 个设计面，47 已完成 / 6 部分 / 0 未验收。
+- [V2.0.6_PLAN.md](../../V2.0.6_PLAN.md)：DPI 100–200% 与混合屏测试表、10k 曲库性能协议。
+- 本会话仅实机覆盖 100% 缩放；125% 以上与 10k 曲库保持待验收。
