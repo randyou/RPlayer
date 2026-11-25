@@ -1846,6 +1846,7 @@ impl RPlayerApp {
             has_track: track.is_some(),
             title: track.map(|track| track.title.clone()).unwrap_or_default(),
             artist: track.map(|track| track.artist.clone()).unwrap_or_default(),
+            track_number: track.and_then(|track| track.track_number),
             position,
             duration: track.map(|track| track.duration).unwrap_or_default(),
             playing: self.is_playing(),

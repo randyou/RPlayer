@@ -55,6 +55,7 @@ pub enum Icon {
     PanelRight,
     Refresh,
     Lock,
+    Pin,
 }
 
 struct Canvas {
@@ -487,6 +488,21 @@ pub fn paint(painter: &Painter, rect: Rect, icon: Icon, color: Color32) {
             c.line((0.69, 0.43), (0.69, 0.52));
             c.bar(0.25, 0.75, 0.51, 0.80, 0.08);
             c.line((0.50, 0.59), (0.50, 0.70));
+        }
+        Icon::Pin => {
+            // Push-pin: dome head, two shoulders, single needle.
+            c.arc(
+                0.50,
+                0.36,
+                0.15,
+                std::f32::consts::PI,
+                std::f32::consts::TAU,
+            );
+            c.line((0.35, 0.36), (0.65, 0.36));
+            c.line((0.43, 0.36), (0.43, 0.57));
+            c.line((0.57, 0.36), (0.57, 0.57));
+            c.line((0.43, 0.57), (0.57, 0.57));
+            c.line((0.50, 0.57), (0.50, 0.82));
         }
     }
 }

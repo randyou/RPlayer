@@ -26,6 +26,8 @@ pub struct OverlayState {
     pub has_track: bool,
     pub title: String,
     pub artist: String,
+    /// Album track number, shown as `艺术家 · 编号` on the mini player.
+    pub track_number: Option<u32>,
     pub position: f64,
     pub duration: f64,
     pub playing: bool,
@@ -655,15 +657,15 @@ pub fn show_mini(
                 ui.painter().rect_filled(card, CornerRadius::ZERO, theme::c().panel);
                 ui.painter().rect_filled(
                     card_shape,
-                    CornerRadius::same(18),
+                    CornerRadius::same(16),
                     theme::c().panel,
                 );
                 ui.painter().rect_filled(
                     Rect::from_min_max(
-                        Pos2::new(card.left() + 1.0, card.top() + 14.0),
-                        Pos2::new(card.left() + 5.0, card.bottom() - 14.0),
+                        Pos2::new(card.left(), card.top() + 12.0),
+                        Pos2::new(card.left() + 5.0, card.bottom() - 12.0),
                     ),
-                    CornerRadius::same(2),
+                    CornerRadius::same(3),
                     theme::c().accent,
                 );
 
@@ -703,7 +705,7 @@ pub fn show_mini(
                                                 } else {
                                                     "RPlayer 迷你播放器"
                                                 })
-                                                .size(14.0)
+                                                .size(14.5)
                                                 .strong()
                                                 .color(theme::c().text),
                                             )
@@ -712,18 +714,19 @@ pub fn show_mini(
                                         ui.add(
                                             egui::Label::new(
                                                 RichText::new(if snapshot.has_track {
-                                                    &snapshot.artist
+                                                    mini_subtitle(&snapshot)
                                                 } else {
-                                                    "从音乐库选择一首歌"
+                                                    "从音乐库选择一首歌".to_string()
                                                 })
-                                                .size(11.0)
+                                                .size(9.0)
                                                 .color(theme::c().muted),
                                             )
                                             .truncate(),
                                         );
                                     });
                                     ui.with_layout(Layout::right_to_left(Align::TOP), |ui| {
-                                        if widgets::icon_button(ui, Icon::Close, 22.0, "关闭迷你播放器")
+                                        ui.spacing_mut().item_spacing.x = 8.0;
+                                        if widgets::icon_button(ui, Icon::Close, 24.0, "关闭迷你播放器")
                                             .clicked()
                                         {
                                             close = true;
@@ -731,7 +734,7 @@ pub fn show_mini(
                                         if widgets::icon_button(
                                             ui,
                                             Icon::Expand,
-                                            22.0,
+                                            24.0,
                                             "切回主播放器",
                                         )
                                         .clicked()
@@ -741,7 +744,7 @@ pub fn show_mini(
                                         if widgets::glyph_button_tinted(
                                             ui,
                                             "词",
-                                            22.0,
+                                            24.0,
                                             theme::c().muted,
                                             snapshot.desktop_lyrics_open,
                                             "显示 / 隐藏桌面歌词",
@@ -752,10 +755,10 @@ pub fn show_mini(
                                                 queue.push(OverlayCommand::ToggleLyrics);
                                             }
                                         }
-                                        if widgets::glyph_button_tinted(
+                                        if widgets::icon_button_tinted(
                                             ui,
-                                            "顶",
-                                            22.0,
+                                            Icon::Pin,
+                                            24.0,
                                             theme::c().muted,
                                             snapshot.mini_on_top,
                                             if snapshot.mini_on_top {
@@ -783,86 +786,29 @@ pub fn show_mini(
                                         queue.push(OverlayCommand::Seek(seconds));
                                     }
                                 }
-                                ui.add_space(1.0);
-                                ui.horizontal(|ui| {
-                                    ui.label(
-                                        RichText::new(crate::model::format_duration(
-                                            snapshot.position,
-                                        ))
-                                        .font(FontId::monospace(9.0))
-                                        .color(theme::c().faint),
-                                    );
-                                    ui.with_layout(
-                                        Layout::right_to_left(Align::Center),
-                                        |ui| {
-                                            ui.label(
-                                                RichText::new(crate::model::format_duration(
-                                                    snapshot.duration,
-                                                ))
-                                                .font(FontId::monospace(9.0))
-                                                .color(theme::c().faint),
-                                            );
-                                        },
-                                    );
-                                });
 
-                                ui.horizontal(|ui| {
-                                    ui.spacing_mut().item_spacing.x = 5.0;
-                                    if widgets::circle_button(
-                                        ui,
-                                        if snapshot.playing {
-                                            Icon::Pause
-                                        } else {
-                                            Icon::Play
-                                        },
-                                        32.0,
-                                        theme::c().accent,
-                                        theme::c().on_accent,
-                                        if snapshot.playing { "暂停" } else { "播放" },
-                                    )
-                                    .clicked()
-                                    {
-                                        if let Ok(mut queue) = commands.lock() {
-                                            queue.push(OverlayCommand::TogglePlay);
-                                        }
-                                    }
-                                    if widgets::icon_button(ui, Icon::Prev, 26.0, "上一首").clicked()
-                                    {
-                                        if let Ok(mut queue) = commands.lock() {
-                                            queue.push(OverlayCommand::Previous);
-                                        }
-                                    }
-                                    if widgets::icon_button(ui, Icon::Next, 26.0, "下一首").clicked()
-                                    {
-                                        if let Ok(mut queue) = commands.lock() {
-                                            queue.push(OverlayCommand::Next);
-                                        }
-                                    }
-                                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                                        if widgets::icon_button_tinted(
-                                            ui,
-                                            if snapshot.favorite {
-                                                Icon::HeartFilled
-                                            } else {
-                                                Icon::Heart
-                                            },
-                                            26.0,
-                                            theme::c().muted,
-                                            snapshot.favorite,
-                                            "收藏",
-                                        )
-                                        .clicked()
-                                        {
-                                            if let Ok(mut queue) = commands.lock() {
-                                                queue.push(OverlayCommand::ToggleFavorite);
-                                            }
-                                        }
-                                    });
-                                });
                             });
                         });
                     },
                 );
+                }
+
+                // Transport sits on the bottom padding of the card, under the
+                // cover column, so it does not depend on how tall the text stack
+                // turned out. Spec: 28px round play, 26px boxes either side.
+                if snapshot.mini_style != "compact" {
+                    let transport_rect = Rect::from_min_size(
+                        Pos2::new(card.left() + 112.0, card.bottom() - 12.0 - 28.0),
+                        Vec2::new((card.width() - 112.0 - 14.0).max(80.0), 28.0),
+                    );
+                    ui.allocate_new_ui(
+                        egui::UiBuilder::new()
+                            .max_rect(transport_rect)
+                            .layout(Layout::left_to_right(Align::Center)),
+                        |ui| {
+                            mini_transport(ui, &snapshot, &commands);
+                        },
+                    );
                 }
 
                 // Title/artist drag strip: avoids covering transport buttons or
@@ -951,6 +897,79 @@ fn snap_and_store_mini(
     }
 }
 
+/// `艺术家 · 编号`, with `未知艺术家` when the tag is empty (mini player spec).
+fn mini_subtitle(snapshot: &OverlayState) -> String {
+    let artist = snapshot.artist.trim();
+    let artist = if artist.is_empty() {
+        "未知艺术家"
+    } else {
+        artist
+    };
+    match snapshot.track_number {
+        Some(number) => format!("{artist} · {number:02}"),
+        None => artist.to_string(),
+    }
+}
+
+/// Transport row of the mini player: 28px round play, prev/next boxes either
+/// side, favourite pinned to the right edge.
+fn mini_transport(
+    ui: &mut egui::Ui,
+    snapshot: &OverlayState,
+    commands: &Arc<Mutex<Vec<OverlayCommand>>>,
+) {
+    ui.spacing_mut().item_spacing.x = 5.0;
+    if widgets::circle_button(
+        ui,
+        if snapshot.playing {
+            Icon::Pause
+        } else {
+            Icon::Play
+        },
+        28.0,
+        theme::c().accent,
+        theme::c().on_accent,
+        if snapshot.playing { "暂停" } else { "播放" },
+    )
+    .clicked()
+    {
+        if let Ok(mut queue) = commands.lock() {
+            queue.push(OverlayCommand::TogglePlay);
+        }
+    }
+    ui.add_space(6.0);
+    if widgets::icon_button(ui, Icon::Prev, 26.0, "上一首").clicked() {
+        if let Ok(mut queue) = commands.lock() {
+            queue.push(OverlayCommand::Previous);
+        }
+    }
+    if widgets::icon_button(ui, Icon::Next, 26.0, "下一首").clicked() {
+        if let Ok(mut queue) = commands.lock() {
+            queue.push(OverlayCommand::Next);
+        }
+    }
+    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+        if widgets::icon_button_tinted(
+            ui,
+            if snapshot.favorite {
+                Icon::HeartFilled
+            } else {
+                Icon::Heart
+            },
+            26.0,
+            theme::c().muted,
+            snapshot.favorite,
+            "收藏",
+        )
+        .clicked()
+        {
+            if let Ok(mut queue) = commands.lock() {
+                queue.push(OverlayCommand::ToggleFavorite);
+            }
+        }
+    });
+}
+
 fn draw_mini_compact(
     ui: &mut egui::Ui,
     snapshot: &OverlayState,
@@ -962,26 +981,24 @@ fn draw_mini_compact(
 
     ui.allocate_new_ui(
         egui::UiBuilder::new()
-            .max_rect(card.shrink2(Vec2::new(16.0, 10.0)))
+            .max_rect(card.shrink2(Vec2::new(12.0, 10.0)))
             .layout(Layout::top_down(Align::Center)),
         |ui| {
             ui.horizontal(|ui| {
-                ui.label(
-                    RichText::new("迷你播放器")
-                        .size(9.0)
-                        .color(theme::c().faint),
-                );
+                // No caption: the compact header is just the four actions on
+                // the right, exactly as the design sheet draws it.
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                    if widgets::icon_button(ui, Icon::Close, 20.0, "关闭迷你播放器").clicked() {
+                    ui.spacing_mut().item_spacing.x = 8.0;
+                    if widgets::icon_button(ui, Icon::Close, 24.0, "关闭迷你播放器").clicked() {
                         *close = true;
                     }
-                    if widgets::icon_button(ui, Icon::Expand, 20.0, "切回主播放器").clicked() {
+                    if widgets::icon_button(ui, Icon::Expand, 24.0, "切回主播放器").clicked() {
                         *open_main = true;
                     }
                     if widgets::glyph_button_tinted(
                         ui,
                         "词",
-                        20.0,
+                        24.0,
                         theme::c().muted,
                         snapshot.desktop_lyrics_open,
                         "显示 / 隐藏桌面歌词",
@@ -992,10 +1009,10 @@ fn draw_mini_compact(
                             queue.push(OverlayCommand::ToggleLyrics);
                         }
                     }
-                    if widgets::glyph_button_tinted(
+                    if widgets::icon_button_tinted(
                         ui,
-                        "顶",
-                        20.0,
+                        Icon::Pin,
+                        24.0,
                         theme::c().muted,
                         snapshot.mini_on_top,
                         if snapshot.mini_on_top {
@@ -1014,27 +1031,37 @@ fn draw_mini_compact(
             });
 
             ui.add_space(2.0);
-            ui.add(
-                egui::Label::new(
-                    RichText::new(if snapshot.has_track {
-                        &snapshot.title
-                    } else {
-                        "RPlayer 迷你播放器"
-                    })
-                    .size(15.0)
-                    .strong()
-                    .color(theme::c().text),
-                )
-                .truncate(),
+            // Spec: single line, never wider than 250px; the hover text carries
+            // the full title when it had to be elided.
+            let title_text = if snapshot.has_track {
+                snapshot.title.clone()
+            } else {
+                "RPlayer 迷你播放器".to_string()
+            };
+            ui.allocate_ui_with_layout(
+                Vec2::new(250.0, 18.0),
+                Layout::top_down(Align::Center),
+                |ui| {
+                    ui.add(
+                        egui::Label::new(
+                            RichText::new(&title_text)
+                                .size(14.5)
+                                .strong()
+                                .color(theme::c().text),
+                        )
+                        .truncate(),
+                    )
+                    .on_hover_text(&title_text);
+                },
             );
             ui.add(
                 egui::Label::new(
                     RichText::new(if snapshot.has_track {
-                        &snapshot.artist
+                        mini_subtitle(snapshot)
                     } else {
-                        "从音乐库选择一首歌"
+                        "从音乐库选择一首歌".to_string()
                     })
-                    .size(10.5)
+                    .size(9.0)
                     .color(theme::c().muted),
                 )
                 .truncate(),
@@ -1049,16 +1076,20 @@ fn draw_mini_compact(
 
             ui.add_space(3.0);
             let width = ui.available_width();
+            // Spec: 28px round play, 26px boxes with 12px glyphs either side.
+            // The favourite sits alone in the bottom-right corner.
+            let transport = 26.0 + 10.0 + 28.0 + 10.0 + 26.0;
             ui.allocate_ui_with_layout(
-                Vec2::new(width, 36.0),
+                Vec2::new(width, 32.0),
                 Layout::left_to_right(Align::Center),
                 |ui| {
-                    ui.add_space(((width - 152.0) / 2.0).max(0.0));
+                    ui.add_space(((width - transport) / 2.0).max(0.0));
                     if widgets::icon_button(ui, Icon::Prev, 26.0, "上一首").clicked() {
                         if let Ok(mut queue) = commands.lock() {
                             queue.push(OverlayCommand::Previous);
                         }
                     }
+                    ui.add_space(10.0);
                     if widgets::circle_button(
                         ui,
                         if snapshot.playing {
@@ -1066,7 +1097,7 @@ fn draw_mini_compact(
                         } else {
                             Icon::Play
                         },
-                        34.0,
+                        28.0,
                         theme::c().accent,
                         theme::c().on_accent,
                         if snapshot.playing { "暂停" } else { "播放" },
@@ -1077,11 +1108,24 @@ fn draw_mini_compact(
                             queue.push(OverlayCommand::TogglePlay);
                         }
                     }
+                    ui.add_space(10.0);
                     if widgets::icon_button(ui, Icon::Next, 26.0, "下一首").clicked() {
                         if let Ok(mut queue) = commands.lock() {
                             queue.push(OverlayCommand::Next);
                         }
                     }
+                },
+            );
+
+            let favorite_rect = Rect::from_min_size(
+                Pos2::new(card.right() - 12.0 - 26.0, card.bottom() - 12.0 - 26.0),
+                Vec2::splat(26.0),
+            );
+            ui.allocate_new_ui(
+                egui::UiBuilder::new()
+                    .max_rect(favorite_rect)
+                    .layout(Layout::left_to_right(Align::Center)),
+                |ui| {
                     if widgets::icon_button_tinted(
                         ui,
                         if snapshot.favorite {
