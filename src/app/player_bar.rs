@@ -297,7 +297,7 @@ impl RPlayerApp {
                 Icon::PanelRight,
                 34.0,
                 rail_ready && self.now_rail_open,
-                "显示 / 收起正在播放侧栏",
+                "正在播放侧栏",
             )
             .clicked()
         {
@@ -335,7 +335,7 @@ impl RPlayerApp {
             "词",
             icon_size,
             self.desktop_lyrics_open,
-            "显示 / 隐藏桌面歌词",
+            "桌面歌词",
         )
         .clicked()
         {

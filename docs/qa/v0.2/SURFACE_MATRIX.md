@@ -36,6 +36,7 @@
 | 侧边导航 | `src/app/sidebar.rs` | 已完成 | v2.2.0 D13：≥1120 为 236px 深色 + 分组计数；840–1119 收成 72px 图标轨；<840 变 236px 抽屉（遮罩、Esc / 点外部即关）。证据 `v220-S7-compact-screen.png`、`v220-S7-narrow-screen.png`、`v220-S7-drawer-screen.png` |
 | 底部播放条 | `src/app/player_bar.rs` | 已完成 | v2.2.0 D13：≥1120 为 92px（48 封面 + 三组动作）；840–1119 为 76px（40 播放键）；<840 为 96px 两行（进度独占一行、右侧动作隐藏）。证据 `v220-S7-wide-library-screen.png`、`v220-S7-compact-screen.png`、`v220-S7-narrow-screen.png` |
 | 正在播放侧栏 | `src/app/now_rail.rs` | 已完成 | 300px；v2.2.0 D13 起严格 ≥1280 显示（1120–1279 不再尝试） |
+| 可访问性角色 | `src/ui/widgets.rs` | 已完成 | v2.2.0 S9：`v220-S9-uia-roles.txt`；面板入口/导航/列表行均为 button，仅面板 tab 与筛选 chip 保留 switch |
 | 播放队列 | `src/app/player_bar.rs` | 已完成 | `v2-queue.png`，360px 右抽屉 |
 | 命令面板 | `src/app/command_palette.rs` | 已完成 | `v2-palette.png`，分组/键盘滚动 |
 | 键盘快捷键 | `src/app/dialogs.rs` | 已完成 | v2.2.0 D10：820×460、21 条两栏、按键列 88、四组说明 + `21 SHORTCUTS · 2 COLUMNS`；证据 `v220-S6-shortcuts-screen.png` |

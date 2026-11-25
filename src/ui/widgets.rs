@@ -87,7 +87,8 @@ pub fn sidebar_icon_button_tinted(
     let response = response
         .on_hover_cursor(CursorIcon::PointingHand)
         .on_hover_text(tooltip);
-    mark(&response, WidgetType::Button, tooltip, Some(active));
+    // S9: these are actions, not switches; narration must not append 关闭.
+    mark(&response, WidgetType::Button, tooltip, None);
     crate::ui::focus::focus_on_click(&response);
     crate::ui::focus::ring(ui, &response);
     response
@@ -117,7 +118,8 @@ pub fn icon_button_tinted(
     let response = response
         .on_hover_cursor(CursorIcon::PointingHand)
         .on_hover_text(tooltip);
-    mark(&response, WidgetType::Button, tooltip, Some(active));
+    // S9: these are actions, not switches; narration must not append 关闭.
+    mark(&response, WidgetType::Button, tooltip, None);
     crate::ui::focus::focus_on_click(&response);
     crate::ui::focus::ring(ui, &response);
     response
@@ -155,7 +157,8 @@ pub fn sidebar_glyph_button(
     let response = response
         .on_hover_cursor(CursorIcon::PointingHand)
         .on_hover_text(tooltip);
-    mark(&response, WidgetType::Button, tooltip, Some(active));
+    // S9: these are actions, not switches; narration must not append 关闭.
+    mark(&response, WidgetType::Button, tooltip, None);
     crate::ui::focus::focus_on_click(&response);
     crate::ui::focus::ring(ui, &response);
     response
@@ -192,7 +195,8 @@ pub fn glyph_button_tinted(
     let response = response
         .on_hover_cursor(CursorIcon::PointingHand)
         .on_hover_text(tooltip);
-    mark(&response, WidgetType::Button, tooltip, Some(active));
+    // S9: these are actions, not switches; narration must not append 关闭.
+    mark(&response, WidgetType::Button, tooltip, None);
     crate::ui::focus::focus_on_click(&response);
     crate::ui::focus::ring(ui, &response);
     response
@@ -351,7 +355,7 @@ pub fn nav_item(
     }
 
     let response = response.on_hover_cursor(CursorIcon::PointingHand);
-    mark(&response, WidgetType::Button, label, Some(selected));
+    mark(&response, WidgetType::Button, label, None);
     crate::ui::focus::focus_on_click(&response);
     crate::ui::focus::ring(ui, &response);
     response
@@ -400,7 +404,7 @@ pub fn nav_icon_item(ui: &mut Ui, icon: Icon, label: &str, selected: bool) -> Re
     let response = response
         .on_hover_cursor(CursorIcon::PointingHand)
         .on_hover_text(label);
-    mark(&response, WidgetType::Button, label, Some(selected));
+    mark(&response, WidgetType::Button, label, None);
     crate::ui::focus::focus_on_click(&response);
     crate::ui::focus::ring(ui, &response);
     response
@@ -451,7 +455,7 @@ pub fn playlist_item(ui: &mut Ui, name: &str, selected: bool) -> Response {
         },
     );
     let response = response.on_hover_cursor(CursorIcon::PointingHand);
-    mark(&response, WidgetType::Button, name, Some(selected));
+    mark(&response, WidgetType::Button, name, None);
     crate::ui::focus::focus_on_click(&response);
     crate::ui::focus::ring(ui, &response);
     response

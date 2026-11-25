@@ -1,0 +1,98 @@
+window | Last Dance — 徐薇 · RPlayer
+ unknown | 
+ statictext | Last Dance
+ statictext | 徐薇
+ unknown | 
+ button | 上一首
+ button | 播放
+ button | 下一首
+ button | 播放模式：顺序播放
+ statictext | 0:02
+ slider | 播放进度 0:02 / 3:57
+ statictext | 3:57
+ button | 正在播放侧栏
+ button | 播放队列
+ button | 桌面歌词
+ button | 均衡器
+ button | 迷你播放器
+ slider | 音量 79%
+ button | 静音
+ button | 打开正在播放
+ statictext | RPlayer
+ statictext | LOCAL LISTENING · 本地音乐
+ button | 本地曲库
+ button | 专辑
+ button | 艺术家
+ button | 我的收藏
+ button | 最近播放
+ button | 音乐目录
+ button | 正在播放
+ button | 播放队列
+ statictext | 播放列表
+ button | 新建播放列表
+ button | 新建智能歌单
+ button | 导入 M3U
+ button | 导出当前视图为 M3U
+ button | 深夜歌单
+ statictext | v2.1.4
+ statictext | 快捷键
+ statictext | 关于 RPlayer
+ statictext | 资料库  /  本地曲库
+ unknown | 
+ textfield | 搜索曲目、专辑或艺术家
+ button | 关闭窗口
+ button | 最大化窗口
+ button | 最小化窗口
+ statictext | 本地
+ button | 切换到浅色主题
+ button | 设置
+ button | 均衡器
+ button | 迷你播放器
+ button | 桌面歌词
+ unknown | 
+ unknown | 
+ unknown | 
+ unknown | 
+ statictext | 正在播放
+ button | 收起侧栏
+ switch | 正在播放
+ switch | 队列 8
+ unknown | 
+ statictext | Last Dance
+ statictext | 徐薇
+ statictext | Last Dance - 徐薇（cover 伍佰）
+ statictext | 歌词·编辑
+ statictext | 歌词
+ statictext | 查看全部
+ statictext | 所以暫時將你眼睛閉了起來
+ statictext | 黑暗之中漂浮我的期待
+ statictext | 平靜臉孔映著繽紛色彩
+ button | 取消收藏
+ button | 从 LRCLIB 下载歌词
+ button | 重新匹配封面
+ button | 打开完整播放页
+ button | 桌面歌词
+ button | 迷你播放器
+ statictext | LIBRARY 01
+ statictext | 本地曲库
+ statictext | 8 首歌曲 · 14 分钟
+ button | 重新扫描音乐库
+ button | 显示 / 收起正在播放侧栏
+ button | 播放全部
+ button | 添加
+ button | 批量操作
+ button | 重复歌曲
+ switch | 歌曲
+ switch | 专辑
+ switch | 艺术家
+ unknown | 
+ unknown | 
+ unknown | 
+ button | Last Dance — 徐薇 · Last Dance - 徐薇（cover 伍佰） · FLAC · C:\Users\Randy\Downloads\徐薇+-+Last+Dance_EG.flac（正在播放）
+ button | 一千年以后 — 林俊杰 · 编号89757 · FLAC · C:\Users\Randy\Downloads\林俊杰 - 一千年以后_EG.flac
+ button | 午夜霓虹 — 林间电台 · 城市夜航 · WAV · D:\Workspace\RPlayer\testdata\midnight-neon.wav
+ button | 夏日回声 — 橘子汽水 · 晴日手记 · WAV · D:\Workspace\RPlayer\testdata\summer-echo.wav
+ button | 星河入梦 — 白昼漫游 · 凌晨两点 · WAV · D:\Workspace\RPlayer\testdata\starry-dream.wav
+ button | 海风与旧信 — 苏晚 · 潮汐来信 · WAV · D:\Workspace\RPlayer\testdata\harbor-letters.wav
+ button | 雨后站台 — 陈屿 · 慢行列车 · WAV · D:\Workspace\RPlayer\testdata\after-rain.wav
+ button | 龙卷风 — 周杰伦 · 周杰伦魔天伦世界巡回演唱会 · FLAC · C:\Users\Randy\Downloads\周杰伦 - 龙卷风 (Live)_EG.flac

@@ -201,11 +201,13 @@ v2 的功能面已经关掉，剩下的两件事性质完全不同：
   - `docs/qa/v0.2/v220-S8-lyrics-forest-screen.png`：Nocturne 主题，浅色字 + 白色 halo。
 - 取舍（记录）：稿面按壁纸明暗选阴影，实现按主题明暗选（应用无法采样壁纸）；面板透明度仍由用户设置决定，取证时面板透明度为 0，只有文字与 halo。
 
-### S9 可访问性补齐（S，1–2 天）
+### S9 可访问性补齐（S，1–2 天）· **已完成**
 
-- 顶栏动作按钮去掉 toggle 语义（讲述人不再读「… 关闭」）——需要确认这些按钮确实是开关语义（设置面板有开/关）还是纯动作，二选一并统一；
-- 表格行/侧栏项补齐 `WidgetInfo` 与稳定 `Id`；
-- 回归脚本改成「UIA 名称断言 + 物理点击」（已写进 `V2_REGRESSION.md` R2 条目）。
+- 统一判定：顶栏/播放条/侧栏里的面板入口（设置、均衡器、迷你播放器、桌面歌词、正在播放侧栏、播放队列）与导航项、播放列表项、曲库表格行**都是动作或可选项，不是开关**。`widgets::icon_button_tinted` / `glyph_button_tinted` / `nav_item` / `nav_icon_item` / `playlist_item` 的 `mark()` 由 `Some(active|selected)` 改成 `None`（`WidgetInfo::labeled(Button, …)`），讲述人不再追加「关闭 / 开」；视觉选中态与 0.12 accent 底保持不变。
+- 顶栏两个动词式名字收敛为名词：`显示 / 收起正在播放侧栏` → `正在播放侧栏`，`显示 / 隐藏桌面歌词` → `桌面歌词`；旧脚本按新名字匹配。
+- 曲库表格行：`WidgetInfo::selected` 改为 `labeled(Button, …)`，当前行 / 勾选行的状态写进名字（`（正在播放）` / `（已选）`），行 id 仍用 `track_row_id(ui, id)`（`ui.id().with(("track-row", track_id))`）。
+- 仍保留 `switch` 的真实开关：正在播放侧栏面板 tab（`正在播放` / `队列 N`）、曲库筛选 chip（`歌曲` / `专辑` / `艺术家`）——这些确实是二态控件。
+- 证据：`docs/qa/v0.2/v220-S9-uia-roles.txt`（agent-desktop snapshot 的角色/名称全量转储；顶栏 6 个入口、侧栏 8 个导航、播放列表行、8 条曲目行均为 `button`，只剩 5 个真实 switch）。
 
 ### S10 可访问性框架升级（M，3–5 天，需用户批准）
 

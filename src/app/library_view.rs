@@ -840,7 +840,7 @@ impl RPlayerApp {
                     hovered && !current && !selected && !checked,
                     crate::ui::motion::duration(crate::ui::motion::FAST),
                 );
-                let row_label = format!(
+                let mut row_label = format!(
                     "{} — {} · {} · {} · {}",
                     track.title,
                     track.artist,
@@ -853,13 +853,15 @@ impl RPlayerApp {
                         .to_uppercase(),
                     track.path.display()
                 );
+                // S9: rows are list buttons, not switches - announce state in the
+                // name instead of a toggled flag so narration never says 关闭.
+                if current {
+                    row_label.push_str("（正在播放）");
+                } else if checked {
+                    row_label.push_str("（已选）");
+                }
                 response.widget_info(move || {
-                    WidgetInfo::selected(
-                        WidgetType::Button,
-                        true,
-                        current || checked,
-                        row_label.clone(),
-                    )
+                    WidgetInfo::labeled(WidgetType::Button, true, row_label.clone())
                 });
 
                     let painter = ui.painter();
