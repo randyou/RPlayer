@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Build & test (Windows)
+    runs-on: windows-latest
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo (app)
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+
+      - name: Cache cargo (smtc helper)
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "tools/smtc-helper -> target"
+          key: smtc-helper
+
+      - name: Test
+        run: cargo test --release
+
+      - name: Build player
+        run: cargo build --release --bin rplayer
+
+      - name: Build SMTC helper
+        working-directory: tools/smtc-helper
+        run: cargo build --release

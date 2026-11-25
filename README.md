@@ -1,5 +1,10 @@
 # RPlayer
 
+[![CI](https://github.com/randyou/RPlayer/actions/workflows/ci.yml/badge.svg)](https://github.com/randyou/RPlayer/actions/workflows/ci.yml)
+[![Release](https://github.com/randyou/RPlayer/actions/workflows/release.yml/badge.svg)](https://github.com/randyou/RPlayer/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-2E5B44.svg)](LICENSE)
+![Platform](https://img.shields.io/badge/platform-Windows%20x64-1D1B16)
+
 RPlayer 是一个用 **Rust** 编写的本地桌面音乐播放器。它不依赖账号、云服务或网页技术栈，启动即用：选择音乐文件夹，扫描标签与封面，然后在清爽的浅色或深色界面里听歌。
 
 v2.0 “Listening Room” 是一次完整的界面重构：暖纸色内容区、深森林绿侧栏、衬线标题、四列曲库、全高队列抽屉与可缩放的正在播放页。它保留 v0.13.5 的全部曲库、歌词、标签、CUE、备份与播放能力，只重做视觉、布局、交互与动效。两套主题“纸张 / 夜幕”、无边框标题栏、236px 侧栏、54px 顶栏、92px 播放条与 300px 右栏构成新的桌面骨架。
@@ -235,6 +240,20 @@ RPlayer/
 - 不抓取商业音乐平台封面，也不使用条款限制为“商店推广”的封面 API；未匹配时保留占位图并允许重试。
 - LRCLIB 与 MusicBrainz 都是免费开放服务，查询会发送曲名、艺术家与专辑信息；不包含账号或遥测。
 - 当前版本只播放本地文件，不包含在线音乐、音效市场或账号系统。
+
+## 构建与自动化
+
+```powershell
+git clone https://github.com/randyou/RPlayer.git
+cd RPlayer
+cargo build --release --bin rplayer        # target/release/rplayer.exe
+cargo test --release                       # 单元测试
+```
+
+- 只支持 Windows x64；需要 Rust stable（本地开发用 `stable-x86_64-pc-windows-gnu`，CI 用 MSVC 验证两套工具链都能编译）。
+- SMTC 助手是独立 crate：`cd tools/smtc-helper; cargo build --release`。
+- `main` 每次推送/PR 都会跑 [`.github/workflows/ci.yml`](.github/workflows/ci.yml)：`cargo test --release`、主程序与 SMTC 助手构建。
+- 发版：推一个 `v*` 标签（如 `git tag v2.2.1 && git push origin v2.2.1`），[`release.yml`](.github/workflows/release.yml) 会自动测试、打包 `RPlayer-<tag>-windows-x64.zip`（含 `RPlayer.exe`、`rplayer-smtc.exe`、文档与品牌资源）、生成 SHA-256 校验文件并发布到 Releases。
 
 ## 需求与路线图
 

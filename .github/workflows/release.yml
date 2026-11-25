@@ -1,0 +1,85 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to publish (e.g. v2.2.0)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    name: Package & publish
+    runs-on: windows-latest
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo (app)
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+
+      - name: Cache cargo (smtc helper)
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "tools/smtc-helper -> target"
+          key: smtc-helper
+
+      - name: Test
+        run: cargo test --release
+
+      - name: Build player
+        run: cargo build --release --bin rplayer
+
+      - name: Build SMTC helper
+        working-directory: tools/smtc-helper
+        run: cargo build --release
+
+      - name: Stage and zip
+        shell: pwsh
+        run: |
+          $stage = "dist/RPlayer"
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          Copy-Item "target/release/rplayer.exe" "$stage/RPlayer.exe"
+          Copy-Item "tools/smtc-helper/target/release/rplayer-smtc.exe" "$stage/rplayer-smtc.exe"
+          Copy-Item README.md, LICENSE, "tools/register-aumid.ps1" $stage
+          Copy-Item "docs" "$stage/docs" -Recurse
+          Copy-Item "brand" "$stage/brand" -Recurse
+
+          $ref = "${{ github.event.inputs.tag || github.ref_name }}"
+          $zip = "dist/RPlayer-$ref-windows-x64.zip"
+          Compress-Archive -Path $stage -DestinationPath $zip -CompressionLevel Optimal
+          $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
+          "$hash  $(Split-Path $zip -Leaf)" | Out-File "$zip.sha256" -Encoding ascii
+          "ZIP=$zip" >> $env:GITHUB_ENV
+          "SHA=$hash" >> $env:GITHUB_ENV
+          "REF=$ref" >> $env:GITHUB_ENV
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.REF }}
+          name: RPlayer ${{ env.REF }}
+          draft: false
+          generate_release_notes: true
+          body: |
+            Windows x64 便携包，解压后运行 `RPlayer.exe`。
+
+            - 内附 `rplayer-smtc.exe`（系统媒体控制助手）与 `register-aumid.ps1`
+            - 校验：下载 `.zip` 与 `.zip.sha256` 后执行 `Get-FileHash .\RPlayer-*-windows-x64.zip -Algorithm SHA256` 对照
+            - 首次启动会把图标放进托盘溢出区（`^`），拖到任务栏即可常驻
+          files: |
+            dist/*.zip
+            dist/*.zip.sha256
