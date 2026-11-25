@@ -323,6 +323,9 @@ pub struct RPlayerApp {
     desktop_lyrics_open: bool,
     mini_open: bool,
     settings_open: bool,
+    /// When the settings dialog was opened; a click that opens it must not be
+    /// read as the Escape that closes it on the very same frame.
+    settings_opened: Option<std::time::Instant>,
     settings_tab: usize,
     now_rail_open: bool,
     rail_queue: bool,
@@ -488,6 +491,7 @@ impl RPlayerApp {
             desktop_lyrics_open,
             mini_open: false,
             settings_open: false,
+            settings_opened: None,
             settings_tab: 0,
             now_rail_open: true,
             rail_queue: false,
@@ -2075,10 +2079,13 @@ impl RPlayerApp {
             if !self.lyrics_region {
                 // DWM adds a dark 1px frame around borderless overlays on
                 // Windows 11; remove it (and the rounded corner preference).
-                crate::platform::set_window_borderless("RPlayer 桌面歌词");
                 crate::platform::focus_main_window();
                 self.lyrics_region = true;
             }
+            // Re-applied every frame: DWM reinstates the frame whenever the
+            // overlay is re-composited (focus handback, capsule toggle), which
+            // showed up as a title bar flickering over the strip.
+            crate::platform::set_window_borderless("RPlayer 桌面歌词");
         } else if self.lyrics_viewport_active {
             self.lyrics_viewport_active = false;
             crate::platform::hide_lyrics_panel();
@@ -2900,8 +2907,13 @@ impl RPlayerApp {
             if self.dialog != Dialog::None {
                 self.dialog = Dialog::None;
                 self.restore_dialog_focus(ctx);
-            } else if self.settings_open {
+            } else if self.settings_open
+                && self
+                    .settings_opened
+                    .is_none_or(|at| at.elapsed().as_millis() >= 250)
+            {
                 self.settings_open = false;
+                self.settings_opened = None;
             } else if self.eq_open {
                 self.eq_open = false;
             } else if self.queue_open {

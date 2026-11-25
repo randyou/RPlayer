@@ -47,8 +47,18 @@ impl RPlayerApp {
         let mut settings_only = false;
         let cover_cache = crate::cover::cache_size();
 
-        if ctx.input(|input| input.key_pressed(egui::Key::Escape)) {
+        if self.settings_opened.is_none() {
+            self.settings_opened = Some(std::time::Instant::now());
+        }
+        // The click that opens this dialog (overlay gear, tray menu) can also be
+        // seen as a stray Escape on the same frame, which closed the dialog
+        // immediately (v2.1.0 issue: settings flashes open then vanishes).
+        let settled = self
+            .settings_opened
+            .is_some_and(|at| at.elapsed().as_millis() >= 250);
+        if settled && ctx.input(|input| input.key_pressed(egui::Key::Escape)) {
             self.settings_open = false;
+            self.settings_opened = None;
             return;
         }
 
@@ -1026,6 +1036,7 @@ impl RPlayerApp {
         }
         if close {
             self.settings_open = false;
+            self.settings_opened = None;
         }
     }
 
