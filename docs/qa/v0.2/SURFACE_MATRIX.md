@@ -38,6 +38,10 @@
 | 正在播放侧栏 | `src/app/now_rail.rs` | 已完成 | 300px；v2.2.0 D13 起严格 ≥1280 显示（1120–1279 不再尝试） |
 | 播放队列 | `src/app/player_bar.rs` | 已完成 | `v2-queue.png`，360px 右抽屉 |
 | 命令面板 | `src/app/command_palette.rs` | 已完成 | `v2-palette.png`，分组/键盘滚动 |
+| 键盘快捷键 | `src/app/dialogs.rs` | 已完成 | v2.2.0 D10：820×460、21 条两栏、按键列 88、四组说明 + `21 SHORTCUTS · 2 COLUMNS`；证据 `v220-S6-shortcuts-screen.png` |
+| 关于 | `src/app/dialogs.rs` | 已完成 | v2.2.0 D10：380 宽、44 标识、数据目录 / 开源许可 / 构建、`NO LOGIN · NO UPLOAD`；证据 `v220-S6-about-screen.png` |
+| 拖入提示 | `src/app/sidebar.rs` | 已完成 | v2.2.0 D11：拖拽中浮出 300×96 虚线 accent 卡（目标行 sage 底 + 2px 左条 + `+N`）；证据 `v220-S6-drag-hint-screen.png` |
+| 错误详情 | `src/app/mod.rs` | 待做 | D12：需要 scanner / health 回传结构化错误（路径 / 错误码 / 诊断），当前只有 toast |
 | 轻提示 | `src/app/mod.rs` | 已完成 | 底部居中 toast |
 | 多选操作条 | `src/app/library_view.rs` | 已完成 | `v2017-batch-0.png` / `v2017-batch-3.png` / `v2017-batch-large.png` / `v2017-batch-crossview.png`；0 / 3 / ≥20 三态 + 跨视图“另有 N 首不在当前视图” |
 

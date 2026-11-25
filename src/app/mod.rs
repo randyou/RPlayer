@@ -337,6 +337,8 @@ pub struct RPlayerApp {
     settings_tab: usize,
     now_rail_open: bool,
     sidebar_drawer_open: bool,
+    /// Playlist row currently under a track drag, for the D11 drop hint.
+    playlist_drop_target: Option<(u64, String)>,
     rail_queue: bool,
     pending_resume: Option<f64>,
     last_session_save: std::time::Instant,
@@ -506,6 +508,7 @@ impl RPlayerApp {
             settings_tab: 0,
             now_rail_open: true,
             sidebar_drawer_open: false,
+            playlist_drop_target: None,
             rail_queue: false,
             pending_resume: None,
             last_session_save: std::time::Instant::now(),

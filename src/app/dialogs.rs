@@ -15,43 +15,99 @@ use crate::ui::widgets;
 
 const FORM_FIELD_WIDTH: f32 = 300.0;
 
-const SHORTCUTS: &[(&str, &str)] = &[
-    ("Tab / Shift+Tab", "在控件之间移动焦点"),
-    ("Space / Enter", "激活当前焦点控件"),
-    ("Esc", "关闭弹窗或面板"),
-    ("F1", "打开快捷键帮助"),
-    ("Ctrl+K", "打开命令面板"),
-    ("Ctrl+F", "聚焦搜索框"),
-    ("Ctrl+O", "添加音乐文件夹"),
-    ("Ctrl+N", "新建播放列表"),
-    ("Ctrl+A", "全选当前列表"),
-    ("Ctrl+,", "打开设置"),
-    ("Ctrl+T", "切换浅色 / 深色主题"),
-    ("Ctrl+E", "打开均衡器"),
-    ("Ctrl+L", "切换桌面歌词"),
-    ("Ctrl+M", "切换迷你播放器"),
-    ("Space", "播放 / 暂停（无焦点时）"),
-    ("← / →", "快退 / 快进 5 秒"),
-    ("↑ / ↓", "列表内移动焦点；无焦点时调整音量"),
-    ("Home / End", "跳到列表首行 / 末行"),
-    ("PageUp / PageDown", "列表向上 / 向下翻页"),
-    ("Ctrl+← / →", "上一首 / 下一首"),
-    ("Delete", "移除选中的歌曲"),
+/// (group, [(keys, action)]) - 21 entries, laid out in two columns per D10.
+const SHORTCUT_GROUPS: &[(&str, &[(&str, &str)])] = &[
+    (
+        "全局",
+        &[
+            ("Ctrl K", "打开命令面板"),
+            ("Ctrl F", "聚焦搜索"),
+            ("Ctrl O", "添加音乐文件夹"),
+            ("Ctrl N", "新建播放列表"),
+            ("Ctrl ,", "打开设置"),
+            ("Ctrl T", "切换 Paper / Nocturne"),
+            ("F1", "打开快捷键帮助"),
+        ],
+    ),
+    (
+        "播放",
+        &[
+            ("Space", "播放 / 暂停（无焦点时）"),
+            ("Ctrl E", "打开均衡器"),
+            ("Ctrl L", "桌面歌词开关"),
+            ("Ctrl M", "迷你播放器开关"),
+        ],
+    ),
+    (
+        "列表与选择",
+        &[
+            ("↑ / ↓", "移动焦点"),
+            ("Home / End", "跳到首行 / 末行"),
+            ("PgUp / PgDn", "翻页"),
+            ("Ctrl A", "全选当前列表"),
+            ("Ctrl ← / →", "上一首 / 下一首"),
+            ("Delete", "移除选中项"),
+        ],
+    ),
+    (
+        "焦点",
+        &[
+            ("Tab", "下一个控件"),
+            ("Shift Tab", "上一个控件"),
+            ("Enter", "执行主操作"),
+            ("Esc", "关闭浮层 / 取消"),
+        ],
+    ),
 ];
+
+const SHORTCUT_COUNT: usize = 21;
 
 fn shortcut_key(ui: &mut Ui, keys: &str) {
     Frame::NONE
         .fill(theme::c().card)
         .stroke(Stroke::new(1.0_f32, theme::c().border_soft))
         .corner_radius(CornerRadius::same(5))
-        .inner_margin(Margin::symmetric(7, 3))
+        .inner_margin(Margin::symmetric(6, 2))
         .show(ui, |ui| {
             ui.label(
                 RichText::new(keys)
-                    .font(FontId::monospace(10.5))
+                    .font(FontId::monospace(10.0))
                     .color(theme::c().muted),
             );
         });
+}
+
+fn shortcut_row(ui: &mut Ui, keys: &str, action: &str) {
+    ui.horizontal(|ui| {
+        ui.set_height(24.0);
+        ui.allocate_ui_with_layout(
+            Vec2::new(88.0, 24.0),
+            Layout::left_to_right(Align::Center),
+            |ui| shortcut_key(ui, keys),
+        );
+        ui.label(RichText::new(action).size(11.5).color(theme::c().text));
+    });
+}
+
+fn shortcut_group(ui: &mut Ui, title: &str, rows: &[(&str, &str)], width: f32) {
+    ui.allocate_ui_with_layout(
+        Vec2::new(width, 0.0),
+        Layout::top_down(Align::Min),
+        |ui| {
+            ui.set_width(width);
+            ui.spacing_mut().item_spacing.y = 0.0;
+            ui.label(
+                RichText::new(title)
+                    .font(crate::ui::tokens::mono(8.5))
+                    .color(theme::c().faint),
+            );
+            ui.add_space(4.0);
+            for (keys, action) in rows {
+                shortcut_row(ui, keys, action);
+            }
+            ui.add_space(10.0);
+        },
+    );
 }
 
 fn fade(color: Color32, alpha: f32) -> Color32 {
@@ -131,6 +187,12 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
         _ => Vec::new(),
     };
 
+    let dialog_width = match &app.dialog {
+        Dialog::Shortcuts => 780.0,
+        Dialog::About => 340.0,
+        _ => 460.0,
+    };
+
     let modal = egui::Modal::new(Id::new("rplayer-modal"))
         .backdrop_color(crate::theme::scrim((175.0 * enter) as u8))
         .frame(
@@ -151,7 +213,7 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
         )
         .show(ctx, |ui| {
             ui.multiply_opacity(enter);
-            ui.set_width(460.0);
+            ui.set_width(dialog_width);
             match &mut app.dialog {
                 Dialog::None => {}
                 Dialog::NewPlaylist { name } => {
@@ -796,112 +858,125 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                 }
 
                 Dialog::Shortcuts => {
-                    ui.set_width(700.0);
-                    dialog_header(
+                    ui.set_width(780.0);
+                    if dialog_header_close(
                         ui,
+                        "KEYBOARD",
                         "键盘快捷键",
-                        "主要操作都可以只用键盘完成，焦点所在控件会显示绿色描边。",
-                    );
-                    ui.add_space(14.0);
-                    let half = SHORTCUTS.len().div_ceil(2);
-                    egui::Grid::new("shortcut-grid")
-                        .num_columns(4)
-                        .spacing([18.0, 8.0])
-                        .show(ui, |ui| {
-                            for index in 0..half {
-                                shortcut_key(ui, SHORTCUTS[index].0);
-                                ui.label(
-                                    RichText::new(SHORTCUTS[index].1)
-                                        .size(11.5)
-                                        .color(theme::c().text),
-                                );
-                                if let Some((keys, action)) = SHORTCUTS.get(index + half) {
-                                    shortcut_key(ui, keys);
-                                    ui.label(
-                                        RichText::new(*action)
-                                            .size(11.5)
-                                            .color(theme::c().text),
-                                    );
-                                } else {
-                                    ui.label("");
-                                    ui.label("");
-                                }
-                                ui.end_row();
+                        "焦点在控件上时，Space 激活控件，不触发全局播放。",
+                    ) {
+                        outcome = Outcome::Close;
+                    }
+                    ui.add_space(16.0);
+
+                    let col_gap = 24.0;
+                    let col_w = (ui.available_width() - col_gap) * 0.5;
+                    let left = &SHORTCUT_GROUPS[0..2];
+                    let right = &SHORTCUT_GROUPS[2..4];
+                    ui.horizontal_top(|ui| {
+                        ui.vertical(|ui| {
+                            for (title, rows) in left {
+                                shortcut_group(ui, title, rows, col_w);
+                            }
+                            ui.add_space(4.0);
+                            ui.add(
+                                Label::new(
+                                    RichText::new(
+                                        "所有快捷键均可重绑，冲突时以后设置者生效。Tab 顺序遵循视觉顺序。",
+                                    )
+                                    .size(9.5)
+                                    .color(theme::c().faint),
+                                )
+                                .wrap(),
+                            );
+                        });
+                        ui.add_space(col_gap);
+                        ui.vertical(|ui| {
+                            for (title, rows) in right {
+                                shortcut_group(ui, title, rows, col_w);
+                            }
+                            ui.add_space(4.0);
+                            ui.add(
+                                Label::new(
+                                    RichText::new(
+                                        "不区分大小写；输入框内不拦截文字键，冲突时以当前焦点为准。",
+                                    )
+                                    .size(9.5)
+                                    .color(theme::c().faint),
+                                )
+                                .wrap(),
+                            );
+                        });
+                    });
+
+                    ui.add_space(10.0);
+                    widget_divider(ui);
+                    ui.add_space(8.0);
+                    ui.horizontal(|ui| {
+                        ui.label(
+                            RichText::new(format!(
+                                "{} SHORTCUTS · 2 COLUMNS",
+                                SHORTCUT_COUNT
+                            ))
+                            .font(crate::ui::tokens::mono(8.5))
+                            .color(theme::c().faint),
+                        );
+                        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                            if widgets::primary_button_compact(ui, "关闭").clicked() {
+                                outcome = Outcome::Close;
                             }
                         });
-                    ui.add_space(16.0);
-                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        if widgets::primary_button(ui, "关闭").clicked() {
-                            outcome = Outcome::Close;
-                        }
                     });
                 }
 
                 Dialog::About => {
-                    let top = ((ui.available_height() - 360.0) * 0.5).max(0.0);
-                    ui.add_space(top);
-                    ui.vertical_centered(|ui| {
-                        let (rect, _) =
-                            ui.allocate_exact_size(Vec2::splat(64.0), Sense::hover());
+                    ui.set_width(340.0);
+                    if dialog_header_close(ui, "ABOUT", "关于 RPlayer", "") {
+                        outcome = Outcome::Close;
+                    }
+                    ui.add_space(16.0);
+
+                    ui.horizontal(|ui| {
+                        let (rect, _) = ui.allocate_exact_size(Vec2::splat(44.0), Sense::hover());
                         icons::logo(ui.painter(), rect);
-                        ui.add_space(10.0);
-                        ui.label(
-                            RichText::new("RPlayer")
-                                .size(21.0)
-                                .strong()
-                                .color(theme::c().text),
-                        );
-                        ui.label(
-                            RichText::new(format!(
-                                "{} · 本地音乐播放器",
-                                env!("CARGO_PKG_VERSION")
-                            ))
-                            .size(11.0)
-                            .color(theme::c().muted),
-                        );
                         ui.add_space(12.0);
-                        ui.add(
-                            Label::new(
-                                RichText::new(
-                                    "纯粹、快速的桌面音乐播放器。\n所有音乐与播放列表都保存在你的电脑上。",
-                                )
-                                .size(11.5)
-                                .color(theme::c().muted),
-                            )
-                            .wrap(),
-                        );
+                        ui.vertical(|ui| {
+                            ui.add_space(2.0);
+                            ui.label(
+                                RichText::new("RPlayer")
+                                    .font(crate::ui::tokens::serif(20.0))
+                                    .color(theme::c().text),
+                            );
+                            ui.label(
+                                RichText::new(format!(
+                                    "{} · 本地优先",
+                                    env!("CARGO_PKG_VERSION")
+                                ))
+                                .font(crate::ui::tokens::mono(9.0))
+                                .color(theme::c().faint),
+                            );
+                        });
                     });
 
                     ui.add_space(14.0);
-                    ui.vertical_centered(|ui| {
-                        ui.horizontal(|ui| {
-                            let width = ui.available_width();
-                            ui.add_space(((width - 290.0) * 0.5).max(0.0));
-                            widgets::chip(ui, "Rust", false);
-                            widgets::chip(ui, "egui", false);
-                            widgets::chip(ui, "rodio", false);
-                            widgets::chip(ui, "lofty", false);
-                        });
+                    about_row(ui, "数据目录", &crate::storage::data_dir().display().to_string());
+                    about_row(ui, "开源许可", "egui · Symphonia · LRCLIB");
+                    about_row(ui, "构建", "windows-gnu · release");
 
-                        ui.add_space(14.0);
+                    ui.add_space(12.0);
+                    widget_divider(ui);
+                    ui.add_space(10.0);
+                    ui.horizontal(|ui| {
                         ui.label(
-                            RichText::new("数据目录")
-                                .size(10.0)
+                            RichText::new("NO LOGIN · NO UPLOAD")
+                                .font(crate::ui::tokens::mono(8.5))
                                 .color(theme::c().faint),
                         );
-                        ui.add(
-                            Label::new(
-                                RichText::new(crate::storage::data_dir().display().to_string())
-                                    .font(FontId::monospace(10.5))
-                                    .color(theme::c().muted),
-                            )
-                            .wrap(),
-                        );
-
-                        ui.add_space(18.0);
-                        if widgets::primary_button(ui, "好的").clicked() {
-                            outcome = Outcome::Close;
-                        }
+                        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                            if widgets::primary_button_compact(ui, "关闭").clicked() {
+                                outcome = Outcome::Close;
+                            }
+                        });
                     });
                 }
             }
@@ -1051,6 +1126,66 @@ fn duplicate_keep(app: &RPlayerApp, ids: &[u64]) -> Option<u64> {
         };
         (lossless, track.added_at, track.path.as_os_str().len())
     })
+}
+
+fn dialog_header_close(ui: &mut Ui, eyebrow: &str, title: &str, subtitle: &str) -> bool {
+    let mut closed = false;
+    ui.horizontal_top(|ui| {
+        ui.vertical(|ui| {
+            ui.label(
+                RichText::new(eyebrow)
+                    .font(crate::ui::tokens::mono(8.5))
+                    .color(theme::c().faint),
+            );
+            ui.add_space(5.0);
+            ui.label(
+                RichText::new(title)
+                    .font(crate::ui::tokens::serif(23.0))
+                    .color(theme::c().text),
+            );
+            if !subtitle.is_empty() {
+                ui.add_space(3.0);
+                ui.add(Label::new(RichText::new(subtitle).size(9.5).color(theme::c().muted)).wrap());
+            }
+        });
+        ui.with_layout(Layout::right_to_left(Align::Min), |ui| {
+            if widgets::icon_button(ui, Icon::Close, 22.0, "关闭").clicked() {
+                closed = true;
+            }
+        });
+    });
+    closed
+}
+
+fn widget_divider(ui: &mut Ui) {
+    let (rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 1.0), Sense::hover());
+    ui.painter()
+        .rect_filled(rect, 0.0, theme::c().border_soft);
+}
+
+fn about_row(ui: &mut Ui, label: &str, value: &str) {
+    ui.horizontal(|ui| {
+        ui.allocate_ui_with_layout(
+            Vec2::new(76.0, 22.0),
+            Layout::left_to_right(Align::Center),
+            |ui| {
+                ui.label(
+                    RichText::new(label)
+                        .font(crate::ui::tokens::mono(8.5))
+                        .color(theme::c().faint),
+                );
+            },
+        );
+        ui.add(
+            Label::new(
+                RichText::new(value)
+                    .font(crate::ui::tokens::mono(9.5))
+                    .color(theme::c().muted),
+            )
+            .truncate(),
+        );
+    });
+    ui.add_space(2.0);
 }
 
 fn dialog_header(ui: &mut Ui, title: &str, subtitle: &str) {

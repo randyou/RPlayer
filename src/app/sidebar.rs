@@ -31,6 +31,91 @@ impl RPlayerApp {
                     self.sidebar_contents(ui);
                 }
             });
+        self.draw_drop_hint(ctx);
+    }
+
+    /// D11: floating hint while tracks are dragged over a playlist row.
+    fn draw_drop_hint(&mut self, ctx: &egui::Context) {
+        let Some((_, name)) = self.playlist_drop_target.take() else {
+            return;
+        };
+        let Some(payload) = egui::DragAndDrop::payload::<Vec<u64>>(ctx) else {
+            return;
+        };
+        let Some(pos) = ctx.pointer_latest_pos() else {
+            return;
+        };
+        let count = payload.len();
+        ctx.request_repaint();
+        egui::Area::new(egui::Id::new("rplayer-drop-hint"))
+            .order(egui::Order::Tooltip)
+            .fixed_pos(pos + egui::vec2(18.0, 14.0))
+            .show(ctx, |ui| {
+                let width = 300.0;
+                let (rect, _) = ui.allocate_exact_size(Vec2::new(width, 96.0), Sense::hover());
+                let painter = ui.painter();
+                painter.rect_filled(rect, egui::CornerRadius::same(10), theme::c().panel);
+                widgets::dashed_round_rect(
+                    painter,
+                    rect,
+                    10.0,
+                    Stroke::new(1.0_f32, theme::c().accent),
+                );
+                painter.text(
+                    rect.left_top() + egui::vec2(14.0, 12.0),
+                    egui::Align2::LEFT_TOP,
+                    format!("拖 {count} 首歌曲到歌单上"),
+                    crate::ui::tokens::serif(13.0),
+                    theme::c().text,
+                );
+                let row = egui::Rect::from_min_size(
+                    rect.left_top() + egui::vec2(10.0, 40.0),
+                    egui::vec2(width - 20.0, 32.0),
+                );
+                painter.rect_filled(row, egui::CornerRadius::same(8), theme::accent_alpha(0.10));
+                painter.rect_filled(
+                    egui::Rect::from_min_size(row.left_top(), egui::vec2(2.0, row.height())),
+                    0.0,
+                    theme::c().accent,
+                );
+                painter.text(
+                    row.left_center() + egui::vec2(10.0, 0.0),
+                    egui::Align2::LEFT_CENTER,
+                    &name,
+                    egui::FontId::proportional(11.5),
+                    theme::c().text,
+                );
+                painter.text(
+                    row.right_center() - egui::vec2(44.0, 0.0),
+                    egui::Align2::RIGHT_CENTER,
+                    "松开以添加",
+                    egui::FontId::proportional(9.5),
+                    theme::c().accent,
+                );
+                let badge = egui::Rect::from_min_size(
+                    row.right_center() + egui::vec2(-34.0, -9.0),
+                    egui::vec2(28.0, 18.0),
+                );
+                painter.rect_filled(
+                    badge,
+                    egui::CornerRadius::same(9),
+                    theme::accent_alpha(0.18),
+                );
+                painter.text(
+                    badge.center(),
+                    egui::Align2::CENTER_CENTER,
+                    format!("+{count}"),
+                    egui::FontId::monospace(9.0),
+                    theme::c().accent,
+                );
+                painter.text(
+                    rect.left_bottom() + egui::vec2(12.0, -10.0),
+                    egui::Align2::LEFT_BOTTOM,
+                    "拖到任意歌单行即可添加 · 不改变当前播放队列",
+                    egui::FontId::proportional(8.5),
+                    theme::c().faint,
+                );
+            });
     }
 
     /// Narrow tier: the sidebar becomes an overlay drawer above the content.
@@ -388,6 +473,13 @@ impl RPlayerApp {
                 for (id, name) in &playlists {
                     let selected = self.view == View::Playlist(*id);
                     let response = widgets::playlist_item(ui, name, selected);
+                    if response.contains_pointer() && egui::DragAndDrop::has_any_payload(ui.ctx()) {
+                        if let Some(payload) = egui::DragAndDrop::payload::<Vec<u64>>(ui.ctx()) {
+                            if !payload.is_empty() {
+                                self.playlist_drop_target = Some((*id, name.clone()));
+                            }
+                        }
+                    }
                     if let Some(payload) = response.dnd_release_payload::<Vec<u64>>() {
                         let added = self.add_ids_to_playlist(*id, payload.as_slice());
                         if added > 0 {

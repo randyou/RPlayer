@@ -1138,3 +1138,26 @@ fn paint_icon_label(
     );
     ui.painter().galley(text_pos, galley, color);
 }
+/// Dashed outline for a rounded rectangle, sampled as a closed path.
+pub fn dashed_round_rect(
+    painter: &egui::Painter,
+    rect: egui::Rect,
+    radius: f32,
+    stroke: egui::Stroke,
+) {
+    let mut points = Vec::new();
+    let corners = [
+        (rect.right_bottom() - egui::vec2(radius, radius), 0.0_f32),
+        (rect.left_bottom() + egui::vec2(radius, -radius), 90.0_f32),
+        (rect.left_top() + egui::vec2(radius, radius), 180.0_f32),
+        (rect.right_top() + egui::vec2(-radius, radius), 270.0_f32),
+    ];
+    for (center, start) in corners {
+        for step in 0..=7 {
+            let angle = (start + 90.0 * step as f32 / 7.0).to_radians();
+            points.push(center + egui::vec2(angle.cos(), angle.sin()) * radius);
+        }
+    }
+    points.push(points[0]);
+    painter.add(egui::Shape::dashed_line(&points, stroke, 4.0, 3.0));
+}
