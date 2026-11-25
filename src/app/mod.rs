@@ -105,11 +105,11 @@ impl PlayMode {
 
     fn tooltip(self) -> &'static str {
         match self {
-            Self::Sequential => "顺序播放",
-            Self::RepeatAll => "列表循环",
-            Self::RepeatOne => "单曲循环",
-            Self::Shuffle => "随机播放",
-            Self::ShuffleAll => "随机循环",
+            Self::Sequential => "播放模式：顺序播放",
+            Self::RepeatAll => "播放模式：列表循环",
+            Self::RepeatOne => "播放模式：单曲循环",
+            Self::Shuffle => "播放模式：随机播放",
+            Self::ShuffleAll => "播放模式：随机循环",
         }
     }
 

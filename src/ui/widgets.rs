@@ -457,6 +457,12 @@ pub fn seek_bar(ui: &mut Ui, position: f64, duration: f64) -> Option<f64> {
         0.0
     };
 
+    // Expose the position as a slider value: without it the bar only announced
+    // its name, so screen readers could not say where playback is.
+    response.widget_info(|| {
+        egui::WidgetInfo::slider(true, (fraction as f64) * 100.0, "播放进度")
+    });
+
     let rail = Rect::from_center_size(rect.center(), Vec2::new(width, 4.0));
     ui.painter()
         .rect_filled(rail, CornerRadius::same(2), theme::c().border);
@@ -527,6 +533,10 @@ pub fn volume_bar(ui: &mut Ui, volume: f32) -> Option<f32> {
     ui.painter()
         .rect_filled(rail, CornerRadius::same(2), theme::c().border);
     let fraction = volume.clamp(0.0, 1.0);
+    // Same as the seek bar: publish the level so assistive tech can read it.
+    response.widget_info(|| {
+        egui::WidgetInfo::slider(true, (fraction as f64) * 100.0, "音量")
+    });
     let filled = Rect::from_min_size(rail.min, Vec2::new(width * fraction, 4.0));
     if fraction > 0.01 {
         ui.painter()
