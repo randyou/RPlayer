@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>RPlayer v2 · 设计缺口补充</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="gaps.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M15.3 15.3L20 20" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.1" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M18.4 5.6l-1.6 1.6M7.2 16.8l-1.6 1.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5.5" y="10" width="13" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8.5 10V7.8a3.5 3.5 0 0 1 7 0V10" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M9 4H4v5M15 4h5v5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-lyrics" viewBox="0 0 24 24"><path d="M5 7h14M5 12h10M5 17h7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M9 4h6l-1 5 3 3v2H7v-2l3-3-1-5ZM12 14v6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7.5A1.5 1.5 0 0 1 4.5 6H9l2 2h8.5A1.5 1.5 0 0 1 21 9.5v8A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5Z" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8.5 5.8v12.4L18 12Z" fill="currentColor"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><rect x="7" y="5" width="3.5" height="14" rx="1" fill="currentColor"/><rect x="13.5" y="5" width="3.5" height="14" rx="1" fill="currentColor"/></symbol>
+    <symbol id="i-prev" viewBox="0 0 24 24"><path d="M7 5v14M18 6l-8 6 8 6Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+    <symbol id="i-next" viewBox="0 0 24 24"><path d="M17 5v14M6 6l8 6-8 6Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-9.2A3.8 3.8 0 0 1 12 8a3.8 3.8 0 0 1 7 2.8C19 15.6 12 20 12 20Z" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="19" cy="12" r="1.4" fill="currentColor"/></symbol>
+    <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 4 21 20H3Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M12 10v4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="17.2" r="1" fill="currentColor"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </defs>
+</svg>
+
+<main class="plate active" id="edge">
+  <header class="ph">
+    <div>
+      <div class="eyebrow">DESIGN GAPS · 01 / EDGE &amp; MENU</div>
+      <h1>边界，先于像素。</h1>
+      <p class="lede">标题栏顶边不缩放；右键菜单只放命令。两件事都不改视觉，只把“哪里能点、点了发生什么”定死。</p>
+    </div>
+    <div class="ph-right"><span class="mono">GAP 01 · 02</span><span class="mono">1600 × 1000</span></div>
+  </header>
+
+  <section class="demo-block">
+    <div class="block-label"><span>01 / TITLEBAR · 顶边归属</span><span class="mono">54 PX · DRAG ≠ RESIZE</span></div>
+    <div class="titlebar">
+      <div class="tb-brand"><span class="tb-r">R</span><span>RPlayer<small>LOCAL LISTENING · 本地音乐</small></span></div>
+      <div class="tb-crumb"><span class="mono">资料库 / 本地曲库</span></div>
+      <div class="tb-search"><svg class="icon"><use href="#i-search"/></svg><span>搜索曲目、专辑或艺术家</span><kbd>Ctrl K</kbd></div>
+      <div class="tb-actions"><svg class="icon"><use href="#i-lyrics"/></svg><svg class="icon"><use href="#i-settings"/></svg><span class="tb-win">—</span><span class="tb-win">□</span><span class="tb-win">×</span></div>
+      <div class="zone-top"></div>
+      <div class="zone-drag"></div>
+      <div class="zone-controls"></div>
+    </div>
+    <div class="triple">
+      <p><b>1 / 顶边 6 px 也属于拖动</b>悬停显示 <code>Grab</code>，不显示垂直缩放光标；顶边缩放明确不做。</p>
+      <p><b>2 / 空白区都可拖</b>面包屑、标题与右侧空白是拖动区；按钮、搜索框保持各自命中。</p>
+      <p><b>3 / 只有侧边与底边缩放</b>左/右/下 6 px 原生 <code>SetWindowPos</code>；窗口按钮独立 34 × 30。</p>
+    </div>
+  </section>
+
+  <section class="split-row" style="margin-top:28px">
+    <div class="demo-block" style="margin:0">
+      <div class="block-label"><span>02 / 桌面歌词 · 右键菜单</span><span class="mono">860 × 158 · MENU 188</span></div>
+      <div class="lyrics-stage">
+        <div class="lyrics-capsule">
+          <div class="lyr-title">陈屿 · 雨后站台</div>
+          <div class="lyr-prev">城市把最后一班车开走</div>
+          <div class="lyr-now">我在站台等一场不会来的雨</div>
+          <div class="lyr-next">灯光落在空座椅上</div>
+          <span class="lyr-gear"><svg class="icon"><use href="#i-settings"/></svg></span>
+          <span class="lyr-lock"><svg class="icon"><use href="#i-lock"/></svg></span>
+        </div>
+        <div class="lyrics-menu">
+          <div class="menu-head">桌面歌词</div>
+          <div class="menu-item"><svg class="icon"><use href="#i-lock"/></svg><span>锁定位置</span></div>
+          <div class="menu-item"><svg class="icon"><use href="#i-settings"/></svg><span>桌面歌词设置…</span></div>
+          <div class="menu-sep"></div>
+          <div class="menu-item danger"><svg class="icon"><use href="#i-close"/></svg><span>关闭桌面歌词</span></div>
+        </div>
+        <div class="menu-note"><b>只放命令，不放滑杆。</b>滑杆留在齿轮弹层，避免同一参数出现两套控件；菜单 30 px 行高，无二级子菜单。</div>
+      </div>
+    </div>
+
+    <aside class="edge-notes">
+      <div class="note-kicker mono">WHY</div>
+      <h3>一个参数，只有一个入口。</h3>
+      <p>菜单承担“离散命令”，齿轮弹层承担“连续调节”。把两个不透明度滑杆塞进右键菜单会让菜单变成第二个设置页，也让触屏长按更难用。</p>
+      <div class="note-rule"></div>
+      <div class="note-row"><span class="mono">LOCKED</span><p>锁定时第一项变为 <b>解锁位置</b>；拖拽禁用，菜单仍可打开。</p></div>
+      <div class="note-row"><span class="mono">GEAR</span><p>齿轮弹层 190 px，两个滑杆 + “打开桌面歌词设置”；点外部关闭。</p></div>
+      <div class="note-row"><span class="mono">HIT</span><p>菜单行 30 px；危险项单独置底，和锁定/设置之间有 1 px 分隔线。</p></div>
+    </aside>
+  </section>
+
+  <section class="secondary-row">
+    <div class="mini-panel">
+      <div class="block-label"><span>02B / 锁定态</span><span class="mono">FIRST ITEM SWAPS</span></div>
+      <div class="lyrics-menu static">
+        <div class="menu-head">桌面歌词 · 已锁定</div>
+        <div class="menu-item"><svg class="icon"><use href="#i-lock"/></svg><span>解锁位置</span></div>
+        <div class="menu-item"><svg class="icon"><use href="#i-settings"/></svg><span>桌面歌词设置…</span></div>
+        <div class="menu-sep"></div>
+        <div class="menu-item danger"><svg class="icon"><use href="#i-close"/></svg><span>关闭桌面歌词</span></div>
+      </div>
+      <p class="panel-note">锁定后拖拽禁用，菜单仍可打开；不要新增“锁定”开关，只在首项做状态反转。</p>
+    </div>
+    <div class="mini-panel">
+      <div class="block-label"><span>02C / 齿轮弹层</span><span class="mono">190 PX · CONTINUOUS</span></div>
+      <div class="gear-pop">
+        <label>面板不透明度 <span class="mono">82%</span></label>
+        <div class="fake-slider"><i style="width:82%"></i></div>
+        <label>歌词文字不透明度 <span class="mono">96%</span></label>
+        <div class="fake-slider"><i style="width:96%"></i></div>
+        <button class="chip">打开桌面歌词设置</button>
+      </div>
+      <p class="panel-note">只在齿轮里出现滑杆；菜单与弹层不重复同一参数。点击外部关闭，Esc 也可关闭。</p>
+    </div>
+    <div class="decision-mini">
+      <span class="mono">DECISION</span>
+      <h3>菜单管状态，齿轮管连续值。</h3>
+      <p>右键菜单是“动作清单”，不是控制面板。把滑杆放进去会破坏 30 px 行节奏，也让“锁定/设置/关闭”三个命令失焦。</p>
+    </div>
+  </section>
+  <footer class="pf"><span>STATUS · 已补充 01 / 02</span><span>DRAG ≠ RESIZE · MENU ≠ SLIDERS</span></footer>
+</main>
+
+<main class="plate" id="lyrics">
+  <header class="ph">
+    <div>
+      <div class="eyebrow">DESIGN GAPS · 02 / EMPTY &amp; MINI</div>
+      <h1>空的时候，也要有下一步。</h1>
+      <p class="lede">桌面歌词空态只给一个“获取歌词”；紧凑迷你播放器用一行标题和省略号，不靠封面撑布局。</p>
+    </div>
+    <div class="ph-right"><span class="mono">GAP 06 · 07</span><span class="mono">860 × 158 · 410 × 146</span></div>
+  </header>
+
+  <section class="lyrics-empty-block">
+    <div>
+      <div class="block-label"><span>06 / 桌面歌词 · 空歌词</span><span class="mono">ONE ACTION</span></div>
+      <div class="empty-lyrics">
+        <div class="lyr-title">陈屿 · 雨后站台</div>
+        <div class="empty-main">暂无歌词</div>
+        <div class="empty-hint">将同名 .lrc 放在歌曲目录，或 <button class="inline-action">获取歌词</button></div>
+      </div>
+    </div>
+    <aside class="empty-notes">
+      <div class="note-kicker mono">STATE MATRIX</div>
+      <div class="state-line"><b>有空 · 可联网</b><span>底部行内 “获取歌词” 文本按钮，点击后原位变 “正在搜索歌词…” + 8 px 转圈。</span></div>
+      <div class="state-line"><b>没有找到</b><span>“没有找到匹配歌词 · 重试”；不弹 toast，不遮住歌曲标题。</span></div>
+      <div class="state-line"><b>网络失败</b><span>“网络不可用 · 重试”；仍保留本地 .lrc 提示，不自动打开设置。</span></div>
+      <div class="state-line"><b>锁定 / 无歌曲</b><span>锁定后隐藏全部控件；没有当前歌曲时不出现按钮。</span></div>
+      <p class="state-foot">按钮不填充底色，只用 accent 文字 + 下划线；命中高度 32 px，命中宽度不小于 64 px。</p>
+      <div class="flow-mini">
+        <span class="mono">FLOW / 4 STEPS</span>
+        <div class="flow"><b>暂无歌词</b><i>→</i><b>获取歌词</b><i>→</i><b>正在搜索…</b><i>→</i><b class="ok">歌词到达</b></div>
+        <p>任何一步失败都留在原位，只换提示文字；不跳页、不弹 toast、不遮挡歌曲信息。</p>
+      </div>
+    </aside>
+  </section>
+
+  <section class="demo-block" style="margin-top:26px">
+    <div class="block-label"><span>07 / 迷你播放器 · 紧凑长标题 + 无封面</span><span class="mono">410 × 146 · NO ART</span></div>
+    <div class="mini-row">
+      <div class="mini">
+        <div class="mini-top"><div class="mini-lines"><b>一千年的雨季，落在没有名字的站台</b><span>陈屿 · 编号 89757</span></div><div class="mini-icons"><svg class="icon"><use href="#i-pin"/></svg><svg class="icon"><use href="#i-lyrics"/></svg><svg class="icon"><use href="#i-expand"/></svg><svg class="icon"><use href="#i-close"/></svg></div></div>
+        <div class="mini-seek"><i></i><span class="mono">2:59 / 3:48</span></div>
+        <div class="mini-bottom"><span class="mini-play"><svg class="icon"><use href="#i-pause"/></svg></span><svg class="icon"><use href="#i-prev"/></svg><svg class="icon"><use href="#i-next"/></svg><span class="mini-vol"><svg class="icon"><use href="#i-heart"/></svg></span></div>
+      </div>
+      <div class="mini standard">
+        <div class="mini-art"><svg class="icon"><use href="#i-play"/></svg></div>
+        <div class="mini-top"><div class="mini-lines"><b>一千年的雨季，落在没有名字的站台</b><span>陈屿 · 编号 89757</span></div><div class="mini-icons"><svg class="icon"><use href="#i-pin"/></svg><svg class="icon"><use href="#i-lyrics"/></svg><svg class="icon"><use href="#i-expand"/></svg><svg class="icon"><use href="#i-close"/></svg></div></div>
+        <div class="mini-seek"><i></i><span class="mono">2:59 / 3:48</span></div>
+        <div class="mini-bottom"><span class="mini-play"><svg class="icon"><use href="#i-pause"/></svg></span><svg class="icon"><use href="#i-prev"/></svg><svg class="icon"><use href="#i-next"/></svg><span class="mini-vol"><svg class="icon"><use href="#i-heart"/></svg></span></div>
+      </div>
+      <div class="mini-notes">
+        <p><b>紧凑：</b>标题单行 14.5 px，超出省略；悬停给完整标题。无封面时不放占位，左内边距 12。</p>
+        <p><b>经典：</b>保留 92 × 92 占位；无封面用音符底，不显示 “未找到封面” 文案。</p>
+        <p><b>共同：</b>封面不参与文字排版；标题永不换行，最窄 410 时不缩字。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="title-cases">
+    <div class="case"><span class="mono">SHORT</span><div class="case-line"><b>晴天</b><span>周杰伦</span></div></div>
+    <div class="case"><span class="mono">LONG · ELLIPSIS</span><div class="case-line"><b class="clipped">一千年的雨季，落在没有名字的站台</b><span>陈屿 · 编号 89757</span></div></div>
+    <div class="case"><span class="mono">NO ARTIST</span><div class="case-line"><b>无题</b><span>未知艺术家</span></div></div>
+    <div class="case-spec"><span class="mono">TYPE SPEC</span><p>标题 14.5 / 600 · 单行 · 最大 250 px<br>副行 9 / 400 · 未知时写“未知艺术家”<br>无封面不占位 · 不出现“未找到封面”</p></div>
+  </section>
+  <section class="mini-geometry">
+    <div><span class="mono">WINDOW</span><b>410 × 146</b><p>固定尺寸，不因标题长度变化；四角 16，内边距 14 / 12。</p></div>
+    <div><span class="mono">TOP ACTIONS</span><b>4 × 24</b><p>置顶 / 歌词 / 展开 / 关闭；间距 8，靠右，不参与标题宽度计算。</p></div>
+    <div><span class="mono">TITLE</span><b>250 max</b><p>14.5 / 600，单行省略；悬停完整值。无封面时不放占位图。</p></div>
+    <div><span class="mono">CONTROLS</span><b>28 play</b><p>播放 28 圆，前后 12 图标；喜欢在右下角，与主播放区分离。</p></div>
+  </section>
+  <footer class="pf"><span>STATUS · 已补充 06 / 07</span><span>ONE ACTION · ONE LINE · NO PLACEHOLDER COPY</span></footer>
+</main>
+
+<main class="plate" id="failure">
+  <header class="ph">
+    <div>
+      <div class="eyebrow">DESIGN GAPS · 03 / FAILURE STATES</div>
+      <h1>失败，要有出口。</h1>
+      <p class="lede">离线、超时、404、限流：保留本地内容，给出一个能继续的动作；不显示原始错误文本。</p>
+    </div>
+    <div class="ph-right"><span class="mono">GAP 03 · 04 · 08</span><span class="mono">1120 × 720 CONTEXT</span></div>
+  </header>
+
+  <section class="failure-grid">
+    <div class="settings-panel">
+      <div class="sp-head"><span class="seal">R</span><div><b>设置</b><small>主题、桌面歌词与数据</small></div><span class="sp-close">×</span></div>
+      <div class="sp-body">
+        <nav class="sp-nav"><i></i><span>外观</span><span>桌面歌词</span><span>迷你播放器</span><span class="on">离线模式</span><span>在线内容</span><span>数据</span></nav>
+        <div class="sp-content">
+          <div class="sp-eyebrow">OFFLINE · 03</div>
+          <h3>离线模式</h3>
+          <div class="settings-row"><b>默认离线</b><span class="switch on"></span></div>
+          <p class="muted">开启后不会自动联网；手动点击封面/歌词仍可在需要时联网补全。</p>
+          <div class="ready-card">
+            <div class="ready-head"><span class="dot"></span><b>离线就绪</b><span class="mono">LOCAL OK</span></div>
+            <div class="check"><span>✓</span>本地曲库与播放队列可用</div>
+            <div class="check"><span>✓</span>已缓存封面与歌词可读</div>
+            <div class="check empty"><span>—</span>当前歌曲没有缓存封面</div>
+          </div>
+          <div class="error-card">
+            <div class="error-head"><svg class="icon"><use href="#i-warn"/></svg><b>本次补全没有完成</b><span class="mono">OFFLINE</span></div>
+            <p>当前是离线模式，这首歌也没有本地封面。播放不受影响。</p>
+            <div class="actions"><button class="btn primary">本次联网</button><button class="btn ghost">保持离线</button></div>
+          </div>
+          <div class="sp-foot"><span class="muted">设置会自动保存</span><button class="btn primary">完成</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="failure-cards">
+      <article class="failure-card">
+        <div class="fc-head"><span class="mono">404 / NOT FOUND</span><span class="badge">未找到</span></div>
+        <h4>没有找到匹配的封面</h4>
+        <p>MusicBrainz 有专辑，但没有可用的 Cover Art Archive 图片。当前占位保留；歌词同此状态，文案换成“没有找到匹配歌词”。</p>
+        <div class="actions"><button class="btn">改用文件名匹配</button><button class="btn ghost">手动选择…</button></div>
+      </article>
+      <article class="failure-card">
+        <div class="fc-head"><span class="mono">TIMEOUT / 8S</span><span class="badge warn">超时</span></div>
+        <h4>请求超时</h4>
+        <p>源没有在 8 秒内响应。本地曲库、播放和缓存内容都没有变化。</p>
+        <div class="actions"><button class="btn">重试</button><button class="btn ghost">改用缓存</button></div>
+      </article>
+      <article class="failure-card">
+        <div class="fc-head"><span class="mono">RATE LIMIT / 429</span><span class="badge warn">限流</span></div>
+        <h4>请求过于频繁</h4>
+        <p>MusicBrainz 要求降速。自动请求已暂停，12 秒后可以再试。</p>
+        <div class="actions"><button class="btn" disabled>12 秒后重试</button><button class="btn ghost">仅用缓存</button></div>
+      </article>
+      <article class="failure-card">
+        <div class="fc-head"><span class="mono">OFFLINE / MANUAL</span><span class="badge">离线</span></div>
+        <h4>当前离线</h4>
+        <p>自动请求已暂停；这是一次手动操作，所以允许单次联网。</p>
+        <div class="actions"><button class="btn">本次联网</button><button class="btn ghost">保持离线</button></div>
+      </article>
+    </div>
+  </section>
+
+  <section class="narrow-row">
+    <div class="narrow-copy">
+      <div class="block-label"><span>08 / 设置数据页 · 1120 × 720</span><span class="mono">NO WRAP AT 1120</span></div>
+      <p><b>1120 下不换行。</b>内容宽 564，两个 128 × 34 按钮加 8 间距仍有余量；保持横排，避免高度跳动。</p>
+      <p><b>只有内容宽 &lt; 360 才折叠。</b>两按钮变成 100% 宽、上下间距 8，顺序不变：备份在上、恢复在下。</p>
+      <p class="mono small">BACKUP / RESTORE · 128 × 34 · GAP 8</p>
+    </div>
+    <div class="data-demo">
+      <div class="dd-head"><span>数据</span><span class="mono">DATA</span></div>
+      <div class="dd-body">
+        <div>
+          <p>备份设置、曲库索引、播放统计和会话；封面歌词缓存可选。</p>
+          <div class="dd-actions"><button class="btn">备份数据…</button><button class="btn">恢复数据…</button></div>
+          <div class="dd-checks"><span>☑ 备份时包含封面和歌词缓存</span><span>☑ 恢复时只恢复设置与播放列表</span></div>
+        </div>
+        <div class="dd-stack"><span class="mono">NARROW &lt; 360</span><button class="btn block">备份数据…</button><button class="btn block">恢复数据…</button></div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="pf"><span>STATUS · 已补充 03 / 04 / 08</span><span>NO RAW ERROR · LOCAL CONTENT SURVIVES · ONE EXIT</span></footer>
+</main>
+
+<main class="plate" id="rules">
+  <header class="ph">
+    <div>
+      <div class="eyebrow">DESIGN GAPS · 04 / RULES &amp; SELECTION</div>
+      <h1>多一条规则，多一个选择。</h1>
+      <p class="lede">智能歌单的行内布局和批量选择，都要能在 720 px 面板里保持同一套节奏。</p>
+    </div>
+    <div class="ph-right"><span class="mono">GAP 05 · 09</span><span class="mono">SMART · BATCH</span></div>
+  </header>
+
+  <section class="rules-grid">
+    <div class="smart-panel">
+      <div class="smart-head"><div><span class="mono">SMART PLAYLIST · EDIT</span><h3>编辑智能歌单</h3></div><span class="sp-close">×</span></div>
+      <div class="smart-body">
+        <label class="field-label">名称</label>
+        <div class="text-field">深夜，慢一点</div>
+        <div class="smart-sub"><span>满足</span><button class="chip on">全部条件</button><button class="chip">任一条件</button><span class="limit">0 首 · 限制 0 首</span></div>
+        <div class="rule-list">
+          <div class="rule-row"><span class="rule-index mono">01</span><span class="select">评分</span><span class="select small">≥</span><span class="select value">4 星</span><span class="rule-x">×</span></div>
+          <div class="rule-row long"><span class="rule-index mono">02</span><span class="select">艺术家</span><span class="select small">包含</span><span class="select value ellipsis" style="max-width:300px" title="The Shanghai Restoration Project &amp; 张乐 · 2025 Deluxe Remastered Edition (Live at Blue Note Beijing)">The Shanghai Restoration Project &amp; 张乐 · 2025 Deluxe Remastered Edition (Live at Blue Note Beijing)</span><span class="rule-x">×</span></div>
+          <div class="rule-row invalid"><span class="rule-index mono">03</span><span class="select">流派</span><span class="select small">=</span><span class="select value placeholder">输入值</span><span class="rule-x">×</span></div>
+        </div>
+        <div class="rule-foot"><button class="chip">＋ 添加条件</button><span class="rule-error"><svg class="icon"><use href="#i-warn"/></svg>第 3 条规则缺少值</span></div>
+        <div class="preview-box"><div><span class="mono">PREVIEW</span><b>0 首匹配</b></div><p>补全第 3 条规则后才能保存。规则会随评分与播放统计实时更新。</p></div>
+        <div class="smart-actions"><button class="btn ghost">取消</button><button class="btn primary" disabled>保存智能歌单</button></div>
+      </div>
+    </div>
+
+    <div class="select-panel">
+      <div class="block-label"><span>05 / 规则行 · 三种状态</span><span class="mono">FIELD 116 · OP 88 · VALUE FLEX</span></div>
+      <div class="legend-row"><span class="legend-dot"></span><b>长值</b><span>单行截断，悬停给完整值；聚焦后横向滚动，不换行、不撑高。</span></div>
+      <div class="legend-row"><span class="legend-dot warn"></span><b>空值</b><span>行内错误 + 底部 “缺少值”；保存禁用，不静默变成 “全部歌曲”。</span></div>
+      <div class="legend-row"><span class="legend-dot accent"></span><b>多条件</b><span>最多 5 行可见，超过后列表内滚动；全部/任一条件只出现一次。</span></div>
+
+      <div class="block-label" style="margin-top:26px"><span>09 / 多选操作条 · 三种状态</span><span class="mono">BAR 38 PX</span></div>
+      <div class="batch-demo off"><b>已选 0 首</b><span>Ctrl 点选 · Shift 范围选择</span><i></i><button class="chip">全选当前结果</button><button class="chip">退出</button></div>
+      <div class="batch-demo"><b>已选 3 首</b><span class="mono">1 首不在当前视图</span><i></i><button class="chip">加入歌单</button><button class="chip">加入队列</button><button class="chip">清空</button></div>
+      <div class="batch-demo cross"><b>已选 24 首</b><span class="mono">8 首不在当前视图</span><i></i><button class="chip">清空全部</button><button class="chip">退出</button></div>
+      <p class="batch-note">全选只选当前筛选结果；跨视图选择保留，计数显示 “不在当前视图”。0 项时危险动作隐藏，避免误触。</p>
+    </div>
+  </section>
+
+  <section class="rule-micro">
+    <div><span class="mono">LONG VALUE</span><b>不换行</b><p>值域 160–100% 弹性；超长时省略号，悬停 <code>title</code> 完整值。</p></div>
+    <div><span class="mono">EMPTY VALUE</span><b>不默认匹配</b><p>空值视为未完成，保存禁用；错误只出现在该行和底部一次。</p></div>
+    <div><span class="mono">CROSS VIEW</span><b>不偷偷清空</b><p>切换筛选/视图不清空选择；显示 “N 首不在当前视图”。</p></div>
+    <div><span class="mono">FOCUS</span><b>2 px 焦点环</b><p>新加条件自动聚焦到 “值”，Tab 顺序：字段 → 运算符 → 值 → 删除。</p></div>
+  </section>
+
+  <footer class="pf"><span>STATUS · 已补充 05 / 09</span><span>720 PANEL · 38 BAR · 2 PX FOCUS</span></footer>
+</main>
+
+<main class="plate" id="first">
+  <header class="ph">
+    <div>
+      <div class="eyebrow">DESIGN GAPS · 05 / FIRST RUN</div>
+      <h1>第一次，别让人猜。</h1>
+      <p class="lede">空曲库只给一个主行动；已有文件夹但没音频时，换一套文案和第二个出口。</p>
+    </div>
+    <div class="ph-right"><span class="mono">GAP 10</span><span class="mono">EMPTY LIBRARY</span></div>
+  </header>
+
+  <section class="first-grid">
+    <div class="first-run">
+      <span class="seal big">R</span>
+      <div class="first-eyebrow mono">LOCAL LIBRARY · 01</div>
+      <h2>把音乐放回桌面。</h2>
+      <p>RPlayer 只读取你的文件夹，不上传、不联网也能播放。</p>
+      <button class="btn primary lg"><svg class="icon"><use href="#i-folder"/></svg>添加音乐文件夹</button>
+      <div class="first-hint">支持 MP3 / FLAC / WAV / OGG / M4A / AAC · 也可以把文件夹拖进窗口</div>
+      <div class="first-rule"><span></span>不要求登录 · 不复制文件 · 随时移除</div>
+    </div>
+
+    <div class="right-stack">
+      <div class="no-audio">
+        <div class="block-label"><span>10B / 已有文件夹 · 没有音频</span><span class="mono">SECOND STATE</span></div>
+        <h3>这个文件夹里没有音乐。</h3>
+        <p>已添加 2 个文件夹。检查扩展名，或换一个文件夹。</p>
+        <div class="actions"><button class="btn primary">重新扫描</button><button class="btn ghost">管理文件夹</button></div>
+        <span class="format-note mono">MP3 · FLAC · WAV · OGG · M4A · AAC</span>
+      </div>
+
+      <div class="narrow-settings">
+        <div class="block-label"><span>08 / 设置数据页 · 窄内容宽</span><span class="mono">STACK &lt; 360</span></div>
+        <div class="narrow-frame">
+          <div class="nf-head">数据 <span class="mono">DATA</span></div>
+          <p>备份设置、曲库索引、播放统计与会话。</p>
+          <div class="nf-actions"><button class="btn block">备份数据…</button><button class="btn block">恢复数据…</button></div>
+        </div>
+        <p class="narrow-note">1120 × 720 仍横排；只有内容宽 &lt; 360 才折成单列。文字不截断，按钮不压缩到 28 以下。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="decision-strip">
+    <div><span class="mono">HIERARCHY</span><b>一个主按钮</b><p>空曲库只有 “添加音乐文件夹” 是实心；没有 “导入” 与它竞争。</p></div>
+    <div><span class="mono">COPY</span><b>先结果，后能力</b><p>标题说结果 “把音乐放回桌面”，副文才解释不上传、可离线。</p></div>
+    <div><span class="mono">RECOVERY</span><b>文件夹为空时换文案</b><p>不重复 “添加文件夹”，改为 “重新扫描 / 管理文件夹”。</p></div>
+  </section>
+
+  <footer class="pf"><span>STATUS · 已补充 10</span><span>ONE PRIMARY · NO LOGIN · LOCAL FIRST</span></footer>
+</main>
+
+<script>
+const requested = new URLSearchParams(location.search).get('plate');
+if (requested) {
+  document.querySelectorAll('.plate').forEach((plate) => plate.classList.toggle('active', plate.id === requested));
+}
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
