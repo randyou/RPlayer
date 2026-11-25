@@ -44,6 +44,8 @@ pub struct OverlayState {
     pub mini_on_top: bool,
     pub mini_snap: bool,
     pub desktop_lyrics_open: bool,
+    /// Mini player viewport is up; the tray menu mirrors it as a check mark.
+    pub mini_open: bool,
     pub cover_id: Option<u64>,
     pub cover: Option<Arc<ColorImage>>,
 }

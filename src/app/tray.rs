@@ -17,12 +17,13 @@ use crate::ui::icons::Icon;
 use crate::ui::menu;
 
 /// Popup width in points (matches the context-menu grammar, one step narrower).
-pub(super) const MENU_WIDTH: f32 = 268.0;
+pub(super) const MENU_WIDTH: f32 = 280.0;
 const PAD: f32 = 8.0;
-const HEADER: f32 = 54.0;
+const HEADER: f32 = 62.0;
 const SEP: f32 = 9.0;
-/// Show, play/pause, previous, next, lyrics, settings, quit.
-const ROWS: f32 = 7.0;
+/// Show, play/pause, previous, next, favourite, lyrics, mini player, settings,
+/// quit.
+const ROWS: f32 = 9.0;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum TrayMenuCommand {
@@ -30,7 +31,9 @@ pub(super) enum TrayMenuCommand {
     PlayToggle,
     Previous,
     Next,
+    ToggleFavorite,
     DesktopLyrics,
+    ToggleMiniPlayer,
     Settings,
     Exit,
     Close,
@@ -40,6 +43,9 @@ pub(super) struct TrayMenu {
     pub pos: Pos2,
     pub opened_at: f64,
     pub commands: Arc<Mutex<Vec<TrayMenuCommand>>>,
+    /// `(cover id, texture)`; the popup loads the thumbnail once per track
+    /// instead of re-uploading it on every polled frame.
+    pub cover: Arc<Mutex<Option<(u64, egui::TextureHandle)>>>,
 }
 
 pub(super) fn tray_menu_viewport() -> ViewportId {
@@ -116,6 +122,7 @@ impl RPlayerApp {
             pos,
             opened_at: ctx.input(|input| input.time),
             commands: Arc::new(Mutex::new(Vec::new())),
+            cover: Arc::new(Mutex::new(None)),
         });
         ctx.request_repaint();
     }
@@ -129,6 +136,7 @@ impl RPlayerApp {
         // The closure below owns a clone; this handle drains the results after
         // the viewport has drawn for this frame.
         let queue = open.commands.clone();
+        let cover_cache = open.cover.clone();
         let state = self.overlay_state.clone();
         let height = menu_height();
 
@@ -177,15 +185,15 @@ impl RPlayerApp {
                         |ui| {
                             ui.spacing_mut().item_spacing.y = 0.0;
                             ui.vertical(|ui| {
-                                // Header: what is playing right now.
-                                ui.add_space(2.0);
+                                // Header: what is playing right now, with the
+                                // cover thumbnail and the elapsed/total time.
                                 let (rect, _) = ui.allocate_exact_size(
                                     Vec2::new(ui.available_width(), HEADER - 4.0),
                                     egui::Sense::hover(),
                                 );
                                 let left = rect.left() + 2.0;
                                 ui.painter().text(
-                                    Pos2::new(left, rect.top() + 7.0),
+                                    Pos2::new(left, rect.top() + 2.0),
                                     Align2::LEFT_TOP,
                                     "RPLAYER",
                                     FontId::monospace(8.2),
@@ -201,22 +209,101 @@ impl RPlayerApp {
                                 } else {
                                     ("本地音乐库".to_owned(), "未在播放".to_owned())
                                 };
-                                ui.painter().text(
-                                    Pos2::new(left, rect.top() + 20.0),
+
+                                let thumb = egui::Rect::from_min_size(
+                                    Pos2::new(left, rect.top() + 16.0),
+                                    Vec2::splat(36.0),
+                                );
+                                ui.painter().rect_filled(
+                                    thumb,
+                                    CornerRadius::same(2),
+                                    theme::c().card,
+                                );
+                                let texture = snapshot.cover.as_ref().and_then(|image| {
+                                    let id = snapshot.cover_id.unwrap_or(0);
+                                    let mut cache = cover_cache.lock().ok()?;
+                                    let stale = match cache.as_ref() {
+                                        Some((cached, _)) => *cached != id,
+                                        None => true,
+                                    };
+                                    if stale {
+                                        let handle = ui.ctx().load_texture(
+                                            "tray-menu-cover",
+                                            image.as_ref().clone(),
+                                            egui::TextureOptions::LINEAR,
+                                        );
+                                        *cache = Some((id, handle));
+                                    }
+                                    cache.as_ref().map(|(_, handle)| handle.clone())
+                                });
+                                match texture {
+                                    Some(texture) => {
+                                        ui.painter().image(
+                                            texture.id(),
+                                            thumb,
+                                            egui::Rect::from_min_max(
+                                                Pos2::ZERO,
+                                                Pos2::new(1.0, 1.0),
+                                            ),
+                                            egui::Color32::WHITE,
+                                        );
+                                    }
+                                    None => {
+                                        crate::ui::icons::paint(
+                                            ui.painter(),
+                                            egui::Rect::from_center_size(
+                                                thumb.center(),
+                                                Vec2::splat(15.0),
+                                            ),
+                                            Icon::Disc,
+                                            theme::c().faint,
+                                        );
+                                    }
+                                }
+                                ui.painter().rect_stroke(
+                                    thumb,
+                                    CornerRadius::same(2),
+                                    Stroke::new(1.0_f32, theme::c().border_soft),
+                                    egui::StrokeKind::Inside,
+                                );
+
+                                let text_left = left + 46.0;
+                                let text_width = (rect.right() - text_left - 4.0).max(40.0);
+                                let clip = egui::Rect::from_min_size(
+                                    Pos2::new(text_left, rect.top() + 16.0),
+                                    Vec2::new(text_width, 34.0),
+                                );
+                                let painter = ui.painter().with_clip_rect(clip);
+                                painter.text(
+                                    Pos2::new(text_left, rect.top() + 16.0),
                                     Align2::LEFT_TOP,
                                     &title,
                                     FontId::proportional(12.5),
                                     theme::c().text,
                                 );
-                                ui.painter().text(
-                                    Pos2::new(left, rect.top() + 38.0),
+                                painter.text(
+                                    Pos2::new(text_left, rect.top() + 34.0),
                                     Align2::LEFT_TOP,
                                     &sub,
                                     FontId::proportional(10.0),
                                     theme::c().muted,
                                 );
+                                if snapshot.has_track {
+                                    ui.painter().text(
+                                        Pos2::new(rect.right() - 2.0, rect.top() + 2.0),
+                                        Align2::RIGHT_TOP,
+                                        format!(
+                                            "{} / {}",
+                                            crate::model::format_duration(snapshot.position),
+                                            crate::model::format_duration(snapshot.duration)
+                                        ),
+                                        FontId::monospace(9.0),
+                                        theme::c().faint,
+                                    );
+                                }
 
                                 let width = ui.available_width();
+                                let has_track = snapshot.has_track;
                                 if menu::row(
                                     ui,
                                     width,
@@ -225,6 +312,7 @@ impl RPlayerApp {
                                     None,
                                     false,
                                     false,
+                                    true,
                                 )
                                 .clicked()
                                 {
@@ -243,6 +331,7 @@ impl RPlayerApp {
                                     Some("Space"),
                                     false,
                                     false,
+                                    has_track,
                                 )
                                 .clicked()
                                 {
@@ -256,6 +345,7 @@ impl RPlayerApp {
                                     None,
                                     false,
                                     false,
+                                    has_track,
                                 )
                                 .clicked()
                                 {
@@ -269,6 +359,7 @@ impl RPlayerApp {
                                     None,
                                     false,
                                     false,
+                                    has_track,
                                 )
                                 .clicked()
                                 {
@@ -278,11 +369,30 @@ impl RPlayerApp {
                                 if menu::row(
                                     ui,
                                     width,
+                                    Some(if snapshot.favorite {
+                                        Icon::HeartFilled
+                                    } else {
+                                        Icon::Heart
+                                    }),
+                                    "收藏当前歌曲",
+                                    None,
+                                    false,
+                                    snapshot.favorite,
+                                    has_track,
+                                )
+                                .clicked()
+                                {
+                                    clicked = Some(TrayMenuCommand::ToggleFavorite);
+                                }
+                                if menu::row(
+                                    ui,
+                                    width,
                                     Some(Icon::Lyrics),
                                     "桌面歌词",
                                     Some("Ctrl+L"),
                                     false,
                                     snapshot.desktop_lyrics_open,
+                                    true,
                                 )
                                 .clicked()
                                 {
@@ -291,11 +401,27 @@ impl RPlayerApp {
                                 if menu::row(
                                     ui,
                                     width,
+                                    Some(Icon::MiniPlayer),
+                                    "迷你播放器",
+                                    Some("Ctrl+M"),
+                                    false,
+                                    snapshot.mini_open,
+                                    true,
+                                )
+                                .clicked()
+                                {
+                                    clicked = Some(TrayMenuCommand::ToggleMiniPlayer);
+                                }
+                                menu::separator_sized(ui, width);
+                                if menu::row(
+                                    ui,
+                                    width,
                                     Some(Icon::Settings),
                                     "设置",
                                     Some("Ctrl+,"),
                                     false,
                                     false,
+                                    true,
                                 )
                                 .clicked()
                                 {
@@ -310,6 +436,7 @@ impl RPlayerApp {
                                     None,
                                     true,
                                     false,
+                                    true,
                                 )
                                 .clicked()
                                 {
@@ -364,7 +491,13 @@ impl RPlayerApp {
                 TrayMenuCommand::PlayToggle => self.toggle_play(ctx),
                 TrayMenuCommand::Previous => self.previous_track(ctx),
                 TrayMenuCommand::Next => self.next_track(ctx, false),
+                TrayMenuCommand::ToggleFavorite => {
+                    if let Some(id) = self.current {
+                        self.toggle_favorite(id);
+                    }
+                }
                 TrayMenuCommand::DesktopLyrics => self.toggle_desktop_lyrics(ctx),
+                TrayMenuCommand::ToggleMiniPlayer => self.toggle_mini(ctx),
                 TrayMenuCommand::Settings => {
                     self.show_main_window(ctx);
                     self.settings_open = true;

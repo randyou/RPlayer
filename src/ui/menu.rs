@@ -58,13 +58,16 @@ pub fn item(
     shortcut: Option<&str>,
     danger: bool,
 ) -> Response {
-    row(ui, MAX_WIDTH, icon, label, shortcut, danger, false)
+    row(ui, MAX_WIDTH, icon, label, shortcut, danger, false, true)
 }
 
 /// A menu row with an explicit width and an optional checked state.
 ///
 /// Popups that are not the default 300px context menu (the tray menu viewport,
 /// for example) need to size their rows to the window instead of a constant.
+/// `enabled: false` keeps the row in place but greys it out and swallows clicks,
+/// which is what a tray menu needs when nothing is playing.
+#[allow(clippy::too_many_arguments)]
 pub fn row(
     ui: &mut Ui,
     width: f32,
@@ -73,8 +76,9 @@ pub fn row(
     shortcut: Option<&str>,
     danger: bool,
     checked: bool,
+    enabled: bool,
 ) -> Response {
-    item_impl(ui, width, icon, label, shortcut, danger, checked)
+    item_impl(ui, width, icon, label, shortcut, danger, checked, enabled)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -86,12 +90,18 @@ fn item_impl(
     shortcut: Option<&str>,
     danger: bool,
     checked: bool,
+    enabled: bool,
 ) -> Response {
     let (rect, _) = ui.allocate_exact_size(Vec2::new(width, ROW_HEIGHT), Sense::hover());
     let id = ui.id().with(("menu-item", label));
-    let response = ui.interact(rect, id, Sense::click());
+    let sense = if enabled {
+        Sense::click()
+    } else {
+        Sense::hover()
+    };
+    let response = ui.interact(rect, id, sense);
 
-    if response.hovered() {
+    if enabled && response.hovered() {
         ui.painter().rect_filled(
             rect,
             CornerRadius::same(6),
@@ -103,7 +113,9 @@ fn item_impl(
         );
     }
 
-    let fg = if danger {
+    let fg = if !enabled {
+        theme::c().faint
+    } else if danger {
         theme::signal()
     } else {
         theme::c().text
@@ -117,7 +129,9 @@ fn item_impl(
                 Vec2::splat(14.0),
             ),
             icon,
-            if danger {
+            if !enabled {
+                theme::c().faint
+            } else if danger {
                 theme::signal()
             } else {
                 theme::c().muted
@@ -144,7 +158,14 @@ fn item_impl(
     }
     if checked {
         let mark = Pos2::new(rect.right() - 16.0, rect.center().y);
-        let stroke = Stroke::new(1.6_f32, theme::c().accent);
+        let stroke = Stroke::new(
+            1.6_f32,
+            if enabled {
+                theme::c().accent
+            } else {
+                theme::c().faint
+            },
+        );
         ui.painter().line_segment(
             [Pos2::new(mark.x - 3.5, mark.y), Pos2::new(mark.x - 1.0, mark.y + 2.5)],
             stroke,
@@ -158,7 +179,7 @@ fn item_impl(
     response.widget_info(|| {
         WidgetInfo::labeled(
             WidgetType::Button,
-            ui.is_enabled(),
+            enabled,
             match (danger, checked) {
                 (true, _) => format!("{label}（危险操作）"),
                 (false, true) => format!("{label}（已开启）"),
@@ -169,7 +190,11 @@ fn item_impl(
     if response.has_focus() {
         focus::ring_rect(ui, rect, 6);
     }
-    response.on_hover_cursor(CursorIcon::PointingHand)
+    if enabled {
+        response.on_hover_cursor(CursorIcon::PointingHand)
+    } else {
+        response
+    }
 }
 
 /// A submenu row. The nested menu keeps egui's navigation model, but the

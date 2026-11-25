@@ -1878,6 +1878,7 @@ impl RPlayerApp {
             mini_on_top: self.library.mini_on_top,
             mini_snap: self.library.mini_snap,
             desktop_lyrics_open: self.desktop_lyrics_open,
+            mini_open: self.mini_open,
             ..OverlayState::default()
         };
 
@@ -3529,6 +3530,7 @@ fn overlay_content_key(state: &OverlayState) -> u64 {
     state.mini_on_top.hash(&mut hasher);
     state.mini_snap.hash(&mut hasher);
     state.desktop_lyrics_open.hash(&mut hasher);
+    state.mini_open.hash(&mut hasher);
     state.cover_id.hash(&mut hasher);
     hasher.finish()
 }
