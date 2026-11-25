@@ -20,6 +20,17 @@ pub const MAX_WIDTH: f32 = 300.0;
 
 /// Prepare a context-menu body.
 pub fn begin(ui: &mut Ui) {
+    // egui can keep the popup frame on the previous/fallback theme while the
+    // rows use the current palette. Paint the panel explicitly so text and
+    // background always come from the same theme.
+    let panel = theme::c().panel;
+    ui.painter().rect_filled(
+        ui.max_rect().expand(6.0),
+        CornerRadius::same(8),
+        panel,
+    );
+    ui.visuals_mut().window_fill = panel;
+    ui.visuals_mut().panel_fill = panel;
     ui.set_width(MAX_WIDTH);
     ui.spacing_mut().item_spacing.y = 2.0;
     ui.spacing_mut().button_padding = Vec2::new(10.0, 6.0);
@@ -138,7 +149,10 @@ pub fn submenu<R>(
     ui.scope(|ui| {
         ui.spacing_mut().button_padding = Vec2::new(10.0, 6.0);
         ui.set_width(230.0);
-        ui.menu_button(RichText::new(label).size(12.0), add_contents);
+        ui.menu_button(
+            RichText::new(label).size(12.0).color(theme::c().text),
+            add_contents,
+        );
     });
 }
 
