@@ -118,6 +118,16 @@ impl RPlayerApp {
         let Some(mut draft) = self.smart_builder.take() else {
             return;
         };
+        let preview_count = self
+            .smart_ids(&SmartPlaylist {
+                id: 0,
+                name: String::new(),
+                match_all: draft.match_all,
+                rules: draft.rules.clone(),
+                limit: draft.limit,
+                created_at: 0,
+            })
+            .len();
         let mut save = false;
         let mut cancel = false;
 
@@ -241,6 +251,33 @@ impl RPlayerApp {
                         value: String::new(),
                     });
                 }
+
+                ui.add_space(8.0);
+                Frame::NONE
+                    .fill(theme::accent_soft())
+                    .corner_radius(egui::CornerRadius::same(8))
+                    .inner_margin(Margin::symmetric(12, 9))
+                    .show(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            ui.label(
+                                RichText::new("PREVIEW")
+                                    .font(crate::ui::tokens::mono(8.5))
+                                    .color(theme::c().faint),
+                            );
+                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                                ui.label(
+                                    RichText::new(format!("{preview_count} 首匹配"))
+                                        .font(crate::ui::tokens::serif(15.0))
+                                        .color(theme::c().text),
+                                );
+                            });
+                        });
+                        ui.label(
+                            RichText::new("规则会随评分、播放统计和曲库变化实时更新。")
+                                .size(9.5)
+                                .color(theme::c().muted),
+                        );
+                    });
 
                 ui.add_space(10.0);
                 ui.with_layout(Layout::bottom_up(Align::RIGHT), |ui| {
