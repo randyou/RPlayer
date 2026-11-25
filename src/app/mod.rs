@@ -249,6 +249,17 @@ pub struct RPlayerApp {
     /// viewports explicitly when something visible changes, instead of relying
     /// on their own 33 ms paint timer.
     overlay_sync_key: u64,
+    /// Development aid: `RPLAYER_UI_SCALE=1.5` renders the whole UI at that
+    /// scale, which is how the DPI matrix is exercised on a 100% display.
+    debug_scale: Option<f32>,
+    /// Development aid: `RPLAYER_FRAME_LOG=<path>` appends one line per frame
+    /// with the `update` build time in ms plus the repaint causes, used by the
+    /// 10k scroll performance baseline.
+    frame_log: Option<std::fs::File>,
+    /// Bumped once per `update`. `visible_ids` sorts the whole library, so it
+    /// must run at most once per frame no matter how many call sites ask.
+    frame_no: u64,
+    visible_ids_cache: Option<(u64, Vec<u64>)>,
     mini_cache: Arc<Mutex<overlay::MiniCache>>,
     lyrics_placed: bool,
     mini_placed: bool,
@@ -398,6 +409,15 @@ impl RPlayerApp {
             overlay_state: Arc::new(Mutex::new(OverlayState::default())),
             overlay_commands: Arc::new(Mutex::new(Vec::new())),
             overlay_sync_key: 0,
+            debug_scale: std::env::var("RPLAYER_UI_SCALE")
+                .ok()
+                .and_then(|value| value.trim().parse::<f32>().ok())
+                .filter(|scale| (0.5..=4.0).contains(scale)),
+            frame_log: std::env::var("RPLAYER_FRAME_LOG")
+                .ok()
+                .and_then(|path| std::fs::File::create(path).ok()),
+            frame_no: 0,
+            visible_ids_cache: None,
             mini_cache: Arc::new(Mutex::new(overlay::MiniCache::default())),
             lyrics_placed: false,
             mini_placed: false,
@@ -590,7 +610,7 @@ impl RPlayerApp {
                         *existing = *track;
                         existing.added_at = added_at;
                     } else {
-                        self.library.tracks.push(*track);
+                        self.library.push_track(*track);
                     }
                 }
                 ScanEvent::Unchanged(id) => {
@@ -621,6 +641,7 @@ impl RPlayerApp {
         let seen = &self.scan_seen;
         let before = self.library.tracks.len();
         self.library.tracks.retain(|track| seen.contains(&track.id));
+        self.library.refresh_index();
         let removed = before.saturating_sub(self.library.tracks.len());
         self.library.prune_playlists();
 
@@ -2130,6 +2151,7 @@ impl RPlayerApp {
             .find(|track| track.id == id)
             .map(|track| track.title.clone());
         self.library.tracks.retain(|track| track.id != id);
+        self.library.refresh_index();
         self.library.prune_playlists();
         self.prune_transport();
         if self.selected == Some(id) {
@@ -2412,7 +2434,18 @@ impl RPlayerApp {
     // Filtering and sorting
     // ---------------------------------------------------------------------
 
-    fn visible_ids(&self) -> Vec<u64> {
+    fn visible_ids(&mut self) -> Vec<u64> {
+        if let Some((frame, ids)) = &self.visible_ids_cache {
+            if *frame == self.frame_no {
+                return ids.clone();
+            }
+        }
+        let ids = self.compute_visible_ids();
+        self.visible_ids_cache = Some((self.frame_no, ids.clone()));
+        ids
+    }
+
+    fn compute_visible_ids(&self) -> Vec<u64> {
         let terms: Vec<String> = self
             .search
             .split_whitespace()
@@ -3113,7 +3146,35 @@ impl RPlayerApp {
 }
 
 impl eframe::App for RPlayerApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        let started = std::time::Instant::now();
+        self.update_inner(ctx, frame);
+        if let Some(file) = &mut self.frame_log {
+            use std::io::Write as _;
+            let causes: Vec<String> = ctx
+                .repaint_causes()
+                .iter()
+                .map(|cause| format!("{cause:?}"))
+                .collect();
+            let _ = writeln!(
+                file,
+                "{:.2}\t{}",
+                started.elapsed().as_secs_f64() * 1000.0,
+                causes.join(" | ")
+            );
+        }
+    }
+}
+
+impl RPlayerApp {
+    fn update_inner(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        self.frame_no = self.frame_no.wrapping_add(1);
+        if let Some(scale) = self.debug_scale {
+            if (ctx.pixels_per_point() - scale).abs() > 1e-4 {
+                ctx.set_pixels_per_point(scale);
+            }
+        }
+
         let dark = self.theme_mode.is_dark();
         if self.titlebar_dark != Some(dark) {
             crate::platform::apply_titlebar(dark);

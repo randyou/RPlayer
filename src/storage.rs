@@ -123,6 +123,7 @@ fn apply_loaded_library(
     if db_exists {
         if let Ok(tracks) = load_tracks_from_db() {
             library.tracks = tracks;
+            library.refresh_index();
         }
     } else if from_main && !library.tracks.is_empty() {
         // First SQLite launch: keep a JSON backup, then import the tracks.

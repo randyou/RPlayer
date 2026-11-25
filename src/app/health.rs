@@ -315,6 +315,7 @@ impl RPlayerApp {
         if remove_missing {
             let missing = report.missing.clone();
             self.library.tracks.retain(|track| !missing.contains(&track.id));
+            self.library.refresh_index();
             self.library.prune_playlists();
             self.prune_transport();
             self.persist();

@@ -195,6 +195,11 @@ pub struct Library {
     pub version: u32,
     pub folders: Vec<PathBuf>,
     pub tracks: Vec<Track>,
+    /// `id -> position in tracks`, rebuilt by `refresh_index`. Kept out of the
+    /// serialized shape because it is derived state; `track()` falls back to a
+    /// linear scan when an entry is missing or stale.
+    #[serde(skip)]
+    index: std::collections::HashMap<u64, usize>,
     pub playlists: Vec<Playlist>,
     pub smart_playlists: Vec<SmartPlaylist>,
     pub volume: f32,
@@ -256,6 +261,7 @@ impl Default for Library {
             version: 6,
             folders: Vec::new(),
             tracks: Vec::new(),
+            index: std::collections::HashMap::new(),
             playlists: Vec::new(),
             smart_playlists: Vec::new(),
             volume: 0.72,
@@ -286,8 +292,32 @@ impl Default for Library {
 }
 
 impl Library {
+    /// Rebuilds the id index. Call after loading the library and after any
+    /// change to `tracks`; `track()` still falls back to a linear scan, so a
+    /// missed call costs speed and never correctness.
+    pub fn refresh_index(&mut self) {
+        self.index.clear();
+        self.index.reserve(self.tracks.len());
+        for (position, track) in self.tracks.iter().enumerate() {
+            self.index.insert(track.id, position);
+        }
+    }
+
     pub fn track(&self, id: u64) -> Option<&Track> {
+        if let Some(&position) = self.index.get(&id) {
+            if let Some(track) = self.tracks.get(position) {
+                if track.id == id {
+                    return Some(track);
+                }
+            }
+        }
         self.tracks.iter().find(|t| t.id == id)
+    }
+
+    /// Appends a track and keeps the id index in sync.
+    pub fn push_track(&mut self, track: Track) {
+        self.index.insert(track.id, self.tracks.len());
+        self.tracks.push(track);
     }
 
     pub fn playlist(&self, id: u64) -> Option<&Playlist> {
