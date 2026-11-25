@@ -256,10 +256,12 @@ pub struct RPlayerApp {
     /// with the `update` build time in ms plus the repaint causes, used by the
     /// 10k scroll performance baseline.
     frame_log: Option<std::fs::File>,
-    /// Bumped once per `update`. `visible_ids` sorts the whole library, so it
-    /// must run at most once per frame no matter how many call sites ask.
-    frame_no: u64,
+    /// Last `view_cache_key` plus its sorted ids. `visible_ids` filters and
+    /// sorts the whole library, so it is only rebuilt when that key changes.
     visible_ids_cache: Option<(u64, Vec<u64>)>,
+    /// Library revision plus the album and artist counts shown in the sidebar.
+    /// Grouping 10k tracks every frame used to dominate the frame budget.
+    nav_counts_cache: Option<(u64, usize, usize)>,
     mini_cache: Arc<Mutex<overlay::MiniCache>>,
     lyrics_placed: bool,
     mini_placed: bool,
@@ -416,8 +418,8 @@ impl RPlayerApp {
             frame_log: std::env::var("RPLAYER_FRAME_LOG")
                 .ok()
                 .and_then(|path| std::fs::File::create(path).ok()),
-            frame_no: 0,
             visible_ids_cache: None,
+            nav_counts_cache: None,
             mini_cache: Arc::new(Mutex::new(overlay::MiniCache::default())),
             lyrics_placed: false,
             mini_placed: false,
@@ -2415,6 +2417,10 @@ impl RPlayerApp {
     }
 
     fn persist(&mut self) {
+        // Anything that reaches a save also changes what the views show
+        // (tags, favorites, playlists, removals), so it invalidates the
+        // cross-frame caches.
+        self.library.touch();
         self.library.volume = self.volume;
         if let Err(err) = storage::save_library(&self.library) {
             self.toast(format!("保存音乐库失败：{err:#}"), ToastKind::Error);
@@ -2435,14 +2441,59 @@ impl RPlayerApp {
     // ---------------------------------------------------------------------
 
     fn visible_ids(&mut self) -> Vec<u64> {
-        if let Some((frame, ids)) = &self.visible_ids_cache {
-            if *frame == self.frame_no {
+        let key = self.view_cache_key();
+        if let Some((cached, ids)) = &self.visible_ids_cache {
+            if *cached == key {
                 return ids.clone();
             }
         }
         let ids = self.compute_visible_ids();
-        self.visible_ids_cache = Some((self.frame_no, ids.clone()));
+        self.visible_ids_cache = Some((key, ids.clone()));
         ids
+    }
+
+    /// Album and artist counts for the sidebar, recomputed only when the
+    /// library content changes.
+    fn nav_counts(&mut self) -> (usize, usize) {
+        let revision = self.library.revision();
+        if let Some((cached, albums, artists)) = self.nav_counts_cache {
+            if cached == revision {
+                return (albums, artists);
+            }
+        }
+        let ids: Vec<u64> = self.library.tracks.iter().map(|track| track.id).collect();
+        let albums = self.album_groups(&ids).len();
+        let artists = self.artist_groups(&ids).len();
+        self.nav_counts_cache = Some((revision, albums, artists));
+        (albums, artists)
+    }
+
+    /// Identifies everything `compute_visible_ids` depends on, so the sorted id
+    /// list survives across frames until the library or the view state changes.
+    fn view_cache_key(&self) -> u64 {
+        use std::hash::{Hash, Hasher};
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        self.library.revision().hash(&mut hasher);
+        match self.view {
+            View::Library => 0u8.hash(&mut hasher),
+            View::Albums => 1u8.hash(&mut hasher),
+            View::Artists => 2u8.hash(&mut hasher),
+            View::Favorites => 3u8.hash(&mut hasher),
+            View::Recent => 4u8.hash(&mut hasher),
+            View::Folders => 5u8.hash(&mut hasher),
+            View::Playlist(id) => {
+                6u8.hash(&mut hasher);
+                id.hash(&mut hasher);
+            }
+            View::Smart(id) => {
+                7u8.hash(&mut hasher);
+                id.hash(&mut hasher);
+            }
+        }
+        (self.sort.field as u8).hash(&mut hasher);
+        self.sort.ascending.hash(&mut hasher);
+        self.search.hash(&mut hasher);
+        hasher.finish()
     }
 
     fn compute_visible_ids(&self) -> Vec<u64> {
@@ -3168,7 +3219,6 @@ impl eframe::App for RPlayerApp {
 
 impl RPlayerApp {
     fn update_inner(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        self.frame_no = self.frame_no.wrapping_add(1);
         if let Some(scale) = self.debug_scale {
             if (ctx.pixels_per_point() - scale).abs() > 1e-4 {
                 ctx.set_pixels_per_point(scale);

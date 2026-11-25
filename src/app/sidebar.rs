@@ -60,8 +60,7 @@ impl RPlayerApp {
             self.switch_view(View::Library);
         }
 
-        let all_ids: Vec<u64> = self.library.tracks.iter().map(|track| track.id).collect();
-        let album_count = self.album_groups(&all_ids).len();
+        let (album_count, artist_count) = self.nav_counts();
         if widgets::nav_item(
             ui,
             Icon::Album,
@@ -74,7 +73,6 @@ impl RPlayerApp {
             self.switch_view(View::Albums);
         }
 
-        let artist_count = self.artist_groups(&all_ids).len();
         if widgets::nav_item(
             ui,
             Icon::Artist,

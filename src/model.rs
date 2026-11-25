@@ -200,6 +200,10 @@ pub struct Library {
     /// linear scan when an entry is missing or stale.
     #[serde(skip)]
     index: std::collections::HashMap<u64, usize>,
+    /// Bumped whenever the library content changes. Views use it to keep their
+    /// filtered/sorted id lists across frames instead of rebuilding them.
+    #[serde(skip)]
+    revision: u64,
     pub playlists: Vec<Playlist>,
     pub smart_playlists: Vec<SmartPlaylist>,
     pub volume: f32,
@@ -262,6 +266,7 @@ impl Default for Library {
             folders: Vec::new(),
             tracks: Vec::new(),
             index: std::collections::HashMap::new(),
+            revision: 0,
             playlists: Vec::new(),
             smart_playlists: Vec::new(),
             volume: 0.72,
@@ -301,6 +306,17 @@ impl Library {
         for (position, track) in self.tracks.iter().enumerate() {
             self.index.insert(track.id, position);
         }
+        self.touch();
+    }
+
+    /// Marks the library content as changed, invalidating view caches.
+    pub fn touch(&mut self) {
+        self.revision = self.revision.wrapping_add(1);
+    }
+
+    /// Current content revision, see [`Library::touch`].
+    pub fn revision(&self) -> u64 {
+        self.revision
     }
 
     pub fn track(&self, id: u64) -> Option<&Track> {
@@ -318,6 +334,7 @@ impl Library {
     pub fn push_track(&mut self, track: Track) {
         self.index.insert(track.id, self.tracks.len());
         self.tracks.push(track);
+        self.touch();
     }
 
     pub fn playlist(&self, id: u64) -> Option<&Playlist> {
