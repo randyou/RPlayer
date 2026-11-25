@@ -33,6 +33,16 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
         .resizable(true)
         .show(ctx, |ui| {
             ui.label(
+                egui::RichText::new("LYRICS EDITOR")
+                    .font(crate::ui::tokens::mono(8.5))
+                    .color(theme::c().faint),
+            );
+            ui.label(
+                egui::RichText::new("编辑歌词")
+                    .font(crate::ui::tokens::serif(22.0))
+                    .color(theme::c().text),
+            );
+            ui.label(
                 egui::RichText::new(&editor.title)
                     .size(11.0)
                     .color(theme::c().muted),

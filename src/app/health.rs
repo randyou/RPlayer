@@ -1,7 +1,10 @@
 //! Health-check worker glue and report window.
 
 use eframe::egui;
-use egui::{Align, CornerRadius, Frame, Layout, Margin, RichText, ScrollArea, Stroke, Vec2};
+use egui::{
+    Align, Align2, CornerRadius, Frame, Layout, Margin, Pos2, RichText, ScrollArea, Sense, Stroke,
+    Vec2,
+};
 
 use super::{RPlayerApp, ToastKind};
 use crate::health::HealthReport;
@@ -217,9 +220,16 @@ impl RPlayerApp {
                     .color(theme::c().muted),
                 );
                 ui.add_space(10.0);
+                ui.horizontal(|ui| {
+                    ui.spacing_mut().item_spacing.x = 9.0;
+                    health_stat(ui, "缺失文件", report.missing.len());
+                    health_stat(ui, "空标签", report.empty_tags.len());
+                    health_stat(ui, "重复候选", report.duplicates.len());
+                });
+                ui.add_space(10.0);
 
                 ScrollArea::vertical()
-                    .max_height(330.0)
+                    .max_height(if report.issue_count() == 0 { 72.0 } else { 240.0 })
                     .show(ui, |ui| {
                         section(ui, "缺失文件", report.missing.len());
                         for id in &report.missing {
@@ -328,7 +338,40 @@ impl RPlayerApp {
     }
 }
 
+fn health_stat(ui: &mut egui::Ui, label: &str, count: usize) {
+    let (rect, _) = ui.allocate_exact_size(Vec2::new(174.0, 64.0), Sense::hover());
+    let painter = ui.painter();
+    painter.rect_filled(rect, CornerRadius::same(8), theme::c().card);
+    painter.rect_stroke(
+        rect,
+        CornerRadius::same(8),
+        Stroke::new(1.0_f32, theme::c().border_soft),
+        egui::StrokeKind::Inside,
+    );
+    painter.text(
+        Pos2::new(rect.left() + 12.0, rect.top() + 10.0),
+        Align2::LEFT_TOP,
+        count.to_string(),
+        crate::ui::tokens::serif(24.0),
+        if count > 0 {
+            theme::signal()
+        } else {
+            theme::c().accent
+        },
+    );
+    painter.text(
+        Pos2::new(rect.left() + 12.0, rect.bottom() - 10.0),
+        Align2::LEFT_BOTTOM,
+        label,
+        crate::ui::tokens::mono(8.5),
+        theme::c().faint,
+    );
+}
+
 fn section(ui: &mut egui::Ui, title: &str, count: usize) {
+    if count == 0 {
+        return;
+    }
     ui.add_space(6.0);
     ui.label(
         RichText::new(format!("{title}  {count}"))
