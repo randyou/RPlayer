@@ -3444,6 +3444,29 @@ impl RPlayerApp {
             );
         }
         self.flush_prefs(ctx);
+        if let Ok(order) = std::env::var("RPLAYER_PAINT_PROBE") {
+            // Development aid: paint a magenta bar over the strip under the top
+            // bar so a paint-coverage problem can be attributed to a layer order.
+            let order = match order.as_str() {
+                "background" => egui::Order::Background,
+                "middle" => egui::Order::Middle,
+                "foreground" => egui::Order::Foreground,
+                _ => egui::Order::Tooltip,
+            };
+            let painter = ctx.layer_painter(egui::LayerId::new(
+                order,
+                egui::Id::new("rplayer-paint-probe"),
+            ));
+            let screen = ctx.screen_rect();
+            painter.rect_filled(
+                egui::Rect::from_min_size(
+                    egui::pos2(screen.left(), 50.0),
+                    egui::vec2(screen.width(), 16.0),
+                ),
+                0.0,
+                egui::Color32::from_rgb(255, 0, 255),
+            );
+        }
         self.request_repaint(ctx);
     }
 

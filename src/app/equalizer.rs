@@ -22,11 +22,6 @@ impl RPlayerApp {
         let mut changed = false;
         let mut close = false;
 
-        let previous_theme = theme::preset();
-        if previous_theme != theme::ThemePreset::Forest {
-            theme::set_preset(theme::ThemePreset::Forest);
-        }
-
         egui::Window::new("rplayer-equalizer")
             .title_bar(false)
             .resizable(false)
@@ -195,10 +190,6 @@ impl RPlayerApp {
                     });
                 });
             });
-
-        if previous_theme != theme::ThemePreset::Forest {
-            theme::set_preset(previous_theme);
-        }
 
         if changed {
             self.eq.update(settings.clone());

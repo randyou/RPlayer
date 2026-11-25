@@ -40,9 +40,12 @@ fn main() -> eframe::Result<()> {
         .with_min_inner_size([1120.0, 720.0])
         .with_decorations(false)
         .with_window_level(egui::WindowLevel::Normal)
-        // The GL context needs alpha support for the transparent desktop
-        // lyrics overlay, even though the main panels paint every pixel.
-        .with_transparent(true);
+        // The player window itself is opaque: a per-pixel-alpha swap chain here
+        // meant any strip the panels did not paint let the desktop through (the
+        // "透明的缝" under the top bar). The floating overlays (lyrics strip,
+        // mini player, tray menu) each ask for transparency on their own
+        // viewport, so they keep their rounded cards.
+        .with_transparent(false);
 
     if let Some(icon) = icon {
         viewport = viewport.with_icon(Arc::new(icon));

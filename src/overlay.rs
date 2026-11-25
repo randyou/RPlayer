@@ -124,8 +124,9 @@ pub fn show_lyrics(
                 ctx.send_viewport_cmd(ViewportCommand::InnerSize(LYRICS_SIZE));
             }
         }
-        let previous_theme = theme::preset();
-        theme::set_preset(crate::theme::ThemePreset::Forest);
+        // The strip follows the app theme: force-feeding the Forest preset here
+        // made the strip (and its opacity panel) disagree with the rest of the
+        // window whenever the theme changed mid-session.
         let snapshot = state.lock().map(|state| state.clone()).unwrap_or_default();
         let mut close = false;
         egui::CentralPanel::default()
@@ -603,7 +604,6 @@ pub fn show_lyrics(
                 }
             });
 
-        theme::set_preset(previous_theme);
         if close {
             if let Ok(mut queue) = commands.lock() {
                 queue.push(OverlayCommand::CloseLyrics);
