@@ -42,14 +42,39 @@ v2 的功能面已经关掉，剩下的两件事性质完全不同：
 
 **证据**：`docs/qa/v0.2/v220-S1-tray.png`（280×366，实测尺寸与稿一致）；`cargo test --release` 71 passed。待人工：悬停 500ms 看三态提示、双击图标试播放/暂停。
 
-### S2 迷你播放器 D15（S，1–2 天）· **进行中**
+### S2 迷你播放器 D15（S，1–2 天）· **已完成**
 
 已改（`src/overlay.rs`）：
-- 不再强制 `ThemePreset::Forest`：迷你播放器跟随应用主题，`经典·纸张` 与 `经典·夜幕` 两态都能出现（实测 `v220-S2-mini-classic.png` 为纸张态）；
-- 经典态标题加 250px 上限（`ui.set_max_width(250.0)` + `truncate()`），长标题按稿省略；紧凑态原本就是 250 上限；
-- 紧凑态内边距 12（`shrink2(12.0, 10.0)`）、无封面不出「未找到封面」、经典态保留 92 音符占位 —— 与稿一致，无需改动。
+- 不再强制 `ThemePreset::Forest`：迷你播放器跟随应用主题，经典 / 紧凑 × 纸张 / 夜幕 × 有 / 无封面八态都能出现；
+- 顶部四动作改成稿注的悬停语义：静止 55% → 指针进入后 140ms 升到 100%（`ctx.animate_bool_with_time` + `ui.multiply_opacity`）；
+- 拖动反馈：按住封面或标题条拖动时，沿圆角 16 采样闭合路径画 1px accent 虚线（`Shape::dashed_line`，4/3 段距），松手走 `snap_and_store_mini` 把窗口位置写回 `library.json`；
+- 标题单行 + 250px 上限：紧凑态按稿 250；经典态扣掉 92 封面与 4×24 动作条后只剩约 152px，取 `min(250, available - 128)`，长标题在动作条之前省略，不再压住图钉与「词」按钮；
+- 迷你标题 / 副行改 `selectable(false)`：文字选择会吞掉标题条拖动（实测首版拖动只选中了标题文字，窗口没动）；
+- 空态：标题 `RPlayer 迷你播放器`、副行 `从音乐库选择一首歌`，经典态仍留 92 音符占位，不出现「未找到封面」。
 
-已采：`经典·纸张·有封面`（`v220-S2-mini-classic.png`）与 `紧凑·夜幕·无封面`（`v220-S2-mini-compact-dark.png`，通过改 `library.json` 的 `theme_preset=forest` + `mini_style=compact` 重启取证，绕开物理点击不稳的顶栏主题按钮）。仍缺六态：`经典·夜幕`、`紧凑·纸张`、长标题省略、hover 100%、拖动虚线态、以及无曲目空态。
+证据（`docs/qa/v0.2/`，均实测 410×146）：
+
+| 态 | 文件（`-screen.png`，另有同内容 `-print.png`） |
+| --- | --- |
+| 经典·纸张·有封面 | `v220-S2-mini-classic-paper-art-screen.png` |
+| 经典·夜幕·有封面 | `v220-S2-mini-classic-forest-art-screen.png` |
+| 经典·纸张·无封面 | `v220-S2-mini-classic-paper-noart-screen.png` |
+| 经典·夜幕·无封面 | `v220-S2-mini-classic-forest-noart-screen.png` |
+| 紧凑·纸张·无封面 | `v220-S2-mini-compact-paper-noart-screen.png` |
+| 紧凑·夜幕·无封面 | `v220-S2-mini-compact-forest-noart-screen.png` |
+| 经典·长标题省略 | `v220-S2-mini-classic-paper-longtitle-screen.png` |
+| 紧凑·长标题省略 | `v220-S2-mini-compact-paper-longtitle-screen.png` |
+| 悬停（动作组 100%） | `v220-S2-mini-classic-paper-art-hover-screen.png` |
+| 拖动（1px 虚线） | `v220-S2-mini-classic-paper-art-drag-screen.png` |
+| 空态（经典） | `v220-S2-mini-classic-paper-empty-screen.png` |
+| 空态（紧凑） | `v220-S2-mini-compact-paper-empty-screen.png` |
+
+取证脚本：`tools/qa/mini-state.ps1`（改 session/library.json → 重启 → 点播放条迷你按钮 → 截图，`-Hover` 把指针停进卡内）、`tools/qa/phys-drag.ps1`（按住拖 60×40 后按住截图再松手）。
+
+未做（记录，不阻塞 D15 收口）：
+- 拖动时整窗 0.96 不透明度 + 外部阴影：`ViewportCommand::StartDrag` 会进入系统模态移动循环，期间不重绘，无法逐帧改窗口透明度；阴影由系统绘制。1px 虚线是拖动中唯一的应用侧反馈。
+- 280ms 进入动画未做（稿的动效标注，当前窗口即时出现）。
+- 紧凑态长标题按稿 250 上限省略，末尾字符会压到 55% 的图钉；稿的 `COMPACT · ELLIPSIS / 250 MAX` 样张同样如此，未额外加避让。
 
 ### S3 品牌落地（S，1 天）· **已完成**
 

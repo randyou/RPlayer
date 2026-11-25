@@ -689,6 +689,16 @@ pub fn show_mini(
         }
         let mut close = false;
         let mut open_main = false;
+        // Spec D15: the 4x24 action group sits at 55% until the window is
+        // hovered, then fades to 100% in 140ms. Hit-testing ignores opacity, so
+        // the buttons stay clickable while faint.
+        let hover_t = ctx.animate_bool_with_time(
+            Id::new("mini-actions-hover"),
+            ctx.input(|input| input.pointer.hover_pos().is_some()),
+            0.14,
+        );
+        let action_alpha = 0.55 + 0.45 * hover_t;
+        let mut dragging = false;
         egui::CentralPanel::default()
             .frame(Frame::NONE)
             .show(ctx, |ui| {
@@ -718,6 +728,7 @@ pub fn show_mini(
                         &commands,
                         &mut close,
                         &mut open_main,
+                        action_alpha,
                     );
                 } else {
                 ui.allocate_new_ui(
@@ -729,11 +740,16 @@ pub fn show_mini(
                             let (cover_rect, cover) =
                                 ui.allocate_exact_size(Vec2::splat(92.0), Sense::drag());
                             if cover.dragged() {
+                                dragging = true;
                                 ctx.send_viewport_cmd(ViewportCommand::StartDrag);
                             }
                             draw_cover(ui, cover_rect, &snapshot, &cache);
 
                             ui.add_space(10.0);
+                            // Classic keeps a 92px cover, so the title can only use
+                            // what is left after the 4x24 action strip (120) and
+                            // one gap; 250 stays the absolute cap from spec D15.
+                            let title_max = (ui.available_width() - 128.0).clamp(80.0, 250.0);
                             ui.vertical(|ui| {
                                 ui.spacing_mut().item_spacing.y = 2.0;
                                 ui.set_width(ui.available_width());
@@ -741,7 +757,7 @@ pub fn show_mini(
                                     ui.vertical(|ui| {
                                         ui.spacing_mut().item_spacing.y = 1.0;
                                         // Spec D15: one line, never wider than 250px.
-                                        ui.set_max_width(250.0);
+                                        ui.set_max_width(title_max);
                                         ui.add(
                                             egui::Label::new(
                                                 RichText::new(if snapshot.has_track {
@@ -753,7 +769,10 @@ pub fn show_mini(
                                                 .strong()
                                                 .color(theme::c().text),
                                             )
-                                            .truncate(),
+                                            // The title area doubles as the window drag
+                                            // handle; text selection would steal the drag.
+                                            .truncate()
+                                            .selectable(false),
                                         );
                                         ui.add(
                                             egui::Label::new(
@@ -765,10 +784,12 @@ pub fn show_mini(
                                                 .size(9.0)
                                                 .color(theme::c().muted),
                                             )
-                                            .truncate(),
+                                            .truncate()
+                                            .selectable(false),
                                         );
                                     });
                                     ui.with_layout(Layout::right_to_left(Align::TOP), |ui| {
+                                        ui.multiply_opacity(action_alpha);
                                         ui.spacing_mut().item_spacing.x = 8.0;
                                         if widgets::icon_button(ui, Icon::Close, 24.0, "关闭迷你播放器")
                                             .clicked()
@@ -870,6 +891,7 @@ pub fn show_mini(
                 };
                 let drag = ui.interact(drag_rect, Id::new("mini-title-drag"), Sense::drag());
                 if drag.dragged() {
+                    dragging = true;
                     ctx.send_viewport_cmd(ViewportCommand::StartDrag);
                 }
                 if drag.drag_stopped() {
@@ -878,6 +900,9 @@ pub fn show_mini(
                         .map(|rect| rect.min)
                         .unwrap_or(card.min);
                     snap_and_store_mini(ctx, &snapshot, &commands, pos, card.size());
+                }
+                if dragging {
+                    paint_drag_outline(ui, card);
                 }
             });
 
@@ -895,6 +920,60 @@ pub fn show_mini(
         // Commands are handled by the (possibly minimized) main viewport.
         ctx.request_repaint_of(egui::ViewportId::ROOT);
     });
+}
+
+/// Spec D15: while the window is being dragged, outline the card with a 1px
+/// dashed accent border (radius 16, inset by half a pixel so the stroke lands
+/// fully inside the client area).
+fn paint_drag_outline(ui: &egui::Ui, card: Rect) {
+    fn arc(points: &mut Vec<Pos2>, center: Pos2, start: f32, radius: f32) {
+        for step in 0..=6 {
+            let angle = start + step as f32 / 6.0 * std::f32::consts::FRAC_PI_2;
+            points.push(center + Vec2::angled(angle) * radius);
+        }
+    }
+
+    let rect = card.shrink(0.5);
+    let radius = 15.5;
+    let mut points = Vec::with_capacity(32);
+    points.push(Pos2::new(rect.left() + radius, rect.top()));
+    points.push(Pos2::new(rect.right() - radius, rect.top()));
+    arc(
+        &mut points,
+        Pos2::new(rect.right() - radius, rect.top() + radius),
+        -std::f32::consts::FRAC_PI_2,
+        radius,
+    );
+    points.push(Pos2::new(rect.right(), rect.bottom() - radius));
+    arc(
+        &mut points,
+        Pos2::new(rect.right() - radius, rect.bottom() - radius),
+        0.0,
+        radius,
+    );
+    points.push(Pos2::new(rect.left() + radius, rect.bottom()));
+    arc(
+        &mut points,
+        Pos2::new(rect.left() + radius, rect.bottom() - radius),
+        std::f32::consts::FRAC_PI_2,
+        radius,
+    );
+    points.push(Pos2::new(rect.left(), rect.top() + radius));
+    arc(
+        &mut points,
+        Pos2::new(rect.left() + radius, rect.top() + radius),
+        std::f32::consts::PI,
+        radius,
+    );
+    points.push(points[0]);
+    for shape in egui::Shape::dashed_line(
+        &points,
+        egui::Stroke::new(1.0_f32, theme::c().accent),
+        4.0,
+        3.0,
+    ) {
+        ui.painter().add(shape);
+    }
 }
 
 fn clamp_mini_position(ctx: &egui::Context, pos: Pos2, size: Vec2) -> Pos2 {
@@ -1016,6 +1095,7 @@ fn draw_mini_compact(
     commands: &Arc<Mutex<Vec<OverlayCommand>>>,
     close: &mut bool,
     open_main: &mut bool,
+    action_alpha: f32,
 ) {
     let card = ui.max_rect();
 
@@ -1028,6 +1108,7 @@ fn draw_mini_compact(
                 // No caption: the compact header is just the four actions on
                 // the right, exactly as the design sheet draws it.
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    ui.multiply_opacity(action_alpha);
                     ui.spacing_mut().item_spacing.x = 8.0;
                     if widgets::icon_button(ui, Icon::Close, 24.0, "关闭迷你播放器").clicked() {
                         *close = true;
@@ -1089,7 +1170,8 @@ fn draw_mini_compact(
                                 .strong()
                                 .color(theme::c().text),
                         )
-                        .truncate(),
+                        .truncate()
+                        .selectable(false),
                     )
                     .on_hover_text(&title_text);
                 },
@@ -1104,7 +1186,8 @@ fn draw_mini_compact(
                     .size(9.0)
                     .color(theme::c().muted),
                 )
-                .truncate(),
+                .truncate()
+                .selectable(false),
             );
 
             ui.add_space(3.0);

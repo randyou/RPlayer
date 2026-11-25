@@ -9,6 +9,8 @@
 | `capture.ps1` | 按窗口标题找窗口，同时出 `PrintWindow` 位图与屏幕区域截图 | `.\capture.ps1 -Title 'RPlayer 桌面歌词' -Out out\lyrics` |
 | `shot.ps1` | 按 hwnd 截窗口（`PrintWindow(hwnd, hdc, 2)`），判断「窗口是否更新」用这个 | `.\shot.ps1 -Hwnd 1234 -Out out\main` |
 | `phys-click.ps1` | 物理左键（`SetCursorPos` + `mouse_event`），egui 只认这种 | `.\phys-click.ps1 -X 500 -Y 400` |
+| `phys-drag.ps1` | 物理按住拖动，拖到目标后**按住**截 `-screen` / `-print` 再松手 | `.\phys-drag.ps1 -X 1439 -Y 815 -DX -60 -DY -40 -Out out\mini-drag` |
+| `mini-state.ps1` | 改 `session.json` / `library.json` 造迷你播放器状态：重启 → 点播放条迷你按钮 → 截图；`-Hover` 把指针停进卡内取 100% 动作组 | `.\mini-state.ps1 -Current 7038494800498988877 -Theme forest -Style classic -Out out\mini` |
 | `post-click.ps1` | `PostMessage` 投递点击；**egui 不响应**，仅作对照实验 | `.\post-click.ps1 -Hwnd 1234 -X 300 -Y 400` |
 | `click-named.ps1` | 按 AccessKit 名称查找并语义点击（需先 `agent-desktop snapshot`） | `.\click-named.ps1 -WindowId w-1234 -Name '下一首' -Count 2 -Out out\t` |
 | `next-track.ps1` | 连点「下一首」，每次截图 | `.\next-track.ps1 -Count 3 -Out out\n` |
