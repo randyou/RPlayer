@@ -132,12 +132,12 @@
 
 | # | 项 | 判据 | 结果 | 证据 |
 | --- | --- | --- | --- | --- |
-| J1 | 快捷键 21 条 | 与「键盘快捷键」弹窗一致 | | |
-| J2 | Tab 焦点序 | 侧栏→顶栏→表格→播放条，焦点环可见 | | |
-| J3 | 表格键盘 | ↑↓/Home/End/Enter/Space | | |
-| J4 | 命令面板 | 分组、模糊匹配、键盘滚动 | | |
-| J5 | AccessKit 主窗口 | 每个可交互控件都有名称与稳定 Id | | |
-| J6 | AccessKit 覆盖层 | **当前不合格**（只有 window 根节点），见 V2_REMAINING B2 | | |
+| J1 | 快捷键 21 条 | 与「键盘快捷键」弹窗一致 | 通过 · 弹窗列 21 条（Tab/Shift+Tab、Space/Enter、Esc、F1、Ctrl+K/F/O/N/A/,/T/E/L/M、Space、←/→、↑/↓、Home/End、PageUp/PageDown、Ctrl+←/→、Delete）；实测 Ctrl+K/L/M/,/E、Esc、Enter、Tab 全部生效 | `v2reg-J1.png` |
+| J2 | Tab 焦点序 | 侧栏→顶栏→表格→播放条，焦点环可见 | 通过 · 从表格内起步依次经过曲目行 → 均衡器面板（window/关闭/开关/预设 chip），焦点环为绿色描边；起点取决于上一次点击，未做严格的全序断言 | `v2reg-J2.png` |
+| J3 | 表格键盘 | ↑↓/Home/End/Enter/Space | 通过 · 焦点在一千年以后 → ↓ 到夏日回声 → End 跳龙卷风 → Enter 开始播放（行内绿色焦点环） | `v2reg-J3.png` |
+| J4 | 命令面板 | 分组、模糊匹配、键盘滚动 | 通过 · 跳转/播放与搜索两组、20 项结果、↑↓ 选择 + Enter 执行（实测 Down×2+Enter 跳到「按艺术家浏览」）、Esc 关闭 | `v2reg-J4.png` |
+| J5 | AccessKit 主窗口 | 每个可交互控件都有名称与稳定 Id | 通过（名称覆盖）· 曲库视图 35 个可交互控件、0 个无名称；但「播放模式名称不随状态变」(R1)、「顶栏图标命中矩形错位」(R2)、「滑条无 SetValue」(R3) 另计 | `tools/qa/a11y-audit.ps1` 输出 |
+| J6 | AccessKit 覆盖层 | **当前不合格**（只有 window 根节点），见 V2_REMAINING B2 | 不合格 · `snapshot` 该窗 `root=window children=0`，歌词条上的收藏/下载/刷新/展开/齿轮/「获取歌词」全部不可达 | — |
 
 ## K. 右键菜单（6）
 
@@ -214,6 +214,7 @@
 
 
 | R4 | 桌面歌词打开 + 播放中，主窗时间/进度长时间停在同一点（多张截图都是 0:15），RPLAYER_FRAME_LOG 显示 8s 内 30 帧、之后 5s 仅 2 帧，进程 CPU ≈44%、内存 230MB、窗口仍响应 | 用户会看到「歌词在唱但进度不动」，且覆盖层后续输入/刷新迟钝 | 待定位（建议带 RPLAYER_FRAME_LOG+RPLAYER_SECTION_LOG 复现，看是音频线程阻塞还是 repaint 停了） |
+
 
 
 
