@@ -254,6 +254,9 @@ pub struct RPlayerApp {
     /// viewports explicitly when something visible changes, instead of relying
     /// on their own 33 ms paint timer.
     overlay_sync_key: u64,
+    /// Open tray popup, if any. It lives in its own viewport so it can be drawn
+    /// with the app's menu rows instead of a native Win32 menu.
+    tray_menu: Option<tray::TrayMenu>,
     /// Development aid: `RPLAYER_UI_SCALE=1.5` renders the whole UI at that
     /// scale, which is how the DPI matrix is exercised on a 100% display.
     debug_scale: Option<f32>,
@@ -389,6 +392,7 @@ impl RPlayerApp {
             window_minimized: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
             allow_exit: false,
             main_window_pos: None,
+            tray_menu: None,
             audio,
             eq,
             view: View::Library,
@@ -500,6 +504,14 @@ impl RPlayerApp {
             app.tray = crate::platform::tray::Tray::create();
             if app.tray.is_some() {
                 app.tray_heartbeat = true;
+                // A tray click pushes an action and then wakes the UI, so the
+                // menu opens on the next frame instead of waiting for a tick.
+                {
+                    let ctx = cc.egui_ctx.clone();
+                    crate::platform::tray::Tray::set_wake(move || {
+                        ctx.request_repaint_of(egui::ViewportId::ROOT);
+                    });
+                }
                 // The main viewport is minimized when sent to the tray, so the
                 // heartbeat is what keeps menu events flowing while hidden.
                 // Visible-but-paused windows do not need that rate: the frame
@@ -3337,6 +3349,7 @@ impl RPlayerApp {
             self.render_toast(ctx);
             self.render_drop_overlay(ctx);
             self.show_overlays(ctx);
+            self.show_tray_menu(ctx);
             lyrics_edit::show(self, ctx);
             self.command_palette(ctx);
             self.flush_prefs(ctx);
@@ -3363,6 +3376,7 @@ impl RPlayerApp {
         self.render_toast(ctx);
         self.render_drop_overlay(ctx);
         self.show_overlays(ctx);
+        self.show_tray_menu(ctx);
         lyrics_edit::show(self, ctx);
         self.command_palette(ctx);
         self.flush_prefs(ctx);

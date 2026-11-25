@@ -58,17 +58,35 @@ pub fn item(
     shortcut: Option<&str>,
     danger: bool,
 ) -> Response {
-    item_impl(ui, icon, label, shortcut, danger)
+    row(ui, MAX_WIDTH, icon, label, shortcut, danger, false)
 }
 
-fn item_impl(
+/// A menu row with an explicit width and an optional checked state.
+///
+/// Popups that are not the default 300px context menu (the tray menu viewport,
+/// for example) need to size their rows to the window instead of a constant.
+pub fn row(
     ui: &mut Ui,
+    width: f32,
     icon: Option<Icon>,
     label: &str,
     shortcut: Option<&str>,
     danger: bool,
+    checked: bool,
 ) -> Response {
-    let width = MAX_WIDTH;
+    item_impl(ui, width, icon, label, shortcut, danger, checked)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn item_impl(
+    ui: &mut Ui,
+    width: f32,
+    icon: Option<Icon>,
+    label: &str,
+    shortcut: Option<&str>,
+    danger: bool,
+    checked: bool,
+) -> Response {
     let (rect, _) = ui.allocate_exact_size(Vec2::new(width, ROW_HEIGHT), Sense::hover());
     let id = ui.id().with(("menu-item", label));
     let response = ui.interact(rect, id, Sense::click());
@@ -114,12 +132,26 @@ fn item_impl(
         fg,
     );
     if let Some(shortcut) = shortcut {
+        // Leave room for the check mark so the two never overlap.
+        let right = if checked { 34.0 } else { 12.0 };
         ui.painter().text(
-            Pos2::new(rect.right() - 12.0, rect.center().y),
+            Pos2::new(rect.right() - right, rect.center().y),
             Align2::RIGHT_CENTER,
             shortcut,
             FontId::monospace(9.0),
             theme::c().faint,
+        );
+    }
+    if checked {
+        let mark = Pos2::new(rect.right() - 16.0, rect.center().y);
+        let stroke = Stroke::new(1.6_f32, theme::c().accent);
+        ui.painter().line_segment(
+            [Pos2::new(mark.x - 3.5, mark.y), Pos2::new(mark.x - 1.0, mark.y + 2.5)],
+            stroke,
+        );
+        ui.painter().line_segment(
+            [Pos2::new(mark.x - 1.0, mark.y + 2.5), Pos2::new(mark.x + 4.0, mark.y - 2.5)],
+            stroke,
         );
     }
 
@@ -127,10 +159,10 @@ fn item_impl(
         WidgetInfo::labeled(
             WidgetType::Button,
             ui.is_enabled(),
-            if danger {
-                format!("{label}（危险操作）")
-            } else {
-                label.to_owned()
+            match (danger, checked) {
+                (true, _) => format!("{label}（危险操作）"),
+                (false, true) => format!("{label}（已开启）"),
+                (false, false) => label.to_owned(),
             },
         )
     });
@@ -160,9 +192,14 @@ pub fn submenu<R>(
 
 /// A hairline divider with breathing room.
 pub fn separator(ui: &mut Ui) {
+    separator_sized(ui, MAX_WIDTH);
+}
+
+/// A hairline divider sized to `width`, for popups that are not the default
+/// context-menu width.
+pub fn separator_sized(ui: &mut Ui, width: f32) {
     ui.add_space(4.0);
-    let (rect, _) =
-        ui.allocate_exact_size(Vec2::new(MAX_WIDTH, 1.0), Sense::hover());
+    let (rect, _) = ui.allocate_exact_size(Vec2::new(width, 1.0), Sense::hover());
     ui.painter().hline(
         rect.x_range(),
         rect.center().y,
