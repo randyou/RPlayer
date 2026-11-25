@@ -358,7 +358,7 @@ pub fn show_lyrics(
                     ui.painter().text(
                         Pos2::new(capsule.right() - 96.0, capsule.top() + 17.0),
                         Align2::RIGHT_CENTER,
-                        "已锁定 · 在设置中解锁",
+                        "已锁定 · 设置→桌面歌词 解锁",
                         FontId::proportional(9.5),
                         with_alpha(theme::c().muted, panel_alpha),
                     );

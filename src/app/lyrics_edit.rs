@@ -51,6 +51,7 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
             egui::ScrollArea::vertical()
                 .max_height(460.0)
                 .show(ui, |ui| {
+                    ui.spacing_mut().item_spacing.y = 6.0;
                     let mut remove = None;
                     for (index, row) in editor.rows.iter_mut().enumerate() {
                         ui.horizontal(|ui| {
