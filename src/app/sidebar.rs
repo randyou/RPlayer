@@ -320,9 +320,13 @@ impl RPlayerApp {
                 }
             });
 
-        // Push the footer to the bottom of the rail.
-        ui.add_space((ui.available_height() - 118.0).max(4.0));
-        self.sidebar_footer(ui);
+        // Anchor the footer to the bottom of the rail's own rect. Measuring the
+        // remaining height by hand let the footer spill into the player bar on
+        // short windows, which made the shortcuts/about links unclickable.
+        ui.with_layout(Layout::bottom_up(Align::Min), |ui| {
+            self.sidebar_footer(ui);
+            ui.add_space(2.0);
+        });
     }
 
     fn smart_playlist_items(&mut self, ui: &mut Ui, lists: &[(u64, String)]) {
