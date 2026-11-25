@@ -773,11 +773,13 @@ mod tests {
     #[test]
     fn paper_and_nocturne_meet_text_contrast() {
         assert!(contrast(LIGHT.text, LIGHT.bg) >= 7.0);
+        assert!(contrast(LIGHT.text, LIGHT.panel) >= 7.0);
         assert!(contrast(LIGHT.muted, LIGHT.bg) >= 4.5);
         assert!(contrast(LIGHT.accent, LIGHT.bg) >= 4.5);
         assert!(contrast(LIGHT.on_accent, LIGHT.accent) >= 4.5);
 
         assert!(contrast(DARK.text, DARK.bg) >= 7.0);
+        assert!(contrast(DARK.text, DARK.panel) >= 7.0);
         assert!(contrast(DARK.muted, DARK.bg) >= 4.5);
         assert!(contrast(DARK.accent, DARK.bg) >= 4.5);
         assert!(contrast(DARK.on_accent, DARK.accent) >= 4.5);

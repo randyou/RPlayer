@@ -31,6 +31,8 @@ pub fn begin(ui: &mut Ui) {
     );
     ui.visuals_mut().window_fill = panel;
     ui.visuals_mut().panel_fill = panel;
+    ui.visuals_mut().window_stroke =
+        Stroke::new(1.0_f32, theme::c().border_soft);
     ui.set_width(MAX_WIDTH);
     ui.spacing_mut().item_spacing.y = 2.0;
     ui.spacing_mut().button_padding = Vec2::new(10.0, 6.0);
