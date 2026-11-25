@@ -286,6 +286,48 @@ pub fn apply_titlebar(dark: bool) {
             let _ = DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE_PRE_20H1, value, 4);
         }
     }
+
+    // DWM recomputes the non-client frame when the caption colour changes; without
+    // a forced frame change the client area keeps the old inset and a strip of
+    // unpainted background shows up right under the title bar.
+    #[link(name = "user32")]
+    extern "system" {
+        fn SetWindowPos(
+            hwnd: isize,
+            insert_after: isize,
+            x: i32,
+            y: i32,
+            cx: i32,
+            cy: i32,
+            flags: u32,
+        ) -> i32;
+        fn RedrawWindow(hwnd: isize, rect: *const c_void, region: isize, flags: u32) -> i32;
+    }
+    const SWP_NOSIZE: u32 = 0x0001;
+    const SWP_NOMOVE: u32 = 0x0002;
+    const SWP_NOZORDER: u32 = 0x0004;
+    const SWP_NOACTIVATE: u32 = 0x0010;
+    const SWP_FRAMECHANGED: u32 = 0x0020;
+    const RDW_INVALIDATE: u32 = 0x0001;
+    const RDW_ALLCHILDREN: u32 = 0x0080;
+    const RDW_FRAME: u32 = 0x0400;
+    unsafe {
+        SetWindowPos(
+            hwnd,
+            0,
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED,
+        );
+        RedrawWindow(
+            hwnd,
+            std::ptr::null(),
+            0,
+            RDW_INVALIDATE | RDW_FRAME | RDW_ALLCHILDREN,
+        );
+    }
 }
 
 /// Applies a rounded native window region to a borderless overlay. Without
@@ -468,8 +510,32 @@ pub fn set_window_color_key(title: &str, enabled: bool) -> bool {
     if next & WS_EX_LAYERED == 0 {
         next |= WS_EX_LAYERED;
     }
+    // Everything below changes the window frame or its region, and both make
+    // DWM recompute the non-client area — doing that on every frame is what
+    // showed the native caption flashing over the strip. The colour key itself
+    // is cheap and is refreshed every frame; the frame work happens once per
+    // HWND.
+    let first_time = {
+        use std::sync::atomic::{AtomicIsize, Ordering};
+        static CONFIGURED: AtomicIsize = AtomicIsize::new(0);
+        if CONFIGURED.load(Ordering::Relaxed) == hwnd {
+            false
+        } else {
+            CONFIGURED.store(hwnd, Ordering::Relaxed);
+            true
+        }
+    };
     if next != style {
         unsafe { SetWindowLongPtrW(hwnd, GWL_EXSTYLE, next) };
+    }
+    if !first_time {
+        return unsafe {
+            if enabled {
+                SetLayeredWindowAttributes(hwnd, KEY, 255, LWA_COLORKEY) != 0
+            } else {
+                SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA) != 0
+            }
+        };
     }
     unsafe {
         let result = if enabled {
@@ -601,6 +667,17 @@ pub fn set_window_borderless(title: &str) {
     let hwnd = unsafe { FindWindowW(std::ptr::null(), wide.as_ptr()) };
     if hwnd == 0 {
         return;
+    }
+    // Only once per overlay window. Re-applying these attributes re-renders the
+    // non-client area, which is exactly what showed up as a native title bar
+    // flashing over the strip; DWM keeps them for the lifetime of the HWND.
+    {
+        use std::sync::atomic::{AtomicIsize, Ordering};
+        static LAST: AtomicIsize = AtomicIsize::new(0);
+        if LAST.load(Ordering::Relaxed) == hwnd {
+            return;
+        }
+        LAST.store(hwnd, Ordering::Relaxed);
     }
     // DWMWA_BORDER_COLOR = 34, DWMWA_COLOR_NONE = 0xFFFFFFFE
     let no_border: u32 = 0xFFFF_FFFE;
