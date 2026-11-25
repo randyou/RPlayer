@@ -113,8 +113,10 @@ fn item_impl(
         );
     }
 
+    // Disabled rows keep their place but drop to 35% opacity, so the popup
+    // geometry never shifts when playback stops (design gap D1).
     let fg = if !enabled {
-        theme::c().faint
+        theme::c().text.gamma_multiply(0.35)
     } else if danger {
         theme::signal()
     } else {
@@ -130,7 +132,7 @@ fn item_impl(
             ),
             icon,
             if !enabled {
-                theme::c().faint
+                theme::c().muted.gamma_multiply(0.35)
             } else if danger {
                 theme::signal()
             } else {

@@ -19,8 +19,10 @@ use crate::ui::menu;
 /// Popup width in points (matches the context-menu grammar, one step narrower).
 pub(super) const MENU_WIDTH: f32 = 280.0;
 const PAD: f32 = 8.0;
-const HEADER: f32 = 62.0;
-const SEP: f32 = 9.0;
+const HEADER: f32 = 58.0;
+/// Read-only playback progress under the header (design gap D1).
+const PROGRESS: f32 = 2.0;
+const SEP: f32 = 10.0;
 /// Show, play/pause, previous, next, favourite, lyrics, mini player, settings,
 /// quit.
 const ROWS: f32 = 9.0;
@@ -55,7 +57,7 @@ pub(super) fn tray_menu_viewport() -> ViewportId {
 }
 
 fn menu_height() -> f32 {
-    PAD * 2.0 + HEADER + menu::ROW_HEIGHT * ROWS + SEP * 2.0
+    PAD * 2.0 + HEADER + PROGRESS + menu::ROW_HEIGHT * ROWS + SEP * 2.0
 }
 
 impl RPlayerApp {
@@ -65,6 +67,23 @@ impl RPlayerApp {
             if self.tray.is_none() {
                 return;
             }
+            // Three-state tooltip (design gap D2). Windows owns the 500 ms
+            // hover delay; we only keep the text current.
+            let track = self.current.and_then(|id| self.library.track(id));
+            let tip = match (track, self.is_playing()) {
+                (Some(track), true) => format!(
+                    "RPlayer · 正在播放 · {} — {}",
+                    track.title,
+                    if track.artist.is_empty() {
+                        "未知艺术家"
+                    } else {
+                        track.artist.as_str()
+                    }
+                ),
+                (Some(track), false) => format!("RPlayer · 已暂停 · {}", track.title),
+                (None, _) => String::from("RPlayer · 未在播放"),
+            };
+            crate::platform::tray::set_tray_tooltip(&tip);
             for action in crate::platform::tray::Tray::poll() {
                 match action {
                     crate::platform::tray::TrayAction::Show => self.show_main_window(ctx),
@@ -164,7 +183,7 @@ impl RPlayerApp {
             // Trim the corners at the OS level: eframe clears every viewport
             // with the panel fill, so a rounded card would otherwise sit on a
             // square patch of that colour.
-            crate::platform::set_rounded_region("RPlayer 托盘菜单", 10.0);
+            crate::platform::set_rounded_region("RPlayer 托盘菜单", 8.0);
             let snapshot = state
                 .lock()
                 .map(|state| state.clone())
@@ -172,18 +191,16 @@ impl RPlayerApp {
             let mut clicked: Option<TrayMenuCommand> = None;
             let mut close = false;
 
-            // Pop out of the tray icon: scale the whole panel up from the icon
-            // point over the first 120 ms. The panel lives on its own layer so
-            // the transform can be applied to it alone.
+            // Fade in while rising 2px (design gap D1): 140 ms, opacity + 2px
+            // offset, no scaling, so the row grid never shimmers.
             let panel_id = egui::Id::new("rplayer-tray-panel");
             let now = ctx.input(|input| input.time);
-            let progress = (((now - opened_at) / 0.12) as f32).clamp(0.0, 1.0);
+            let progress = (((now - opened_at) / 0.14) as f32).clamp(0.0, 1.0);
             let eased = 1.0 - (1.0 - progress).powi(3);
-            let scale = 0.94 + 0.06 * eased;
-            let anchor = Vec2::new(origin.x - pos.x, origin.y - pos.y);
+            let rise = 2.0 * (1.0 - eased);
             ctx.set_transform_layer(
                 egui::LayerId::new(egui::Order::Foreground, panel_id),
-                egui::emath::TSTransform::new(anchor * (1.0 - scale), scale),
+                egui::emath::TSTransform::new(Vec2::new(0.0, rise), 1.0),
             );
             if progress < 1.0 {
                 ctx.request_repaint_after(std::time::Duration::from_millis(16));
@@ -200,15 +217,16 @@ impl RPlayerApp {
                     let size = Vec2::new(MENU_WIDTH, height);
                     ui.set_min_size(size);
                     ui.set_max_size(size);
+                    ui.multiply_opacity(eased);
                     let card = egui::Rect::from_min_size(Pos2::ZERO, size);
                     ui.painter().rect_filled(
                         card,
-                        CornerRadius::same(10),
+                        CornerRadius::same(8),
                         theme::c().panel,
                     );
                     ui.painter().rect_stroke(
                         card.shrink(0.5),
-                        CornerRadius::same(10),
+                        CornerRadius::same(8),
                         Stroke::new(1.0_f32, theme::c().border_soft),
                         egui::StrokeKind::Inside,
                     );
@@ -224,6 +242,29 @@ impl RPlayerApp {
                                     Vec2::new(ui.available_width(), HEADER - 4.0),
                                     egui::Sense::hover(),
                                 );
+                                // Read-only progress: 2px, never interactive, so
+                                // the popup cannot be scrubbed by accident.
+                                let bar = egui::Rect::from_min_size(
+                                    Pos2::new(rect.left(), rect.bottom() + 2.0),
+                                    Vec2::new(rect.width(), PROGRESS),
+                                );
+                                ui.painter().rect_filled(
+                                    bar,
+                                    CornerRadius::ZERO,
+                                    theme::c().border_soft,
+                                );
+                                if snapshot.duration > 0.0 {
+                                    let fraction = (snapshot.position / snapshot.duration)
+                                        .clamp(0.0, 1.0) as f32;
+                                    ui.painter().rect_filled(
+                                        egui::Rect::from_min_size(
+                                            bar.min,
+                                            Vec2::new(bar.width() * fraction, PROGRESS),
+                                        ),
+                                        CornerRadius::ZERO,
+                                        theme::c().accent,
+                                    );
+                                }
                                 let left = rect.left() + 2.0;
                                 ui.painter().text(
                                     Pos2::new(left, rect.top() + 2.0),
@@ -460,7 +501,8 @@ impl RPlayerApp {
                                 {
                                     clicked = Some(TrayMenuCommand::Settings);
                                 }
-                                menu::separator_sized(ui, width);
+                                // Only two dividers: 窗口与传输 / 收藏与浮层 /
+                                // 设置与退出. 设置 and 退出 share the last group.
                                 if menu::row(
                                     ui,
                                     width,

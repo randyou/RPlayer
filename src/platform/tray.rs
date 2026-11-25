@@ -15,7 +15,7 @@ use winapi::shared::windef::{HICON, HWND, POINT};
 use winapi::um::libloaderapi::GetModuleHandleW;
 use winapi::um::shellapi::{
     ExtractIconExW, Shell_NotifyIconW, NIF_ICON, NIF_MESSAGE, NIF_TIP, NIM_ADD, NIM_DELETE,
-    NOTIFYICONDATAW,
+    NIM_MODIFY, NOTIFYICONDATAW,
 };
 use winapi::um::winuser::{
     CreateWindowExW, DefWindowProcW, DestroyIcon, DestroyWindow, DispatchMessageW, GetCursorPos,
@@ -23,6 +23,41 @@ use winapi::um::winuser::{
     ShowWindow, TranslateMessage, UpdateWindow, IDI_APPLICATION, SW_RESTORE, WM_APP, WM_CLOSE,
     WM_CONTEXTMENU, WM_DESTROY, WS_POPUP, WM_LBUTTONDBLCLK, WM_LBUTTONUP, WM_RBUTTONUP, WNDCLASSW,
 };
+
+/// Tooltip state pushed from the UI thread; the tray window adopts it on
+/// `WM_TRAY_TIP` (design gap D2: three states, 500 ms delay handled by us).
+static TRAY_TIP: OnceLock<Mutex<String>> = OnceLock::new();
+static TRAY_HWND: std::sync::atomic::AtomicIsize = std::sync::atomic::AtomicIsize::new(0);
+const WM_TRAY_TIP: UINT = WM_APP + 3;
+
+fn tip_slot() -> &'static Mutex<String> {
+    TRAY_TIP.get_or_init(|| Mutex::new(String::from("RPlayer")))
+}
+
+/// Update the tray tooltip from the UI thread. Cheap when nothing changed.
+pub fn set_tray_tooltip(text: &str) {
+    let hwnd = TRAY_HWND.load(std::sync::atomic::Ordering::Relaxed);
+    if hwnd == 0 {
+        return;
+    }
+    let changed = match tip_slot().lock() {
+        Ok(mut slot) => {
+            if slot.as_str() == text {
+                false
+            } else {
+                slot.clear();
+                slot.push_str(text);
+                true
+            }
+        }
+        Err(_) => false,
+    };
+    if changed {
+        unsafe {
+            PostMessageW(hwnd as HWND, WM_TRAY_TIP, 0, 0);
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TrayAction {
@@ -222,7 +257,12 @@ unsafe fn create_tray_window() -> Option<HWND> {
     data.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
     data.uCallbackMessage = WM_TRAY;
     data.hIcon = icon;
-    let tip = wide("RPlayer");
+    TRAY_HWND.store(hwnd as isize, std::sync::atomic::Ordering::Relaxed);
+    let current = match tip_slot().lock() {
+        Ok(slot) => slot.clone(),
+        Err(_) => String::from("RPlayer"),
+    };
+    let tip = wide(&current);
     let count = tip.len().min(data.szTip.len());
     data.szTip[..count].copy_from_slice(&tip[..count]);
     if Shell_NotifyIconW(NIM_ADD, &mut data) == 0 {
@@ -242,7 +282,10 @@ unsafe extern "system" fn wndproc(
     match message {
         WM_TRAY => {
             let event = lparam as u32;
-            if event == WM_LBUTTONUP || event == WM_LBUTTONDBLCLK {
+            if event == WM_LBUTTONDBLCLK {
+                // Double click is transport (design gap D3): play / pause.
+                push(TrayAction::TogglePlay);
+            } else if event == WM_LBUTTONUP {
                 push(TrayAction::Show);
                 restore_main_window();
             } else if event == WM_RBUTTONUP || event == WM_CONTEXTMENU {
@@ -250,6 +293,22 @@ unsafe extern "system" fn wndproc(
                 GetCursorPos(&mut point);
                 push(TrayAction::OpenMenu(point.x, point.y));
             }
+            0
+        }
+        WM_TRAY_TIP => {
+            let text = match tip_slot().lock() {
+                Ok(slot) => slot.clone(),
+                Err(_) => String::new(),
+            };
+            let mut data: NOTIFYICONDATAW = std::mem::zeroed();
+            data.cbSize = std::mem::size_of::<NOTIFYICONDATAW>() as u32;
+            data.hWnd = hwnd;
+            data.uID = 1;
+            data.uFlags = NIF_TIP;
+            let tip = wide(&text);
+            let count = tip.len().min(data.szTip.len());
+            data.szTip[..count].copy_from_slice(&tip[..count]);
+            Shell_NotifyIconW(NIM_MODIFY, &mut data);
             0
         }
         WM_DESTROY => {
