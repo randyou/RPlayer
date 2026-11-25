@@ -1,6 +1,6 @@
 # RPlayer v2 剩余工作清单
 
-基线：v2.1.0 代码已成型（未打 tag），见 `docs/V2_PLAN.md` 的排期。
+基线：**v2.1.4 已发版**（tag `v2.1.0`–`v2.1.4`：A–O 十五组回归已完成、9 项缺陷已修、R2 定性为工具限制）。后续排期、里程碑与验收口径以 `docs/V2_PLAN.md` 为准（该文已按新补充稿与 Sleeve R 品牌资产重写）。
 配套文档：全量回归清单 `docs/qa/V2_REGRESSION.md`、缺稿登记 `docs/qa/DESIGN_SPEC_GAPS.md`、D1–D15 规格说明 `docs/qa/v0.2/DESIGN_SPEC_GAPS_SUPPLEMENT.md`。
 本文只列**还没做完**的部分，已完成的历史见 `ROADMAP.md` 与 `README.md` 的版本记录；**排期与工作量以 `docs/V2_PLAN.md` 为准**。
 
