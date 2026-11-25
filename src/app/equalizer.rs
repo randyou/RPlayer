@@ -1,7 +1,7 @@
 //! Floating ten-band equalizer surface.
 //!
-//! The panel is always painted with the Nocturne palette: it behaves like a
-//! piece of hardware and keeps its dark face on the paper theme too.
+//! The panel follows the active theme so switching Paper / Nocturne repaints
+//! it like every other window; on Nocturne it keeps the dark face from D9.
 
 use eframe::egui;
 use egui::{
@@ -30,7 +30,7 @@ impl RPlayerApp {
         let mut changed = false;
         let mut close = false;
 
-        theme::scoped(&theme::DARK, || {
+        {
             egui::Window::new("rplayer-equalizer")
                 .title_bar(false)
                 .resizable(false)
@@ -59,7 +59,7 @@ impl RPlayerApp {
                     ui.add_space(4.0);
                     footer(ui, &mut settings, &mut changed);
                 });
-        });
+        }
 
         if changed {
             self.eq.update(settings.clone());

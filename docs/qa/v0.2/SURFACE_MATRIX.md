@@ -97,7 +97,7 @@
 
 | 设计面 | 代码 | 状态 | 证据 / 剩余 |
 | --- | --- | --- | --- |
-| 均衡器 | `src/app/equalizer.rs` | 已完成 | v2.2.0 D9：820×250、固定 Nocturne、10 根推子 62 间距、单行预设、前级拖拽，`v220-S5-equalizer-screen.png` |
+| 均衡器 | `src/app/equalizer.rs` | 已完成 | v2.2.0 D9：820×250、跟随主题（Paper 亮面 / Nocturne 暗面）、10 根推子 62 间距、单行预设、前级拖拽；`v220-S5-equalizer-paper-screen.png`、`v220-S5-equalizer-nocturne-screen.png` |
 | 新建智能歌单 | `src/app/smart.rs` | 已完成 | v2.2.0 D8：620×430、规则列 116/88/值 flex、空值红框 + 单条错误、实时预览、下拉换肤，`v220-S5-smart-builder-screen.png` / `v220-S5-smart-incomplete-screen.png` |
 | 曲库健康检查 | `src/app/health.rs` | 已完成 | v2.2.0 D5：720×340、三数字卡可点进明细、问题行 44px 单动作、空态对勾，`v220-S4-health-empty-screen.png` / `v220-S4-health-issues-screen.png` / `v220-S4-health-drill-screen.png` / `v220-S4-health-missing-screen.png` |
 | 编辑歌词 | `src/app/lyrics_edit.rs` | 已完成 | v2.2.0 D7：820×430、行高 34、当前行高亮 + 2px 左条、未保存标记、非法行标红，`v220-S5-lyrics-editor-screen.png` / `v220-S5-lyrics-invalid-screen.png` |
