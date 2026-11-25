@@ -4,7 +4,7 @@
 
 use eframe::egui;
 use egui::{
-    Align, Align2, Color32, CornerRadius, FontId, Frame, Label, Layout, Margin, Pos2, Rect,
+    Align, Align2, CornerRadius, FontId, Frame, Label, Layout, Margin, Pos2, Rect,
     RichText, ScrollArea, Sense, Stroke, Ui, Vec2,
 };
 
@@ -107,7 +107,7 @@ impl RPlayerApp {
                 texture.id(),
                 cover_rect,
                 Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
-                Color32::WHITE,
+                crate::theme::ON_MEDIA,
             ));
         } else {
             ui.painter().circle_filled(

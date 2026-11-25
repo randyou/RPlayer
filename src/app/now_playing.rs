@@ -546,7 +546,7 @@ impl RPlayerApp {
             .exact_width(316.0)
             .frame(
                 Frame::NONE
-                    .fill(Color32::from_rgb(14, 18, 17))
+                    .fill(crate::theme::scene::SURFACE)
                     .stroke(Stroke::new(1.0_f32, theme::c().border_soft))
                     .inner_margin(Margin::symmetric(18, 20)),
             )
@@ -699,13 +699,13 @@ fn ambient_background(ui: &Ui, tint: Option<Color32>) {
         .rect_filled(rect, CornerRadius::ZERO, theme::c().bg);
     let (mut top, mut bottom) = if theme::c().dark {
         (
-            Color32::from_rgb(12, 20, 17),
-            Color32::from_rgb(7, 10, 9),
+            crate::theme::scene::TOP,
+            crate::theme::scene::BOTTOM,
         )
     } else {
         (
-            Color32::from_rgb(250, 252, 248),
-            Color32::from_rgb(234, 240, 232),
+            crate::theme::scene::HEADLINE,
+            crate::theme::scene::BODY,
         )
     };
     if let Some(tint) = tint {

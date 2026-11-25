@@ -278,7 +278,7 @@ impl RPlayerApp {
                                                 Pos2::ZERO,
                                                 Pos2::new(1.0, 1.0),
                                             ),
-                                            egui::Color32::WHITE,
+                                            crate::theme::ON_MEDIA,
                                         );
                                     }
                                     None => {

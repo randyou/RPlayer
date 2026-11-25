@@ -181,15 +181,15 @@ impl RPlayerApp {
                                     .allocate_exact_size(Vec2::new(220.0, 64.0), Sense::click());
                                 let (canvas, ink, accent) = if preset.is_dark() {
                                     (
-                                        egui::Color32::from_rgb(0x0F, 0x12, 0x0F),
-                                        egui::Color32::from_rgb(0xF0, 0xE9, 0xDA),
-                                        egui::Color32::from_rgb(0x8F, 0xB7, 0x9A),
+                                        crate::theme::brand::INK,
+                                        crate::theme::brand::CREAM,
+                                        crate::theme::brand::SAGE,
                                     )
                                 } else {
                                     (
-                                        egui::Color32::from_rgb(0xF4, 0xEF, 0xE5),
-                                        egui::Color32::from_rgb(0x1D, 0x1B, 0x16),
-                                        egui::Color32::from_rgb(0x2E, 0x5B, 0x44),
+                                        crate::theme::brand::PAPER,
+                                        crate::theme::brand::INK,
+                                        crate::theme::brand::FOREST,
                                     )
                                 };
                                 let painter = ui.painter();
@@ -228,9 +228,9 @@ impl RPlayerApp {
                                     if preset.is_dark() { "Nocturne" } else { "Paper" },
                                     crate::ui::tokens::mono(8.5),
                                     if preset.is_dark() {
-                                        egui::Color32::from_rgb(0xB0, 0xA5, 0x94)
+                                        crate::theme::brand::MUTED
                                     } else {
-                                        egui::Color32::from_rgb(0x6B, 0x64, 0x57)
+                                        crate::theme::brand::INK_MUTED
                                     },
                                 );
                                 crate::ui::focus::focus_on_click(&response);

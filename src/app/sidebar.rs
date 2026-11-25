@@ -395,7 +395,7 @@ impl RPlayerApp {
         let compact = ui.available_height() < 140.0;
         if !compact {
             Frame::NONE
-                .fill(egui::Color32::from_rgba_unmultiplied(255, 255, 255, 8))
+                .fill(crate::theme::wash(8))
                 .stroke(Stroke::new(1.0_f32, theme::sidebar_line()))
                 .corner_radius(egui::CornerRadius::same(8))
                 .inner_margin(Margin::same(11))
@@ -456,7 +456,7 @@ impl RPlayerApp {
                             egui::Button::new(
                                 RichText::new("管理文件夹").size(11.0).color(theme::sidebar_text()),
                             )
-                            .fill(egui::Color32::from_rgba_unmultiplied(255, 255, 255, 8))
+                            .fill(crate::theme::wash(8))
                             .stroke(Stroke::new(1.0_f32, theme::sidebar_line()))
                             .corner_radius(6),
                         )

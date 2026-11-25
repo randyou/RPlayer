@@ -3159,7 +3159,7 @@ impl RPlayerApp {
                         offset: [0, 6],
                         blur: 18,
                         spread: 0,
-                        color: Color32::from_black_alpha((90.0 * alpha) as u8),
+                        color: crate::theme::scrim((90.0 * alpha) as u8),
                     })
                     .show(ui, |ui| {
                         ui.set_max_width(330.0);
@@ -3199,7 +3199,7 @@ impl RPlayerApp {
                         offset: [0, 18],
                         blur: 44,
                         spread: 0,
-                        color: Color32::from_black_alpha(160),
+                        color: crate::theme::scrim(160),
                     })
                     .show(ui, |ui| {
                         ui.set_min_width(320.0);

@@ -273,3 +273,19 @@
 本轮试过：在 `overlay.rs` 的 `show_viewport_deferred(lyrics_viewport(), …)` 闭包里首行调 `ctx.enable_accesskit()`（egui 0.31 提供该 API）。重建后 `agent-desktop snapshot --window-id w-<歌词窗>` 仍返回 `children=0` —— 说明次级 viewport 的 AccessKit 适配器没有被 eframe/winit 挂上，不是"没开开关"的问题。已回滚该改动。
 
 下一步（v2.1.3）：需要在 eframe 层给次级窗口创建独立的 AccessKit adapter（或把覆盖层控件做成真正的窗口级按钮），属于框架级改造，需单独立项评估。
+
+## N1 修复记录（v2.1.3 起）
+
+主题外的硬编码颜色从 46 处收敛到 **0 处语义色**（剩余 3 处是计算色：`RPLAYER_PAINT_PROBE` 的品红探针、像素平均色、`blend()`，都不承载配色语义）。
+
+新增（`src/theme.rs`）：
+- `ON_MEDIA` 固定浅色——画在封面/媒体上的文字与图标；
+- `COLOR_KEY` 色键灰——歌词条 panel 的 chroma key，永不走主题；
+- `wash(alpha)` 白色叠层、`scrim(alpha)` 黑色遮罩；
+- `ACCENT_PULSE / ACCENT_PRESSED / ACCENT_HOVER / BUTTON_DISABLED` 主按钮四态；
+- `brand` 模块（`INK / PAPER / CREAM / FOREST / SAGE / MUTED / INK_MUTED`）承载 Sleeve R 品牌色；
+- `scene` 模块（`TOP / BOTTOM / HEADLINE / BODY / SURFACE`）承载「正在播放」大场景的固定色阶。
+
+改用点：`browse.rs`/`now_rail.rs`/`player_bar.rs`/`topbar.rs`/`tray.rs` 的 `Color32::WHITE` → `theme::ON_MEDIA`；`sidebar.rs` 与 `widgets.rs` 的白色叠层 → `theme::wash()`；`mod.rs`/`dialogs.rs` 阴影与背景遮罩 → `theme::scrim()`；`settings.rs` 品牌预览卡、`now_playing.rs` 场景渐变 → `theme::brand::*` / `theme::scene::*`；`overlay.rs` 的色键与当前行文字 → `theme::COLOR_KEY` / `theme::c().text`。
+
+验证：`cargo test --release` 71 passed；纸张主题下曲库、扩展「正在播放」场景截图 `tools/qa/out/screens/n1-paper.png`、`n1-scene.png` 与改动前一致（纯值等价迁移）。

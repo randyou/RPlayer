@@ -5,7 +5,7 @@ use std::sync::mpsc::{self, Receiver, Sender, TryRecvError};
 
 use eframe::egui;
 use egui::{
-    Align2, Color32, CornerRadius, CursorIcon, FontId, Pos2, Rect, Sense, Stroke, TextureHandle,
+    Align2, CornerRadius, CursorIcon, FontId, Pos2, Rect, Sense, Stroke, TextureHandle,
     TextureOptions, Ui, Vec2,
 };
 
@@ -355,7 +355,7 @@ impl RPlayerApp {
                 texture.id(),
                 cover,
                 Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
-                Color32::WHITE,
+                crate::theme::ON_MEDIA,
             );
         } else {
             icons::paint(
@@ -459,7 +459,7 @@ impl RPlayerApp {
                 texture.id(),
                 cover,
                 Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
-                Color32::WHITE,
+                crate::theme::ON_MEDIA,
             );
         } else {
             let initial = group.name.chars().next().unwrap_or('?').to_string();
@@ -547,7 +547,7 @@ impl RPlayerApp {
                     texture.id(),
                     cover,
                     Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
-                    Color32::WHITE,
+                    crate::theme::ON_MEDIA,
                 );
             } else {
                 icons::paint(
@@ -639,7 +639,7 @@ impl RPlayerApp {
                     texture.id(),
                     cover,
                     Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
-                    Color32::WHITE,
+                    crate::theme::ON_MEDIA,
                 );
             } else {
                 ui.painter().text(

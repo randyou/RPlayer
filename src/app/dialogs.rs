@@ -124,7 +124,7 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
     let mut outcome = Outcome::None;
 
     let modal = egui::Modal::new(Id::new("rplayer-modal"))
-        .backdrop_color(Color32::from_black_alpha((175.0 * enter) as u8))
+        .backdrop_color(crate::theme::scrim((175.0 * enter) as u8))
         .frame(
             Frame::NONE
                 .fill(fade(theme::c().panel, enter))
@@ -138,7 +138,7 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                     offset: [0, 12],
                     blur: 30,
                     spread: 0,
-                    color: Color32::from_black_alpha((90.0 * enter) as u8),
+                    color: crate::theme::scrim((90.0 * enter) as u8),
                 }),
         )
         .show(ctx, |ui| {

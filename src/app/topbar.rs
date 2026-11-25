@@ -2,7 +2,7 @@
 
 use eframe::egui;
 use egui::{
-    Align, Color32, CursorIcon, Frame, Id, Layout, Margin, Pos2, Rect, ResizeDirection, Response,
+    Align, CursorIcon, Frame, Id, Layout, Margin, Pos2, Rect, ResizeDirection, Response,
     RichText, Sense, Stroke, Ui, Vec2, ViewportCommand,
 };
 
@@ -470,7 +470,7 @@ impl RPlayerApp {
             ui.painter().rect_filled(rect, egui::CornerRadius::ZERO, fill);
         }
         let color = if hovered && matches!(kind, WindowButton::Close) {
-            Color32::WHITE
+            crate::theme::ON_MEDIA
         } else if hovered {
             theme::c().text
         } else {

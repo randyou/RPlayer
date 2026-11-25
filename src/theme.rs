@@ -317,6 +317,57 @@ pub fn c() -> &'static Palette {
     preset().palette()
 }
 
+/// Text and glyphs drawn straight onto cover art. Media is unpredictable, so
+/// this stays light in both themes instead of following the palette.
+pub const ON_MEDIA: Color32 = Color32::from_rgb(0xFF, 0xFF, 0xFF);
+
+/// Chroma key painted behind the lyric strip. Never themed: the panel window
+/// below it keys this exact colour out.
+pub const COLOR_KEY: Color32 = Color32::from_rgb(0xA0, 0xA0, 0xA0);
+
+/// Primary action tints. Hover and press brighten the accent instead of
+/// following the palette, and the disabled disc stays neutral.
+pub const ACCENT_PULSE: Color32 = Color32::from_rgb(0x7A, 0xF0, 0xA1);
+pub const ACCENT_PRESSED: Color32 = Color32::from_rgb(0x79, 0xEF, 0xA2);
+pub const ACCENT_HOVER: Color32 = Color32::from_rgb(0xA6, 0xFF, 0xC5);
+pub const BUTTON_DISABLED: Color32 = Color32::from_rgb(0x22, 0x26, 0x30);
+
+/// Neutral wash layered over dark chrome for hover and pressed states.
+pub fn wash(alpha: u8) -> Color32 {
+    Color32::from_rgba_unmultiplied(255, 255, 255, alpha)
+}
+
+/// Scrim painted behind modal dialogs and toasts.
+pub fn scrim(alpha: u8) -> Color32 {
+    Color32::from_black_alpha(alpha)
+}
+
+/// Sleeve R brand colours. Used by the settings preview card and the tray
+/// artwork so the identity stays fixed even when the UI theme changes.
+pub mod brand {
+    use eframe::egui::Color32;
+
+    pub const INK: Color32 = Color32::from_rgb(0x0F, 0x12, 0x0F);
+    pub const PAPER: Color32 = Color32::from_rgb(0xF4, 0xEF, 0xE5);
+    pub const CREAM: Color32 = Color32::from_rgb(0xF0, 0xE9, 0xDA);
+    pub const FOREST: Color32 = Color32::from_rgb(0x2E, 0x5B, 0x44);
+    pub const SAGE: Color32 = Color32::from_rgb(0x8F, 0xB7, 0x9A);
+    pub const MUTED: Color32 = Color32::from_rgb(0xB0, 0xA5, 0x94);
+    pub const INK_MUTED: Color32 = Color32::from_rgb(0x6B, 0x64, 0x57);
+}
+
+/// Gradient stops and ink used by the expanded now-playing scene. The scene is
+/// artwork rather than chrome, so it keeps its own fixed ramp.
+pub mod scene {
+    use eframe::egui::Color32;
+
+    pub const TOP: Color32 = Color32::from_rgb(0x0C, 0x14, 0x11);
+    pub const BOTTOM: Color32 = Color32::from_rgb(0x07, 0x0A, 0x09);
+    pub const HEADLINE: Color32 = Color32::from_rgb(0xFA, 0xFC, 0xF8);
+    pub const BODY: Color32 = Color32::from_rgb(0xEA, 0xF0, 0xE8);
+    pub const SURFACE: Color32 = Color32::from_rgb(0x0E, 0x12, 0x11);
+}
+
 /// Deep chrome used by the v2 sidebar and player bar. Kept outside [`Palette`]
 /// because the shell is always dark in both themes, even on Paper.
 pub fn sidebar_deep() -> Color32 {

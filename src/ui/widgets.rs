@@ -38,7 +38,7 @@ pub fn sidebar_icon_button(ui: &mut Ui, icon: Icon, size: f32, tooltip: &str) ->
         ui.painter().rect_filled(
             rect,
             CornerRadius::same(6),
-            Color32::from_rgba_unmultiplied(255, 255, 255, 14),
+            crate::theme::wash(14),
         );
     }
     icons::paint(
@@ -73,7 +73,7 @@ pub fn sidebar_icon_button_tinted(
         ui.painter().rect_filled(
             rect,
             CornerRadius::same(7),
-            Color32::from_rgba_unmultiplied(255, 255, 255, 12),
+            crate::theme::wash(12),
         );
     }
     let color = if active {
@@ -136,7 +136,7 @@ pub fn sidebar_glyph_button(
         ui.painter().rect_filled(
             rect,
             CornerRadius::same(7),
-            Color32::from_rgba_unmultiplied(255, 255, 255, 12),
+            crate::theme::wash(12),
         );
     }
     ui.painter().text(
@@ -213,7 +213,7 @@ pub fn circle_button(
     let radius = size * 0.5;
     if response.is_pointer_button_down_on() {
         ui.painter()
-            .circle_filled(center, radius, Color32::from_rgb(0x7A, 0xF0, 0xA1));
+            .circle_filled(center, radius, crate::theme::ACCENT_PULSE);
     } else {
         ui.painter()
             .circle_filled(center, radius * if hovered { 1.03 } else { 1.0 }, fill);
@@ -238,9 +238,9 @@ pub fn play_button(ui: &mut Ui, playing: bool, enabled: bool) -> Response {
         ui.painter()
             .circle_filled(center, radius + 5.0, theme::accent_alpha(0.10));
         let fill = if response.is_pointer_button_down_on() {
-            Color32::from_rgb(0x79, 0xEF, 0xA2)
+            crate::theme::ACCENT_PRESSED
         } else if response.hovered() {
-            Color32::from_rgb(0xA6, 0xFF, 0xC5)
+            crate::theme::ACCENT_HOVER
         } else {
             theme::c().accent
         };
@@ -259,7 +259,7 @@ pub fn play_button(ui: &mut Ui, playing: bool, enabled: bool) -> Response {
         response.on_hover_cursor(CursorIcon::PointingHand)
     } else {
         ui.painter()
-            .circle_filled(center, radius, Color32::from_rgb(0x22, 0x26, 0x30));
+            .circle_filled(center, radius, crate::theme::BUTTON_DISABLED);
         icons::paint(
             ui.painter(),
             rect.shrink(size * 0.31),
@@ -297,7 +297,7 @@ pub fn nav_item(
         painter.rect_filled(
             rect,
             CornerRadius::same(8),
-            Color32::from_rgba_unmultiplied(255, 255, 255, (14.0 * hover_t) as u8),
+            crate::theme::wash((14.0 * hover_t) as u8),
         );
     }
     if selected {
@@ -366,7 +366,7 @@ pub fn playlist_item(ui: &mut Ui, name: &str, selected: bool) -> Response {
         painter.rect_filled(
             rect,
             CornerRadius::same(7),
-            Color32::from_rgba_unmultiplied(255, 255, 255, (12.0 * hover_t) as u8),
+            crate::theme::wash((12.0 * hover_t) as u8),
         );
     }
     if selected {
