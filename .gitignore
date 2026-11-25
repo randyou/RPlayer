@@ -1,5 +1,7 @@
 /target
 /tools/smtc-helper/target
+/tools/qa/out
+/tools/scratch
 /dist
 /testdata
 /.idea
