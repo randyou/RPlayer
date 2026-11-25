@@ -576,10 +576,14 @@ pub fn show_lyrics(
                                     && !button_rect.contains(position)
                             })
                     });
+                    // The strip never takes focus (WS_EX_NOACTIVATE), so clicks on
+                    // other windows never reach egui; asking the platform keeps the
+                    // old focus check from closing this panel the frame after it
+                    // opened.
+                    let clicked_elsewhere = clicked_outside
+                        || crate::platform::left_button_outside("RPlayer 桌面歌词");
                     let escape = ctx.input(|input| input.key_pressed(egui::Key::Escape));
-                    let lost_focus =
-                        ctx.input(|input| input.viewport().focused) == Some(false);
-                    if clicked_outside || escape || lost_focus {
+                    if clicked_elsewhere || escape {
                         controls_open = false;
                     }
                 }
