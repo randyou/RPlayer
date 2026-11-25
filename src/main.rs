@@ -32,6 +32,15 @@ use std::sync::Arc;
 use eframe::egui;
 
 fn main() -> eframe::Result<()> {
+    // One player per session: a second launch asks the running copy to come
+    // forward and exits, so there is never a second tray icon or a second
+    // always-on-top lyrics window.
+    #[cfg(target_os = "windows")]
+    if !platform::tray::single_instance_guard() {
+        platform::tray::request_show_from_other_instance();
+        return Ok(());
+    }
+
     let icon = eframe::icon_data::from_png_bytes(include_bytes!("../assets/icon.png")).ok();
 
     let mut viewport = egui::ViewportBuilder::default()

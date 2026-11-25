@@ -548,6 +548,9 @@ impl RPlayerApp {
     }
 
     fn show_main_window(&mut self, ctx: &egui::Context) {
+        // Bring the taskbar button back before the window returns, otherwise the
+        // shell keeps it hidden for the rest of the session.
+        crate::platform::set_taskbar_button_visible(true);
         ctx.send_viewport_cmd(egui::ViewportCommand::Visible(true));
         ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(false));
         if let Some(pos) = self.main_window_pos.take() {

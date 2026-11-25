@@ -111,6 +111,64 @@ fn push(action: TrayAction) {
 
 const WM_TRAY: UINT = WM_APP + 1;
 
+/// Message a second app instance broadcasts to ask this one to show itself.
+fn show_request_message() -> UINT {
+    use std::sync::OnceLock;
+    use winapi::um::winuser::RegisterWindowMessageW;
+
+    static MSG: OnceLock<UINT> = OnceLock::new();
+    *MSG.get_or_init(|| {
+        let name: Vec<u16> = "RPlayerShowMainWindow"
+            .encode_utf16()
+            .chain(std::iter::once(0))
+            .collect();
+        unsafe { RegisterWindowMessageW(name.as_ptr()) }
+    })
+}
+
+/// Returns true when this process is the only player; false means another copy
+/// already holds the session and this one should ask it to come forward and
+/// exit (v2 regression A7: two copies used to mean two tray icons and two
+/// always-on-top lyric strips).
+pub fn single_instance_guard() -> bool {
+    use std::sync::OnceLock;
+
+    const ERROR_ALREADY_EXISTS: u32 = 183;
+
+    // Declared here rather than pulling the `synchapi`/`errhandlingapi` winapi
+    // features in for two calls.
+    #[link(name = "kernel32")]
+    extern "system" {
+        fn CreateMutexW(
+            attributes: *mut core::ffi::c_void,
+            owner: i32,
+            name: *const u16,
+        ) -> *mut core::ffi::c_void;
+        fn GetLastError() -> u32;
+    }
+
+    // The handle is kept for the process lifetime, which is what holds the
+    // mutex; dropping it would release the guard.
+    static HANDLE: OnceLock<isize> = OnceLock::new();
+    let name: Vec<u16> = "Local\\RPlayer.SingleInstance"
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect();
+    let handle = unsafe { CreateMutexW(std::ptr::null_mut(), 0, name.as_ptr()) };
+    let already = unsafe { GetLastError() } == ERROR_ALREADY_EXISTS;
+    HANDLE.get_or_init(|| handle as isize);
+    !already
+}
+
+/// Tells the already-running copy to show its window.
+pub fn request_show_from_other_instance() {
+    use winapi::um::winuser::{PostMessageW, HWND_BROADCAST};
+
+    unsafe {
+        PostMessageW(HWND_BROADCAST, show_request_message(), 0, 0);
+    }
+}
+
 fn wide(value: &str) -> Vec<u16> {
     value.encode_utf16().chain(std::iter::once(0)).collect()
 }
@@ -201,6 +259,13 @@ unsafe extern "system" fn wndproc(
             data.uID = 1;
             Shell_NotifyIconW(NIM_DELETE, &mut data);
             PostQuitMessage(0);
+            0
+        }
+        _ if message == show_request_message() => {
+            // A second copy of the app was started; it exits after asking the
+            // running instance to come forward (single-instance behaviour).
+            push(TrayAction::Show);
+            restore_main_window();
             0
         }
         _ => DefWindowProcW(hwnd, message, wparam, lparam),

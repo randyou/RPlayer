@@ -3246,6 +3246,13 @@ impl RPlayerApp {
             #[cfg(target_os = "windows")]
             if self.tray.is_some() {
                 ctx.send_viewport_cmd(ViewportCommand::CancelClose);
+                // Minimize rather than hide: a hidden window stops pumping
+                // frames, so the tray menu would never open again. The taskbar
+                // button is dropped instead, which is what "closed to tray"
+                // should look like (v2 regression A5).
+                self.main_window_pos =
+                    ctx.input(|input| input.viewport().outer_rect).map(|rect| rect.min);
+                crate::platform::set_taskbar_button_visible(false);
                 ctx.send_viewport_cmd(ViewportCommand::Minimized(true));
                 return;
             }

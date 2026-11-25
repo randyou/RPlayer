@@ -196,6 +196,57 @@ pub fn main_window_handle() -> Option<isize> {
     None
 }
 
+/// Shows or hides the player's taskbar button.
+///
+/// Closing to the tray minimizes the window, because a hidden window stops
+/// pumping frames and the tray menu would stop opening (v2 regression A5). A
+/// minimized window keeps its taskbar button though, which does not read as
+/// "closed to tray", so the button is removed by marking the window a tool
+/// window while it sits in the tray and restored when it comes back.
+#[cfg(target_os = "windows")]
+pub fn set_taskbar_button_visible(visible: bool) -> bool {
+    use winapi::um::winuser::{
+        GetWindowLongPtrW, SetWindowLongPtrW, SetWindowPos, GWL_EXSTYLE, SWP_FRAMECHANGED,
+        SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER,
+    };
+
+    const WS_EX_TOOLWINDOW: isize = 0x0000_0080;
+
+    let Some(hwnd) = main_window_handle() else {
+        return false;
+    };
+    let hwnd = hwnd as winapi::shared::windef::HWND;
+    let ex = unsafe { GetWindowLongPtrW(hwnd, GWL_EXSTYLE) };
+    let next = if visible {
+        ex & !WS_EX_TOOLWINDOW
+    } else {
+        ex | WS_EX_TOOLWINDOW
+    };
+    if next == ex {
+        return true;
+    }
+    unsafe { SetWindowLongPtrW(hwnd, GWL_EXSTYLE, next) };
+    // The shell picks the change up on the next frame change; without this the
+    // button lingers until something else forces a non-client repaint.
+    unsafe {
+        SetWindowPos(
+            hwnd,
+            std::ptr::null_mut(),
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED,
+        )
+    };
+    true
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn set_taskbar_button_visible(_visible: bool) -> bool {
+    false
+}
+
 /// Ask the Windows compositor to use a dark or light native title bar.
 ///
 /// The main HWND is discovered once by process id so switching themes after the
