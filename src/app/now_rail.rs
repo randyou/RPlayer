@@ -16,7 +16,7 @@ use crate::ui::widgets;
 
 impl RPlayerApp {
     pub(super) fn rail_available(ctx: &egui::Context) -> bool {
-        ctx.screen_rect().width() >= 1280.0
+        super::layout::Tier::of_ctx(ctx).shows_rail()
     }
 
     pub(super) fn now_rail_panel(&mut self, ctx: &egui::Context) {

@@ -11,16 +11,117 @@ use crate::ui::widgets;
 
 impl RPlayerApp {
     pub(super) fn sidebar_panel(&mut self, ctx: &egui::Context) {
+        let tier = super::layout::Tier::of_ctx(ctx);
+        if tier.drawer() {
+            self.sidebar_drawer(ctx);
+            return;
+        }
+        let compact = tier.icons_only_sidebar();
         egui::SidePanel::left("rplayer-sidebar")
-            .exact_width(236.0)
+            .exact_width(tier.sidebar_width())
             .resizable(false)
             .show_separator_line(false)
-            .frame(
+            .frame(Frame::NONE.fill(theme::sidebar_deep()).inner_margin(
+                Margin::symmetric(if compact { 6 } else { 12 }, 16),
+            ))
+            .show(ctx, |ui| {
+                if compact {
+                    self.sidebar_compact(ui);
+                } else {
+                    self.sidebar_contents(ui);
+                }
+            });
+    }
+
+    /// Narrow tier: the sidebar becomes an overlay drawer above the content.
+    fn sidebar_drawer(&mut self, ctx: &egui::Context) {
+        if !self.sidebar_drawer_open {
+            return;
+        }
+        let screen = ctx.screen_rect();
+        let scrim = egui::Area::new(egui::Id::new("sidebar-drawer-scrim"))
+            .order(egui::Order::Foreground)
+            .fixed_pos(screen.left_top())
+            .show(ctx, |ui| {
+                let (rect, response) =
+                    ui.allocate_exact_size(screen.size(), egui::Sense::click());
+                ui.painter()
+                    .rect_filled(rect, 0, egui::Color32::from_black_alpha(110));
+                response
+            });
+        if scrim.inner.clicked() {
+            self.sidebar_drawer_open = false;
+        }
+
+        let before_view = self.view;
+        let before_expanded = self.expanded;
+        let before_queue = self.queue_open;
+        egui::Area::new(egui::Id::new("sidebar-drawer"))
+            .order(egui::Order::Foreground)
+            .fixed_pos(screen.left_top())
+            .show(ctx, |ui| {
                 Frame::NONE
                     .fill(theme::sidebar_deep())
-                    .inner_margin(Margin::symmetric(12, 16)),
-            )
-            .show(ctx, |ui| self.sidebar_contents(ui));
+                    .inner_margin(Margin::symmetric(12, 16))
+                    .show(ui, |ui| {
+                        ui.set_width(236.0);
+                        ui.set_min_height(screen.height() - 32.0);
+                        ui.set_max_height(screen.height() - 32.0);
+                        egui::ScrollArea::vertical()
+                            .id_salt("sidebar-drawer-scroll")
+                            .show(ui, |ui| self.sidebar_contents(ui));
+                    });
+            });
+        let navigated = self.view != before_view
+            || self.expanded != before_expanded
+            || self.queue_open != before_queue;
+        if navigated || ctx.input(|input| input.key_pressed(egui::Key::Escape)) {
+            self.sidebar_drawer_open = false;
+        }
+    }
+
+    /// Compact tier: icon-only rail with the same destinations.
+    fn sidebar_compact(&mut self, ui: &mut Ui) {
+        ui.vertical_centered(|ui| {
+            let (rect, _) = ui.allocate_exact_size(Vec2::splat(34.0), Sense::hover());
+            icons::logo(ui.painter(), rect);
+        });
+        ui.add_space(18.0);
+        ui.spacing_mut().item_spacing.y = 4.0;
+
+        if widgets::nav_icon_item(ui, Icon::Disc, "本地曲库", self.view == View::Library).clicked() {
+            self.switch_view(View::Library);
+        }
+        if widgets::nav_icon_item(ui, Icon::Album, "专辑", self.view == View::Albums).clicked() {
+            self.switch_view(View::Albums);
+        }
+        if widgets::nav_icon_item(ui, Icon::Artist, "艺术家", self.view == View::Artists).clicked()
+        {
+            self.switch_view(View::Artists);
+        }
+        if widgets::nav_icon_item(ui, Icon::Heart, "我的收藏", self.view == View::Favorites)
+            .clicked()
+        {
+            self.switch_view(View::Favorites);
+        }
+        if widgets::nav_icon_item(ui, Icon::Clock, "最近播放", self.view == View::Recent).clicked()
+        {
+            self.switch_view(View::Recent);
+        }
+        if widgets::nav_icon_item(ui, Icon::Folder, "音乐目录", self.view == View::Folders)
+            .clicked()
+        {
+            self.switch_view(View::Folders);
+        }
+        if widgets::nav_icon_item(ui, Icon::Music, "正在播放", self.expanded).clicked()
+            && self.current.is_some()
+        {
+            self.queue_open = false;
+            self.expanded = true;
+        }
+        if widgets::nav_icon_item(ui, Icon::Queue, "播放队列", self.queue_open).clicked() {
+            self.queue_open = !self.queue_open;
+        }
     }
 
     fn sidebar_contents(&mut self, ui: &mut Ui) {

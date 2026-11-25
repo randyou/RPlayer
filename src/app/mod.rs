@@ -5,6 +5,7 @@ mod command_palette;
 mod dialogs;
 mod equalizer;
 mod health;
+mod layout;
 mod library_view;
 mod lyrics_edit;
 mod now_playing;
@@ -335,6 +336,7 @@ pub struct RPlayerApp {
     settings_opened: Option<std::time::Instant>,
     settings_tab: usize,
     now_rail_open: bool,
+    sidebar_drawer_open: bool,
     rail_queue: bool,
     pending_resume: Option<f64>,
     last_session_save: std::time::Instant,
@@ -503,6 +505,7 @@ impl RPlayerApp {
             settings_opened: None,
             settings_tab: 0,
             now_rail_open: true,
+            sidebar_drawer_open: false,
             rail_queue: false,
             pending_resume: None,
             last_session_save: std::time::Instant::now(),

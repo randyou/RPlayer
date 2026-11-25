@@ -178,7 +178,8 @@ impl RPlayerApp {
         const CARDS_H: f32 = 64.0;
         const FOOTER_H: f32 = 39.0;
         const GAP: f32 = 8.0;
-        let content = Vec2::new(SIZE.x - MARGIN * 2.0, SIZE.y - MARGIN * 2.0);
+        let width = super::layout::fit_width(ctx, SIZE.x);
+        let content = Vec2::new(width - MARGIN * 2.0, SIZE.y - MARGIN * 2.0);
 
         let mut close = false;
         let mut rerun = false;

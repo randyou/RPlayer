@@ -46,7 +46,7 @@ fn main() -> eframe::Result<()> {
     let mut viewport = egui::ViewportBuilder::default()
         .with_title("RPlayer")
         .with_inner_size([1440.0, 900.0])
-        .with_min_inner_size([1120.0, 720.0])
+        .with_min_inner_size([720.0, 600.0])
         .with_decorations(false)
         .with_window_level(egui::WindowLevel::Normal)
         // The player window itself is opaque: a per-pixel-alpha swap chain here

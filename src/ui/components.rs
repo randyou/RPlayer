@@ -15,9 +15,16 @@ pub fn eyebrow(ui: &mut Ui, text: &str) -> egui::Response {
 }
 
 pub fn page_title(ui: &mut Ui, text: &str) -> egui::Response {
+    // D13: below the rail breakpoint the page title drops from 42 to 32 so the
+    // header stops eating the first content row on short windows.
+    let size = if ui.ctx().screen_rect().width() < 1120.0 {
+        32.0
+    } else {
+        tokens::PAGE_TITLE
+    };
     ui.label(
         RichText::new(text)
-            .font(tokens::serif(tokens::PAGE_TITLE))
+            .font(tokens::serif(size))
             .color(theme::c().text),
     )
 }

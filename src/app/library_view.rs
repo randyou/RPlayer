@@ -55,8 +55,17 @@ struct Columns {
 
 impl Columns {
     fn for_width(width: f32) -> Self {
+        Self::for_width_opt(width, true)
+    }
+
+    /// `show_album = false` collapses the album column (D13 compact tier).
+    fn for_width_opt(width: f32, show_album: bool) -> Self {
         let index = 40.0;
-        let album = (width * 0.27).clamp(180.0, 360.0);
+        let album = if show_album {
+            (width * 0.27).clamp(180.0, 360.0)
+        } else {
+            0.0
+        };
         let duration = 64.0;
         let actions = 64.0;
         let title = (width - SIDE_PAD * 2.0 - index - album - duration - actions).max(180.0);
@@ -67,6 +76,10 @@ impl Columns {
             duration,
             actions,
         }
+    }
+
+    fn shows_album(&self) -> bool {
+        self.album > 0.0
     }
 
     fn index_rect(&self, row: Rect) -> Rect {
@@ -177,7 +190,10 @@ impl RPlayerApp {
                     .inner_margin(Margin::symmetric(0, 0))
                     .show(ui, |ui| {
                         ui.spacing_mut().item_spacing.y = 0.0;
-                        let columns = Columns::for_width(ui.available_width());
+                        let show_album =
+                            super::layout::Tier::of_ctx(ui.ctx()).shows_album_column();
+                        let columns =
+                            Columns::for_width_opt(ui.available_width(), show_album);
                         self.table_header(ui, columns);
 
                         if ids.is_empty() {
@@ -281,9 +297,14 @@ impl RPlayerApp {
                         .font(crate::ui::tokens::mono(9.0))
                         .color(theme::c().faint),
                 );
+                let title_size = if super::layout::Tier::of_ctx(ui.ctx()).shows_rail() {
+                    42.0
+                } else {
+                    32.0
+                };
                 ui.label(
                     RichText::new(title)
-                        .font(crate::ui::tokens::serif(42.0))
+                        .font(crate::ui::tokens::serif(title_size))
                         .color(theme::c().text),
                 );
                 ui.label(RichText::new(subtitle).size(11.5).color(theme::c().muted));
@@ -523,14 +544,16 @@ impl RPlayerApp {
         ) {
             clicked = Some(SortField::Title);
         }
-        if sort_column(
-            ui,
-            columns.album_rect(rect),
-            "专辑",
-            SortField::Album,
-            sort,
-            false,
-        ) {
+        if columns.shows_album()
+            && sort_column(
+                ui,
+                columns.album_rect(rect),
+                "专辑",
+                SortField::Album,
+                sort,
+                false,
+            )
+        {
             clicked = Some(SortField::Album);
         }
         if sort_column(
@@ -803,14 +826,16 @@ impl RPlayerApp {
                         theme::c().muted,
                     );
 
-                    let album_rect = columns.album_rect(rect);
-                    painter.with_clip_rect(album_rect).text(
-                        Pos2::new(album_rect.left() + 2.0, album_rect.center().y),
-                        Align2::LEFT_CENTER,
-                        &track.album,
-                        FontId::proportional(11.5),
-                        if current { theme::c().muted } else { theme::c().faint },
-                    );
+                    if columns.shows_album() {
+                        let album_rect = columns.album_rect(rect);
+                        painter.with_clip_rect(album_rect).text(
+                            Pos2::new(album_rect.left() + 2.0, album_rect.center().y),
+                            Align2::LEFT_CENTER,
+                            &track.album,
+                            FontId::proportional(11.5),
+                            if current { theme::c().muted } else { theme::c().faint },
+                        );
+                    }
 
                     painter.text(
                         Pos2::new(

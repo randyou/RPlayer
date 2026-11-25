@@ -14,8 +14,9 @@ use crate::ui::widgets;
 
 impl RPlayerApp {
     pub(super) fn player_bar(&mut self, ctx: &egui::Context) {
+        let tier = super::layout::Tier::of_ctx(ctx);
         egui::TopBottomPanel::bottom("rplayer-player-bar")
-            .exact_height(92.0)
+            .exact_height(tier.player_height())
             .frame(
                 Frame::NONE
                     .fill(theme::sidebar_deep())
@@ -30,10 +31,53 @@ impl RPlayerApp {
                     Pos2::new(screen.right() - 20.0, bar_bottom),
                 );
                 let width = full.width();
+
+                if tier.drawer() {
+                    // Two-line bar: identity + transport, progress on its own row.
+                    ui.scope_builder(egui::UiBuilder::new().max_rect(full), |ui| {
+                        ui.set_clip_rect(screen);
+                        let row_h = 40.0;
+                        let info_w = (width * 0.44).clamp(180.0, 300.0);
+                        ui.horizontal(|ui| {
+                            ui.spacing_mut().item_spacing.x = 0.0;
+                            ui.allocate_ui_with_layout(
+                                Vec2::new(info_w, row_h),
+                                Layout::left_to_right(Align::Center),
+                                |ui| {
+                                    ui.set_min_width(info_w);
+                                    self.player_info(ui);
+                                },
+                            );
+                            ui.add_space(8.0);
+                            let center = ui.available_width();
+                            ui.allocate_ui_with_layout(
+                                Vec2::new(center, row_h),
+                                Layout::left_to_right(Align::Center),
+                                |ui| {
+                                    ui.set_min_width(center);
+                                    self.transport_row(ui, ctx, 40.0, center);
+                                },
+                            );
+                        });
+                        ui.add_space(2.0);
+                        self.seek_row(ui);
+                    });
+                    return;
+                }
+
+                let compact = tier.icons_only_sidebar();
                 // Symmetric side columns keep the transport cluster at the
                 // real window centre instead of the centre of leftover space.
-                let side = if width >= 1040.0 { 335.0 } else { 280.0 };
+                let side = if width >= 1040.0 {
+                    335.0
+                } else if width >= 900.0 {
+                    280.0
+                } else {
+                    220.0
+                };
                 let center = (width - side * 2.0 - 24.0).max(300.0);
+                let transport_h = if compact { 40.0 } else { 50.0 };
+                let controls_h = transport_h + 3.0 + 18.0;
 
                 ui.scope_builder(egui::UiBuilder::new().max_rect(full), |ui| {
                     ui.set_clip_rect(screen);
@@ -49,16 +93,15 @@ impl RPlayerApp {
                         );
 
                         ui.add_space(12.0);
-                        // 50px transport row + 3px gap + 18px seek row. Using
-                        // the content height (instead of stretching to the
-                        // whole bar) lets the parent `Align::Center` place the
-                        // entire transport block on the bar's vertical center.
+                        // Transport row + 3px gap + seek row. Using the content
+                        // height lets the parent `Align::Center` place the whole
+                        // block on the bar's vertical center.
                         ui.allocate_ui_with_layout(
-                            Vec2::new(center, 71.0),
+                            Vec2::new(center, controls_h),
                             Layout::top_down(Align::Center),
                             |ui| {
                                 ui.set_min_width(center);
-                                self.player_controls(ui, ctx);
+                                self.player_controls(ui, ctx, compact);
                             },
                         );
 
@@ -162,34 +205,43 @@ impl RPlayerApp {
         }
     }
 
-    fn player_controls(&mut self, ui: &mut Ui, ctx: &egui::Context) {
+    fn player_controls(&mut self, ui: &mut Ui, ctx: &egui::Context, compact: bool) {
         let width = ui.available_width();
-        let controls_width = 158.0;
+        self.transport_row(ui, ctx, if compact { 40.0 } else { 50.0 }, width);
+        ui.add_space(3.0);
+        self.seek_row(ui);
+    }
+
+    /// Transport cluster only; `row_h` is the button row height in pixels.
+    fn transport_row(&mut self, ui: &mut Ui, ctx: &egui::Context, row_h: f32, width: f32) {
+        let controls_width = if row_h >= 50.0 { 158.0 } else { 132.0 };
+        let side_icon = if row_h >= 50.0 { 30.0 } else { 26.0 };
+        let play_size = if row_h >= 50.0 { 50.0 } else { 40.0 };
 
         ui.allocate_ui_with_layout(
-            Vec2::new(width, 50.0),
+            Vec2::new(width, row_h),
             Layout::left_to_right(Align::Center),
             |ui| {
                 ui.spacing_mut().item_spacing.x = 6.0;
                 ui.add_space(((width - controls_width) / 2.0).max(0.0));
 
-                if widgets::sidebar_icon_button(ui, Icon::Prev, 30.0, "上一首").clicked() {
+                if widgets::sidebar_icon_button(ui, Icon::Prev, side_icon, "上一首").clicked() {
                     self.previous_track(ctx);
                 }
 
                 let enabled = self.current.is_some() || !self.library.tracks.is_empty();
-                if widgets::play_button(ui, self.is_playing(), enabled).clicked() {
+                if widgets::play_button_sized(ui, self.is_playing(), enabled, play_size).clicked() {
                     self.toggle_play(ctx);
                 }
 
-                if widgets::sidebar_icon_button(ui, Icon::Next, 30.0, "下一首").clicked() {
+                if widgets::sidebar_icon_button(ui, Icon::Next, side_icon, "下一首").clicked() {
                     self.next_track(ctx, false);
                 }
 
                 if widgets::sidebar_icon_button_tinted(
                     ui,
                     self.play_mode.icon(),
-                    30.0,
+                    side_icon,
                     self.play_mode.active(),
                     self.play_mode.tooltip(),
                 )
@@ -199,8 +251,10 @@ impl RPlayerApp {
                 }
             },
         );
+    }
 
-        ui.add_space(3.0);
+    /// Seek bar with the current/total time at both ends.
+    fn seek_row(&mut self, ui: &mut Ui) {
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 8.0;
             ui.label(

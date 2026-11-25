@@ -142,9 +142,33 @@ v2 的功能面已经关掉，剩下的两件事性质完全不同：
 
 快捷键 820×460（21 条两栏，已有，需对稿）、关于 380×280（已有，需对稿）、拖入提示 380×220、错误态文案。
 
-### S7 响应式骨架 D13（L，4–6 天）
+### S7 响应式骨架 D13（L，4–6 天）· **已完成**
 
-断点 ≥1280 / 1120–1279（隐右栏）/ 840–1119（侧栏 72 图标 + 隐专辑列 + 播放条 76）/ <840（抽屉 + 播放条两行 96），最小逻辑宽 720。当前只做到「1120 以下收右栏」，其余三档要新写。**这是本版唯一的大件**，且与 200% DPI 破版问题同源（`with_min_inner_size([1120,720])` 在 1080p@200% 无解）。
+已改（新增 `src/app/layout.rs`，配套 `src/app/sidebar.rs`、`src/app/player_bar.rs`、`src/app/topbar.rs`、`src/app/now_rail.rs`、`src/app/library_view.rs`、`src/app/health.rs`、`src/ui/widgets.rs`、`src/ui/components.rs`、`src/ui/tokens.rs`、`src/main.rs`）：
+
+- **断点模块** `layout::Tier { Wide, Medium, Compact, Narrow }`：≥1280 / ≥1120 / ≥840 / 其余；`MIN_WIDTH 720`、`MIN_HEIGHT 600`；派生 `sidebar_width`（236/236/72/0）、`player_height`（92/92/76/96）、`shows_rail`（仅 Wide）、`shows_album_column`（Wide|Medium）、`icons_only_sidebar`、`drawer`、`dialog_width(viewport, preferred)`（Narrow 下 `min(92vw,720)`）。每帧按逻辑宽度求值，断点切换不做动画、直接重排。
+- **侧栏**：Wide/Medium 仍是 236 带文案；Compact 收成 72 宽图标轨（新 `widgets::nav_icon_item`，40 高、17px 图标、tooltip + AccessKit 名，选中态沿用左 2px accent 条）；Narrow 变抽屉——`Area` 前景层 + 半透明遮罩，宽 236、满高、可滚动，点遮罩 / Esc / 选中任一导航即关（`sidebar_drawer_open`）。
+- **顶栏**：Narrow 档在面包屑左侧插入「打开导航」按钮；面包屑拖动层起点随之后移 36px，避免拖动层吃掉按钮点击。
+- **右栏**：`rail_available` 改为 `Tier::shows_rail()`（≥1280），1120–1279 不再尝试显示。
+- **曲库表**：`Columns::for_width_opt(width, show_album)`，Compact/Narrow 收起专辑列（表头与行内文本都不画），列变为 `# / 曲目+艺人 / 时长`；页头标题在 <1120 从 serif 42 降到 32（`library_view` 与 `components::page_title` 两处）。
+- **播放条**：92 / 76 / 96 三档。Compact 用 40px 播放键 + 26px 侧键、侧栏列 220；Narrow 改两行——第一行 44% 封面信息 + 运输簇，第二行进度条独占整行，右侧 extras 隐藏（音量 / 歌词 / EQ / 迷你播放器仍在 Wide、Medium 保留）。
+- **对话框**：健康检查宽度走 `layout::fit_width(ctx, 720)`，Narrow 下 `min(92vw,720)`；`src/main.rs` 的 `with_min_inner_size` 与 `tokens::WINDOW_MIN` 由 1120×720 改为 **720×600**，`topbar.rs` 的自绘缩放下限同步引用 `layout::MIN_*`。
+
+证据（`docs/qa/v0.2/`，均实测，另有同内容 `-print.png`）：
+
+| 面 | 文件（`-screen.png`） |
+| --- | --- |
+| ≥1280 Wide：236 侧栏 + 专辑列 + 92 播放条 | `v220-S7-wide-library-screen.png` |
+| ≥1280 Wide：文件夹页（无当前曲时无右栏） | `v220-S7-wide-screen.png` |
+| 840–1119 Compact：72 图标轨 + 无专辑列 + 76 播放条（1024×720） | `v220-S7-compact-screen.png` / `v220-S7-compact-library-screen.png` |
+| <840 Narrow：抽屉按钮 + 两行 96 播放条（720×720） | `v220-S7-narrow-screen.png` |
+| <840 Narrow：抽屉展开（遮罩 + 236 面板） | `v220-S7-drawer-screen.png` |
+
+取舍（记录，不阻塞 D13 收口）：
+- 歌词 / 智能歌单 / 均衡器三个编辑窗仍是固定 820 / 620 / 788 内容宽，未接 `dialog_width`；Narrow 下靠 egui 自动夹到屏幕内，若后续要严格 92vw，再逐窗接。
+- Narrow 的运输簇右对齐（信息列固定 44%），不是稿面的绝对居中；两行结构与进度独占一行已满足。
+- 抽屉开合是瞬时显示，没有 280ms 滑入：稿面要求「断点切换不播动画」，开合动画留待 S8 之后统一动效包。
+- 200% DPI 四档截图待补：本轮以 1440×900 / 1024×720 / 720×720 三个逻辑尺寸取证，DPI 缩放回归放在发版前统一跑。
 
 ### S8 桌面歌词 D14（S，0.5 天）
 

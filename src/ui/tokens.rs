@@ -9,7 +9,7 @@ pub const RAIL_WIDTH: f32 = 300.0;
 pub const RAIL_BREAKPOINT: f32 = 1280.0;
 
 pub const WINDOW_DEFAULT: Vec2 = Vec2::new(1440.0, 900.0);
-pub const WINDOW_MIN: Vec2 = Vec2::new(1120.0, 720.0);
+pub const WINDOW_MIN: Vec2 = Vec2::new(720.0, 600.0);
 
 pub const PAGE_TITLE: f32 = 42.0;
 pub const NOW_TITLE: f32 = 60.0;
@@ -50,7 +50,7 @@ mod tests {
     #[test]
     fn window_tokens_keep_the_designed_minimum() {
         assert_eq!(WINDOW_DEFAULT, Vec2::new(1440.0, 900.0));
-        assert_eq!(WINDOW_MIN, Vec2::new(1120.0, 720.0));
+        assert_eq!(WINDOW_MIN, Vec2::new(720.0, 600.0));
     }
 
     #[test]

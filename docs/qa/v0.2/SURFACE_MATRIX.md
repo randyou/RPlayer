@@ -32,10 +32,10 @@
 
 | 设计面 | 代码 | 状态 | 证据 / 剩余 |
 | --- | --- | --- | --- |
-| 窗口标题栏 | `src/app/topbar.rs` | 已完成 | `v2012-shell.png`；顶边只拖动不缩放（顶边缩放按设计不适用），侧/底用 `SetWindowPos` 缩放 |
-| 侧边导航 | `src/app/sidebar.rs` | 已完成 | 236px、深色、分组计数 |
-| 底部播放条 | `src/app/player_bar.rs` | 已完成 | 92px、48 封面、三组动作 |
-| 正在播放侧栏 | `src/app/now_rail.rs` | 已完成 | 300px，≥1280 显示 |
+| 窗口标题栏 | `src/app/topbar.rs` | 已完成 | `v2012-shell.png`；顶边只拖动不缩放（顶边缩放按设计不适用），侧/底用 `SetWindowPos` 缩放；v2.2.0 D13 起 <840 在左侧加「打开导航」按钮 |
+| 侧边导航 | `src/app/sidebar.rs` | 已完成 | v2.2.0 D13：≥1120 为 236px 深色 + 分组计数；840–1119 收成 72px 图标轨；<840 变 236px 抽屉（遮罩、Esc / 点外部即关）。证据 `v220-S7-compact-screen.png`、`v220-S7-narrow-screen.png`、`v220-S7-drawer-screen.png` |
+| 底部播放条 | `src/app/player_bar.rs` | 已完成 | v2.2.0 D13：≥1120 为 92px（48 封面 + 三组动作）；840–1119 为 76px（40 播放键）；<840 为 96px 两行（进度独占一行、右侧动作隐藏）。证据 `v220-S7-wide-library-screen.png`、`v220-S7-compact-screen.png`、`v220-S7-narrow-screen.png` |
+| 正在播放侧栏 | `src/app/now_rail.rs` | 已完成 | 300px；v2.2.0 D13 起严格 ≥1280 显示（1120–1279 不再尝试） |
 | 播放队列 | `src/app/player_bar.rs` | 已完成 | `v2-queue.png`，360px 右抽屉 |
 | 命令面板 | `src/app/command_palette.rs` | 已完成 | `v2-palette.png`，分组/键盘滚动 |
 | 轻提示 | `src/app/mod.rs` | 已完成 | 底部居中 toast |

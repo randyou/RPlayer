@@ -81,8 +81,8 @@ impl RPlayerApp {
     /// Borderless windows need their own edge hit-testing and resize loop.
     pub(super) fn window_resize_edges(&self, ctx: &egui::Context) {
         const EDGE: f32 = 6.0;
-        const MIN_W: f32 = 1120.0;
-        const MIN_H: f32 = 720.0;
+        const MIN_W: f32 = super::layout::MIN_WIDTH;
+        const MIN_H: f32 = super::layout::MIN_HEIGHT;
         let id = Id::new("rplayer-window-resize");
 
         let Some(pos) = native_cursor_pos() else {
@@ -233,6 +233,13 @@ impl RPlayerApp {
                 let mut search_rect = Rect::NOTHING;
 
                 ui.horizontal_centered(|ui| {
+                    if super::layout::Tier::of_ctx(ui.ctx()).drawer() {
+                        if widgets::sidebar_icon_button(ui, Icon::List, 28.0, "打开导航").clicked()
+                        {
+                            self.sidebar_drawer_open = !self.sidebar_drawer_open;
+                        }
+                        ui.add_space(4.0);
+                    }
                     self.topbar_breadcrumb(ui);
 
                     let compact = ui.available_width() < 900.0;
@@ -260,9 +267,16 @@ impl RPlayerApp {
                 // Drag layers stay above the panel background but below the
                 // interactive controls. The 6px top strip is always a drag
                 // handle; the top edge is intentionally not resizable.
+                // On the drawer tier a menu button sits at the far left; the
+                // breadcrumb drag layer must start after it or it swallows clicks.
+                let menu_offset = if super::layout::Tier::of_ctx(ctx).drawer() {
+                    36.0
+                } else {
+                    0.0
+                };
                 let breadcrumb_rect = Rect::from_min_size(
-                    bar_rect.min,
-                    Vec2::new(220.0, tokens::TOPBAR_HEIGHT),
+                    Pos2::new(bar_rect.left() + menu_offset, bar_rect.top()),
+                    Vec2::new(220.0 - menu_offset, tokens::TOPBAR_HEIGHT),
                 );
                 let gap_left = bar_rect.left() + 220.0;
                 let gap_right = search_rect.left().max(gap_left);

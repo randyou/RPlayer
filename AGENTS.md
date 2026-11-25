@@ -101,13 +101,18 @@ src/ui/focus.rs      2px focus rings for custom controls
 
 - Spacing: 4/8/12/16 px; radius 8 for controls, 10 for cards, 2 for covers.
 - Layout tokens live in `src/ui/tokens.rs`: 236 sidebar, 54 topbar, 92 player,
-  300 rail, 1280 rail breakpoint, 1440×900 default, 1120×720 minimum.
+  300 rail, 1280 rail breakpoint, 1440×900 default, 720×600 minimum.
+- Responsive tiers live in `src/app/layout.rs`: >=1280 wide, 1120-1279 rail
+  hidden, 840-1119 compact (72px icon sidebar, no album column, 76px player),
+  <840 narrow (drawer sidebar, two-line 96px player). Never scale font sizes
+  across tiers; drop columns first.
 - Visible themes are only Paper / Nocturne. Old preset ids alias into those two.
 - Primary buttons use accent; secondary use card + border; danger uses signal.
 - Window chrome is borderless: `src/app/topbar.rs` draws window buttons and the
   drag handle; side/bottom resize uses native `SetWindowPos`, never
   `ViewportCommand::BeginResize`.
-- Page headers use `tokens::serif(42.0)` with a mono eyebrow; body text is 13.
+- Page headers use `tokens::serif(42.0)` with a mono eyebrow, dropping to 32 below
+  1120px; body text is 13.
 - Buttons scale to 0.975 while pressed via `animate_bool_with_time`.
 - Custom controls draw focus with `src/ui/focus.rs`: `ring` for rounded
   rectangles, `ring_round` for circles, `ring_rect` for table rows/sliders.
@@ -118,7 +123,7 @@ src/ui/focus.rs      2px focus rings for custom controls
 
 ## Verification
 
-- Unit tests: `cargo test --release` (currently 75; update this line when it moves).
+- Unit tests: `cargo test --release` (currently 78; update this line when it moves).
 - `cargo test` does **not** rebuild `target/release/rplayer.exe`; always run
   `cargo build --release` before UI screenshots.
 - Windows UI automation: `agent-desktop snapshot --window-id <id>`, then click
