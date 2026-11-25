@@ -66,6 +66,7 @@ pub enum OverlayCommand {
     CloseMini,
     OpenMain,
     OpenLyricsSettings,
+    FetchLyrics,
 }
 
 pub fn lyrics_viewport() -> ViewportId {
@@ -253,12 +254,30 @@ pub fn show_lyrics(
                     if !snapshot.has_lyrics {
                         shadow_text(
                             ui.painter(),
-                            Pos2::new(center_x, capsule.bottom() - 27.0),
-                            "将同名 .lrc 放在歌曲目录，RPlayer 会自动加载",
-                            FontId::proportional(11.0),
+                            Pos2::new(center_x, capsule.bottom() - 43.0),
+                            "将同名 .lrc 放在歌曲目录，或",
+                            FontId::proportional(10.5),
                             theme::c().faint,
                             shadow,
                         text_alpha,
+                        );
+                        shadow_text(
+                            ui.painter(),
+                            Pos2::new(center_x, capsule.bottom() - 23.0),
+                            "获取歌词",
+                            FontId::proportional(11.5),
+                            theme::accent_hover(),
+                            shadow,
+                            text_alpha,
+                        );
+                        let underline = Rect::from_center_size(
+                            Pos2::new(center_x, capsule.bottom() - 15.0),
+                            Vec2::new(48.0, 1.0),
+                        );
+                        ui.painter().rect_filled(
+                            underline,
+                            0,
+                            with_alpha(theme::accent_hover(), text_alpha),
                         );
                     } else if !snapshot.lyric_next.trim().is_empty() {
                         shadow_text(
@@ -398,11 +417,10 @@ pub fn show_lyrics(
                     .context_menu(|ui| {
                         menu::begin(ui);
                         menu::heading(ui, "桌面歌词");
-                        if menu::item(ui, Some(Icon::Lock), "锁定位置", None, false)
-                            .clicked()
-                        {
+                        let lock_label = if locked { "解锁位置" } else { "锁定位置" };
+                        if menu::item(ui, Some(Icon::Lock), lock_label, None, false).clicked() {
                             if let Ok(mut queue) = commands.lock() {
-                                queue.push(OverlayCommand::SetLyricsLocked(true));
+                                queue.push(OverlayCommand::SetLyricsLocked(!locked));
                             }
                             ui.close_menu();
                         }
@@ -422,6 +440,21 @@ pub fn show_lyrics(
                             ui.close_menu();
                         }
                     });
+
+                if !snapshot.has_lyrics && snapshot.has_track {
+                    let cta = Rect::from_center_size(
+                        Pos2::new(center_x, capsule.bottom() - 23.0),
+                        Vec2::new(76.0, 24.0),
+                    );
+                    let response = ui
+                        .interact(cta, Id::new("lyrics-fetch"), Sense::click())
+                        .on_hover_cursor(egui::CursorIcon::PointingHand);
+                    if response.clicked() {
+                        if let Ok(mut queue) = commands.lock() {
+                            queue.push(OverlayCommand::FetchLyrics);
+                        }
+                    }
+                }
 
                 // A gear opens the two opacity sliders. Its opacity follows the
                 // panel, with a hover boost when the panel is fully transparent.

@@ -616,6 +616,19 @@ pub fn secondary_button(ui: &mut Ui, text: &str) -> Response {
     response
 }
 
+/// A compact full-width secondary button for narrow settings content.
+pub fn secondary_button_sized(ui: &mut Ui, text: &str, width: f32) -> Response {
+    let button = Button::new(RichText::new(text).color(theme::c().text).size(12.0))
+        .fill(theme::c().card)
+        .stroke(Stroke::new(1.0_f32, theme::c().border))
+        .corner_radius(8)
+        .min_size(Vec2::new(width, 28.0));
+    let response = ui.add(button).on_hover_cursor(CursorIcon::PointingHand);
+    crate::ui::focus::focus_on_click(&response);
+    crate::ui::focus::ring(ui, &response);
+    response
+}
+
 pub fn danger_button(ui: &mut Ui, text: &str) -> Response {
     let button = Button::new(RichText::new(text).color(theme::c().danger).size(13.0))
         .fill(theme::c().danger.gamma_multiply(0.12))

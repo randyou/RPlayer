@@ -1912,6 +1912,11 @@ impl RPlayerApp {
                     ctx.send_viewport_cmd_to(egui::ViewportId::ROOT, ViewportCommand::Visible(true));
                     ctx.send_viewport_cmd_to(egui::ViewportId::ROOT, ViewportCommand::Focus);
                 }
+                OverlayCommand::FetchLyrics => {
+                    if let Some(id) = self.current {
+                        self.request_lyrics(ctx, id, true);
+                    }
+                }
                 OverlayCommand::OpenMain => {
                     self.mini_open = false;
                     self.mini_viewport_active = false;

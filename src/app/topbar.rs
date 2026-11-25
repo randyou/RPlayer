@@ -221,6 +221,17 @@ impl RPlayerApp {
                     ],
                     egui::Stroke::new(1.0_f32, theme::c().border_soft),
                 );
+                let bar_rect = ui.max_rect();
+                let on_edge = ctx
+                    .input(|input| input.pointer.latest_pos())
+                    .is_some_and(|pos| {
+                        let rect = ctx.screen_rect();
+                        pos.x - rect.left() <= 6.0
+                            || rect.right() - pos.x <= 6.0
+                            || rect.bottom() - pos.y <= 6.0
+                    });
+                let mut search_rect = Rect::NOTHING;
+
                 ui.horizontal_centered(|ui| {
                     self.topbar_breadcrumb(ui);
 
@@ -236,6 +247,7 @@ impl RPlayerApp {
                             },
                         )
                         .inner;
+                    search_rect = response.rect;
                     if std::mem::take(&mut self.focus_search) {
                         response.request_focus();
                     }
@@ -248,33 +260,45 @@ impl RPlayerApp {
                     });
                 });
 
-                // The breadcrumb doubles as the borderless window's drag handle.
-                let drag = ui.interact(
-                    Rect::from_min_size(
-                        ui.max_rect().min,
-                        Vec2::new(220.0, tokens::TOPBAR_HEIGHT),
-                    ),
-                    Id::new("rplayer-titlebar-drag"),
-                    Sense::click_and_drag(),
+                // Drag layers stay above the panel background but below the
+                // interactive controls. The 6px top strip is always a drag
+                // handle; the top edge is intentionally not resizable.
+                let breadcrumb_rect = Rect::from_min_size(
+                    bar_rect.min,
+                    Vec2::new(220.0, tokens::TOPBAR_HEIGHT),
                 );
-                let drag = drag.on_hover_cursor(egui::CursorIcon::Grab);
-                let on_edge = ctx
-                    .input(|input| input.pointer.latest_pos())
-                    .is_some_and(|pos| {
-                        let rect = ctx.screen_rect();
-                        pos.x - rect.left() <= 6.0
-                            || rect.right() - pos.x <= 6.0
-                            || rect.bottom() - pos.y <= 6.0
-                    });
-                if drag.clicked() && self.expanded {
-                    self.expanded = false;
-                }
-                if drag.drag_started() && !on_edge {
-                    ctx.send_viewport_cmd(ViewportCommand::StartDrag);
-                }
-                if drag.double_clicked() {
-                    let maximized = ctx.input(|input| input.viewport().maximized.unwrap_or(false));
-                    ctx.send_viewport_cmd(ViewportCommand::Maximized(!maximized));
+                let gap_left = bar_rect.left() + 220.0;
+                let gap_right = search_rect.left().max(gap_left);
+                let gap_rect = Rect::from_min_max(
+                    Pos2::new(gap_left, bar_rect.top()),
+                    Pos2::new(gap_right, bar_rect.bottom()),
+                );
+                let top_strip = Rect::from_min_max(
+                    bar_rect.min,
+                    Pos2::new(bar_rect.right(), bar_rect.top() + 6.0),
+                );
+                for (id, rect, is_breadcrumb) in [
+                    ("rplayer-titlebar-drag-breadcrumb", breadcrumb_rect, true),
+                    ("rplayer-titlebar-drag-gap", gap_rect, false),
+                    ("rplayer-titlebar-drag-top", top_strip, false),
+                ] {
+                    if rect.width() <= 0.0 {
+                        continue;
+                    }
+                    let drag = ui
+                        .interact(rect, Id::new(id), Sense::click_and_drag())
+                        .on_hover_cursor(egui::CursorIcon::Grab);
+                    if is_breadcrumb && drag.clicked() && self.expanded {
+                        self.expanded = false;
+                    }
+                    if drag.drag_started() && !on_edge {
+                        ctx.send_viewport_cmd(ViewportCommand::StartDrag);
+                    }
+                    if drag.double_clicked() {
+                        let maximized =
+                            ctx.input(|input| input.viewport().maximized.unwrap_or(false));
+                        ctx.send_viewport_cmd(ViewportCommand::Maximized(!maximized));
+                    }
                 }
             });
     }

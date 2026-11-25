@@ -1,6 +1,6 @@
 # RPlayer v2 设计面验收矩阵
 
-基线：v2.0.11。状态：`已完成` / `部分` / `未验收`。
+基线：v2.0.12。状态：`已完成` / `部分` / `未验收`。
 本矩阵只记录可核对的证据；没有截图或代码证据的面不写“已完成”。
 
 ## 视图（11）
@@ -23,7 +23,7 @@
 
 | 设计面 | 代码 | 状态 | 证据 / 剩余 |
 | --- | --- | --- | --- |
-| 窗口标题栏 | `src/app/topbar.rs` | 部分 | 自绘按钮/拖动/侧底缩放；顶边不支持缩放 |
+| 窗口标题栏 | `src/app/topbar.rs` | 已完成 | `v2012-shell.png`；顶边 6px 拖动、侧/底缩放 |
 | 侧边导航 | `src/app/sidebar.rs` | 已完成 | 236px、深色、分组计数 |
 | 底部播放条 | `src/app/player_bar.rs` | 已完成 | 92px、48 封面、三组动作 |
 | 正在播放侧栏 | `src/app/now_rail.rs` | 已完成 | 300px，≥1280 显示 |
@@ -46,7 +46,7 @@
 | 桌面歌词 · 默认 | `src/overlay.rs` | 已完成 | `v202-lyrics-default.png` |
 | 桌面歌词 · 悬停 | `src/overlay.rs` | 已完成 | `v202-lyrics-hover.png`，0.78 深色面板 |
 | 桌面歌词 · 锁定 | `src/overlay.rs` | 已完成 | `v202-lyrics-locked.png`，提示走设置 |
-| 桌面歌词 · 无歌词 | `src/overlay.rs` | 已完成 | `v202-lyrics-empty.png` |
+| 桌面歌词 · 无歌词 | `src/overlay.rs` | 部分 | 空态 CTA 已实现；旧歌词残留导致截图未复验 |
 | 迷你播放器 · 经典 | `src/overlay.rs` | 已完成 | `v2-mini.png`，410×146 |
 | 迷你播放器 · 紧凑 | `src/overlay.rs` | 已完成 | 同窗口切换，保留 |
 | 系统托盘菜单 | `src/platform/tray.rs` | 已完成 | 原生 Win32 菜单，按系统样式 |

@@ -651,15 +651,27 @@ impl RPlayerApp {
                             .color(theme::c().faint),
                         );
                         ui.add_space(9.0);
-                        ui.horizontal(|ui| {
-                            if widgets::secondary_button(ui, "备份数据…").clicked() {
+                        let narrow = ui.available_width() < 360.0;
+                        if narrow {
+                            let width = ui.available_width();
+                            if widgets::secondary_button_sized(ui, "备份数据…", width).clicked() {
                                 backup_requested = true;
                             }
                             ui.add_space(4.0);
-                            if widgets::secondary_button(ui, "恢复数据…").clicked() {
+                            if widgets::secondary_button_sized(ui, "恢复数据…", width).clicked() {
                                 restore_requested = true;
                             }
-                        });
+                        } else {
+                            ui.horizontal(|ui| {
+                                if widgets::secondary_button(ui, "备份数据…").clicked() {
+                                    backup_requested = true;
+                                }
+                                ui.add_space(4.0);
+                                if widgets::secondary_button(ui, "恢复数据…").clicked() {
+                                    restore_requested = true;
+                                }
+                            });
+                        }
                         ui.add_space(5.0);
                         ui.checkbox(
                             &mut backup_media,
