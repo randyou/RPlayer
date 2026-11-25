@@ -902,7 +902,9 @@ impl RPlayerApp {
                     } else {
                         vec![id]
                     };
-                    response.dnd_set_drag_payload(drag_ids);
+                    if !response.context_menu_opened() {
+                        response.dnd_set_drag_payload(drag_ids);
+                    }
 
                     response.context_menu(|ui| {
                         menu::begin(ui);
