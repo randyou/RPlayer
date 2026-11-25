@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 64" role="img" aria-label="RPlayer">
+  <g transform="translate(6 6)">
+    <rect x="2" y="2" width="52" height="52" rx="10" fill="#2E5B44"/>
+    <path fill="#F4EFE5" transform="translate(0 -1) scale(.9)" d="M16 14h12v36H16zM28 14h12c9.4 0 14 5.3 14 12s-4.6 12-14 12H28v-8h11c3.2 0 5-1.5 5-4s-1.8-4-5-4H28zM38.5 38 53 51H42L30.5 42z"/>
+  </g>
+  <text x="72" y="42" fill="#1D1B16" font-family="'Noto Serif SC','Source Han Serif SC',Georgia,serif" font-size="30" font-weight="600" letter-spacing="0.2">RPlayer</text>
+</svg>
+

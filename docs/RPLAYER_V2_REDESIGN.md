@@ -324,6 +324,15 @@ RPlayer 0.13.5 的功能是完整的：本地扫描、歌词、队列、歌单�
 4. 每屏完成后用真实窗口截图回归，和 `shots/` 对照；桌面歌词与迷你播放器需单独做 100% / 125% / 150% DPI 检查。
 5. 全量通过后更新 `docs/`、版本说明与商店截图。
 
+---
 
+## 12. 品牌标识
 
+稿：`design/rplayer-v2/brand/brand-sheet.png`；PDF：`RPlayer-v2-品牌标识.pdf`；矢量源：`rplayer-mark.svg`、`rplayer-lockup*.svg`。
 
+- **Sleeve R**：森林色唱片套包住纸色 R。两个字——“套”与“R”。远看是 R，近看是封套。
+- **色**：仅 `#2E5B44` + `#F4EFE5`；Nocturne 使用 reversed 组合；signal 红只用于状态，不进入标识。
+- **最小尺寸**：标识 16px；横向组合字标 ≥ 12px；堆叠组合 ≥ 132px。
+- **留白**：`x = 1/4 标识宽`，四边不小于 x；标记内不放文字、线框或第二个标识。
+- **禁止**：不加投影、不用渐变、16–24px 不描边、深底必须反白。
+- **资产**：`favicon-32.png`、`apple-touch-180.png`、`og-1200x630.png`。Cascadia Mono 缺失处回退 Consolas。

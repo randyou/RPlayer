@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>RPlayer · 设计稿补全 + 品牌标识</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="gaps.css">
+<link rel="stylesheet" href="spec2.css?v=3">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-window" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3.5 9h17" stroke="currentColor" stroke-width="1.5"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8.5 5.8v12.4L18 12Z" fill="currentColor"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><rect x="7" y="5" width="3.5" height="14" rx="1" fill="currentColor"/><rect x="13.5" y="5" width="3.5" height="14" rx="1" fill="currentColor"/></symbol>
+  <symbol id="i-prev" viewBox="0 0 24 24"><path d="M7 5v14M18 6l-8 6 8 6Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+  <symbol id="i-next" viewBox="0 0 24 24"><path d="M17 5v14M6 6l8 6-8 6Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-9.2A3.8 3.8 0 0 1 12 8a3.8 3.8 0 0 1 7 2.8C19 15.6 12 20 12 20Z" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+  <symbol id="i-lyrics" viewBox="0 0 24 24"><path d="M5 7h14M5 12h10M5 17h7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="i-mini" viewBox="0 0 24 24"><rect x="3.5" y="6" width="17" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="8.5" cy="12" r="2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M13 10h4M13 14h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.1" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M18.4 5.6l-1.6 1.6M7.2 16.8l-1.6 1.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 4 21 20H3Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M12 10v4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="17.2" r="1" fill="currentColor"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M9 4h6l-1 5 3 3v2H7v-2l3-3-1-5ZM12 14v6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></symbol>
+  <symbol id="i-expand" viewBox="0 0 24 24"><path d="M9 4H4v5M15 4h5v5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M5 7h14M9 7V4.5h6V7M7 7l1 13h8l1-13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M15.3 15.3 20 20" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7.5A1.5 1.5 0 0 1 4.5 6H9l2 2h8.5A1.5 1.5 0 0 1 21 9.5v8A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5Z" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+  <symbol id="i-note" viewBox="0 0 24 24"><path d="M9 18V6l9-2v12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="15.5" cy="16" r="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
+<symbol id="i-list" viewBox="0 0 24 24"><path d="M5 7h14M5 12h14M5 17h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3.5 21 20H3Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M12 9v5M12 17.2v.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+</svg>
+
+<!-- 01 · TRAY & SYSTEM -->
+<section class="plate" id="tray">
+  <div class="ph">
+    <div>
+      <div class="eyebrow">DESIGN GAPS · 01 / TRAY &amp; SYSTEM</div>
+      <h1>托盘，也是入口。</h1>
+      <p class="lede">把系统托盘当成一个 280px 的小播放器：曲目、进度、传输、开关和退出都在一条视线里。图标不换脸，状态放在提示里。</p>
+    </div>
+    <div class="ph-right"><span class="mono">D1 · D2 · D3 · D4</span><span>280 × 366 / 16 PX</span><span>1600 × 1000</span></div>
+  </div>
+
+  <div class="s2-tray-grid">
+    <div class="s2-tray-col">
+      <div class="block-label"><span>A / 托盘菜单 · 纸张</span><span class="mono">280 × 366</span></div>
+      <div class="tray light">
+        <div class="tr-head">
+          <img class="tr-art" src="brand/rplayer-mark.svg" alt="">
+          <div class="tr-meta"><b>一千年以后</b><span>林俊杰</span></div>
+          <span class="tr-time mono">2:59 / 3:48</span>
+        </div>
+        <div class="tr-prog"><i style="width:76%"></i></div>
+        <div class="tr-row"><svg class="icon"><use href="#i-window"/></svg><span>显示主窗口</span></div>
+        <div class="tr-row"><svg class="icon"><use href="#i-play"/></svg><span>播放</span><kbd>Space</kbd></div>
+        <div class="tr-row"><svg class="icon"><use href="#i-prev"/></svg><span>上一首</span><kbd>Ctrl ←</kbd></div>
+        <div class="tr-row"><svg class="icon"><use href="#i-next"/></svg><span>下一首</span><kbd>Ctrl →</kbd></div>
+        <div class="tr-sep"></div>
+        <div class="tr-row"><svg class="icon"><use href="#i-heart"/></svg><span>收藏当前歌曲</span><span class="tr-check"><svg class="icon"><use href="#i-check"/></svg></span></div>
+        <div class="tr-row"><svg class="icon"><use href="#i-lyrics"/></svg><span>桌面歌词</span><kbd>Ctrl L</kbd><span class="tr-check"><svg class="icon"><use href="#i-check"/></svg></span></div>
+        <div class="tr-row"><svg class="icon"><use href="#i-mini"/></svg><span>迷你播放器</span><kbd>Ctrl M</kbd></div>
+        <div class="tr-sep"></div>
+        <div class="tr-row"><svg class="icon"><use href="#i-settings"/></svg><span>设置</span><kbd>Ctrl ,</kbd></div>
+        <div class="tr-row danger"><svg class="icon"><use href="#i-close"/></svg><span>退出 RPlayer</span></div>
+      </div>
+    </div>
+
+    <div class="s2-tray-col">
+      <div class="block-label"><span>B / 托盘菜单 · 夜幕</span><span class="mono">REVERSED</span></div>
+      <div class="tray dark">
+        <div class="tr-head">
+          <img class="tr-art" src="brand/rplayer-mark.svg" alt="">
+          <div class="tr-meta"><b>一千年以后</b><span>林俊杰</span></div>
+          <span class="tr-time mono">2:59 / 3:48</span>
+        </div>
+        <div class="tr-prog"><i style="width:76%"></i></div>
+        <div class="tr-row"><svg class="icon"><use href="#i-window"/></svg><span>显示主窗口</span></div>
+        <div class="tr-row"><svg class="icon"><use href="#i-pause"/></svg><span>暂停</span><kbd>Space</kbd></div>
+        <div class="tr-row"><svg class="icon"><use href="#i-prev"/></svg><span>上一首</span><kbd>Ctrl ←</kbd></div>
+        <div class="tr-row"><svg class="icon"><use href="#i-next"/></svg><span>下一首</span><kbd>Ctrl →</kbd></div>
+        <div class="tr-sep"></div>
+        <div class="tr-row"><svg class="icon"><use href="#i-heart"/></svg><span>收藏当前歌曲</span><span class="tr-check"><svg class="icon"><use href="#i-check"/></svg></span></div>
+        <div class="tr-row"><svg class="icon"><use href="#i-lyrics"/></svg><span>桌面歌词</span><kbd>Ctrl L</kbd><span class="tr-check"><svg class="icon"><use href="#i-check"/></svg></span></div>
+        <div class="tr-row"><svg class="icon"><use href="#i-mini"/></svg><span>迷你播放器</span><kbd>Ctrl M</kbd></div>
+        <div class="tr-sep"></div>
+        <div class="tr-row"><svg class="icon"><use href="#i-settings"/></svg><span>设置</span><kbd>Ctrl ,</kbd></div>
+        <div class="tr-row danger"><svg class="icon"><use href="#i-close"/></svg><span>退出 RPlayer</span></div>
+      </div>
+    </div>
+
+    <div class="s2-tray-col">
+      <div class="block-label"><span>C / 无曲目 · 禁用态</span><span class="mono">35% OPACITY</span></div>
+      <div class="tray light idle">
+        <div class="tr-head">
+          <img class="tr-art" src="brand/rplayer-mark.svg" alt="">
+          <div class="tr-meta"><b>未在播放</b><span>从主窗口开始</span></div>
+          <span class="tr-time mono">--:--</span>
+        </div>
+        <div class="tr-prog"><i style="width:0"></i></div>
+        <div class="tr-row"><svg class="icon"><use href="#i-window"/></svg><span>显示主窗口</span></div>
+        <div class="tr-row disabled"><svg class="icon"><use href="#i-play"/></svg><span>播放</span><kbd>Space</kbd></div>
+        <div class="tr-row disabled"><svg class="icon"><use href="#i-prev"/></svg><span>上一首</span><kbd>Ctrl ←</kbd></div>
+        <div class="tr-row disabled"><svg class="icon"><use href="#i-next"/></svg><span>下一首</span><kbd>Ctrl →</kbd></div>
+        <div class="tr-sep"></div>
+        <div class="tr-row disabled"><svg class="icon"><use href="#i-heart"/></svg><span>收藏当前歌曲</span></div>
+        <div class="tr-row"><svg class="icon"><use href="#i-lyrics"/></svg><span>桌面歌词</span><kbd>Ctrl L</kbd></div>
+        <div class="tr-row"><svg class="icon"><use href="#i-mini"/></svg><span>迷你播放器</span><kbd>Ctrl M</kbd></div>
+        <div class="tr-sep"></div>
+        <div class="tr-row"><svg class="icon"><use href="#i-settings"/></svg><span>设置</span><kbd>Ctrl ,</kbd></div>
+        <div class="tr-row danger"><svg class="icon"><use href="#i-close"/></svg><span>退出 RPlayer</span></div>
+      </div>
+    </div>
+
+    <aside class="s2-side-notes">
+      <div class="s2-side-block">
+        <div class="s2-kicker">D1 / FORMAL MENU</div>
+        <h3>三组，不写组名。</h3>
+        <p>280 × 366，头部 58 px，行高 30 px。只用两条分隔线分三组：窗口与传输 / 收藏与浮窗 / 设置与退出。再加组名只会让 280 px 更吵。</p>
+      </div>
+      <div class="s2-spec-list">
+        <div><span>HEADER</span><b>36 封面 + 曲名 / 艺人 + 时间</b></div>
+        <div><span>PROGRESS</span><b>2 px，不可拖动，只读</b></div>
+        <div><span>DISABLED</span><b>35% 不透明度，仍占行高</b></div>
+        <div><span>CHECK</span><b>收藏 / 桌面歌词 / 迷你</b></div>
+        <div><span>EXIT</span><b>signal 红，永远最后一行</b></div>
+      </div>
+      <div class="s2-callout"><b>不显示“播放队列”</b><span>280 px 里再加一层列表会失去托盘菜单的即时性；队列留给主窗口。</span></div>
+    </aside>
+  </div>
+
+  <div class="s2-system-strip">
+    <div class="s2-sys-card">
+      <div class="s2-kicker">D2 / TRAY ICON</div>
+      <div class="s2-icons">
+        <div><img src="brand/rplayer-mark.svg" width="16"><span class="mono">16</span></div>
+        <div><img src="brand/rplayer-mark.svg" width="24"><span class="mono">24</span></div>
+        <div><img src="brand/rplayer-mark.svg" width="32"><span class="mono">32</span></div>
+        <div class="s2-icon-dark"><img src="brand/rplayer-mark.svg" width="32"><span class="mono">DARK</span></div>
+      </div>
+      <p>图标不随播放状态换脸。状态在悬停提示里，16 px 下只保留一个可辨认的 R。</p>
+    </div>
+
+    <div class="s2-sys-card">
+      <div class="s2-kicker">TOOLTIP / 悬停</div>
+      <div class="s2-tooltip"><b>RPlayer · 正在播放</b><span>一千年以后 — 林俊杰</span></div>
+      <div class="s2-tooltip muted"><b>RPlayer</b><span>未在播放</span></div>
+      <p>只在悬停 500 ms 后出现；不显示封面，不换行。</p>
+    </div>
+
+    <div class="s2-sys-card">
+      <div class="s2-kicker">D3 / CLICK</div>
+      <div class="s2-click">
+        <div><b>单击左键</b><span>显示 / 聚焦主窗口</span><i>不隐藏</i></div>
+        <div><b>双击左键</b><span>播放 / 暂停</span><i>不改变窗口</i></div>
+        <div><b>右键</b><span>打开托盘菜单</span><i>Esc 关闭</i></div>
+        <div><b>中键</b><span>无动作</span><i>不分配</i></div>
+      </div>
+    </div>
+
+    <div class="s2-sys-card">
+      <div class="s2-kicker">D4 / NOTIFICATION</div>
+      <div class="s2-no-toast">NO OS TOAST</div>
+      <p><b>不做系统通知。</b>切歌静默，托盘提示更新；下载完成与错误留在应用内 toast / 错误条。</p>
+      <div class="s2-noti-list"><div><span>切歌</span><b>静默</b></div><div><span>下载完成</span><b>应用内 toast</b></div><div><span>错误</span><b>应用内错误条 + 详情</b></div></div>
+    </div>
+  </div>
+
+  <div class="s2-tray-quote"><div class="s2-kicker">DESIGN PRINCIPLE</div><p>托盘不是第二个主窗口。<br>它只做五件事：看见、播放、收藏、开关、退出。</p><span class="mono">SCOPE / 5 VERBS · NO QUEUE</span></div>
+
+  <div class="s2-foot"><span>STATUS · 已补充 D1 / D2 / D3 / D4</span><span>DESIGN GAP SUPPLEMENT · V2.0.17</span></div>
+</section>
+
+<!-- 02 · MINI PLAYER -->
+<section class="plate" id="mini">
+  <div class="ph">
+    <div>
+      <div class="eyebrow">DESIGN GAPS · 02 / MINI PLAYER</div>
+      <h1>一行标题，八个状态。</h1>
+      <p class="lede">410 × 146 是固定画布。经典模式保留封面，紧凑模式把封面让给标题；浅/深、有/无封面都不改变控制的位置。</p>
+    </div>
+    <div class="ph-right"><span class="mono">D15</span><span>410 × 146 / 1×</span><span>1600 × 1000</span></div>
+  </div>
+
+  <div class="s2-mini-grid">
+    <div class="mini-state"><div class="mini light cover"><div class="mini-head"><button class="ma on"><svg class="icon"><use href="#i-pin"/></svg></button><button class="ma"><svg class="icon"><use href="#i-lyrics"/></svg></button><button class="ma"><svg class="icon"><use href="#i-expand"/></svg></button><button class="ma"><svg class="icon"><use href="#i-close"/></svg></button></div><div class="mini-art"><div class="mini-cover"><span class="mono">林俊杰 · 2005</span><b>89757</b></div></div><b class="mini-title">一千年以后</b><span class="mini-artist">林俊杰 · 编号 89757</span><div class="mini-prog"><i style="width:76%"></i></div><button class="mini-play"><svg class="icon"><use href="#i-pause"/></svg></button><button class="mini-skip prev"><svg class="icon"><use href="#i-prev"/></svg></button><button class="mini-skip next"><svg class="icon"><use href="#i-next"/></svg></button><button class="mini-heart"><svg class="icon"><use href="#i-heart"/></svg></button></div><div class="mini-cap"><b>经典 · 纸张 · 有封面</b><span>CLASSIC / PAPER / ART</span></div></div>
+
+    <div class="mini-state"><div class="mini dark cover"><div class="mini-head"><button class="ma on"><svg class="icon"><use href="#i-pin"/></svg></button><button class="ma"><svg class="icon"><use href="#i-lyrics"/></svg></button><button class="ma"><svg class="icon"><use href="#i-expand"/></svg></button><button class="ma"><svg class="icon"><use href="#i-close"/></svg></button></div><div class="mini-art"><div class="mini-cover"><span class="mono">林俊杰 · 2005</span><b>89757</b></div></div><b class="mini-title">一千年以后</b><span class="mini-artist">林俊杰 · 编号 89757</span><div class="mini-prog"><i style="width:76%"></i></div><button class="mini-play"><svg class="icon"><use href="#i-pause"/></svg></button><button class="mini-skip prev"><svg class="icon"><use href="#i-prev"/></svg></button><button class="mini-skip next"><svg class="icon"><use href="#i-next"/></svg></button><button class="mini-heart"><svg class="icon"><use href="#i-heart"/></svg></button></div><div class="mini-cap"><b>经典 · 夜幕 · 有封面</b><span>CLASSIC / NOCTURNE / ART</span></div></div>
+
+    <div class="mini-state"><div class="mini light compact"><div class="mini-head"><button class="ma on"><svg class="icon"><use href="#i-pin"/></svg></button><button class="ma"><svg class="icon"><use href="#i-lyrics"/></svg></button><button class="ma"><svg class="icon"><use href="#i-expand"/></svg></button><button class="ma"><svg class="icon"><use href="#i-close"/></svg></button></div><b class="mini-title">一千年以后</b><span class="mini-artist">林俊杰 · 编号 89757</span><div class="mini-prog"><i style="width:76%"></i></div><button class="mini-play"><svg class="icon"><use href="#i-pause"/></svg></button><button class="mini-skip prev"><svg class="icon"><use href="#i-prev"/></svg></button><button class="mini-skip next"><svg class="icon"><use href="#i-next"/></svg></button><button class="mini-heart"><svg class="icon"><use href="#i-heart"/></svg></button></div><div class="mini-cap"><b>紧凑 · 纸张 · 无封面</b><span>COMPACT / PAPER / NO ART</span></div></div>
+
+    <div class="mini-state"><div class="mini dark compact"><div class="mini-head"><button class="ma on"><svg class="icon"><use href="#i-pin"/></svg></button><button class="ma"><svg class="icon"><use href="#i-lyrics"/></svg></button><button class="ma"><svg class="icon"><use href="#i-expand"/></svg></button><button class="ma"><svg class="icon"><use href="#i-close"/></svg></button></div><b class="mini-title">一千年以后</b><span class="mini-artist">林俊杰 · 编号 89757</span><div class="mini-prog"><i style="width:76%"></i></div><button class="mini-play"><svg class="icon"><use href="#i-pause"/></svg></button><button class="mini-skip prev"><svg class="icon"><use href="#i-prev"/></svg></button><button class="mini-skip next"><svg class="icon"><use href="#i-next"/></svg></button><button class="mini-heart"><svg class="icon"><use href="#i-heart"/></svg></button></div><div class="mini-cap"><b>紧凑 · 夜幕 · 无封面</b><span>COMPACT / NOCTURNE / NO ART</span></div></div>
+
+    <div class="mini-state"><div class="mini light noart"><div class="mini-head"><button class="ma on"><svg class="icon"><use href="#i-pin"/></svg></button><button class="ma"><svg class="icon"><use href="#i-lyrics"/></svg></button><button class="ma"><svg class="icon"><use href="#i-expand"/></svg></button><button class="ma"><svg class="icon"><use href="#i-close"/></svg></button></div><div class="mini-art empty"><svg class="icon"><use href="#i-note"/></svg></div><b class="mini-title">一千年以后</b><span class="mini-artist">林俊杰 · 编号 89757</span><div class="mini-prog"><i style="width:76%"></i></div><button class="mini-play"><svg class="icon"><use href="#i-pause"/></svg></button><button class="mini-skip prev"><svg class="icon"><use href="#i-prev"/></svg></button><button class="mini-skip next"><svg class="icon"><use href="#i-next"/></svg></button><button class="mini-heart"><svg class="icon"><use href="#i-heart"/></svg></button></div><div class="mini-cap"><b>经典 · 纸张 · 无封面</b><span>CLASSIC / PAPER / NO ART</span></div></div>
+
+    <div class="mini-state"><div class="mini dark noart"><div class="mini-head"><button class="ma on"><svg class="icon"><use href="#i-pin"/></svg></button><button class="ma"><svg class="icon"><use href="#i-lyrics"/></svg></button><button class="ma"><svg class="icon"><use href="#i-expand"/></svg></button><button class="ma"><svg class="icon"><use href="#i-close"/></svg></button></div><div class="mini-art empty"><svg class="icon"><use href="#i-note"/></svg></div><b class="mini-title">一千年以后</b><span class="mini-artist">林俊杰 · 编号 89757</span><div class="mini-prog"><i style="width:76%"></i></div><button class="mini-play"><svg class="icon"><use href="#i-pause"/></svg></button><button class="mini-skip prev"><svg class="icon"><use href="#i-prev"/></svg></button><button class="mini-skip next"><svg class="icon"><use href="#i-next"/></svg></button><button class="mini-heart"><svg class="icon"><use href="#i-heart"/></svg></button></div><div class="mini-cap"><b>经典 · 夜幕 · 无封面</b><span>CLASSIC / NOCTURNE / NO ART</span></div></div>
+
+    <div class="mini-state"><div class="mini light compact long"><div class="mini-head"><button class="ma on"><svg class="icon"><use href="#i-pin"/></svg></button><button class="ma"><svg class="icon"><use href="#i-lyrics"/></svg></button><button class="ma"><svg class="icon"><use href="#i-expand"/></svg></button><button class="ma"><svg class="icon"><use href="#i-close"/></svg></button></div><b class="mini-title">一千年的雨季，落在没有名字的站台</b><span class="mini-artist">陈屿 · 未知专辑</span><div class="mini-prog"><i style="width:32%"></i></div><button class="mini-play"><svg class="icon"><use href="#i-play"/></svg></button><button class="mini-skip prev"><svg class="icon"><use href="#i-prev"/></svg></button><button class="mini-skip next"><svg class="icon"><use href="#i-next"/></svg></button><button class="mini-heart"><svg class="icon"><use href="#i-heart"/></svg></button></div><div class="mini-cap"><b>紧凑 · 长标题 · 省略号</b><span>COMPACT / ELLIPSIS / 250 MAX</span></div></div>
+
+    <div class="mini-state"><div class="mini dark compact long"><div class="mini-head"><button class="ma on"><svg class="icon"><use href="#i-pin"/></svg></button><button class="ma"><svg class="icon"><use href="#i-lyrics"/></svg></button><button class="ma"><svg class="icon"><use href="#i-expand"/></svg></button><button class="ma"><svg class="icon"><use href="#i-close"/></svg></button></div><b class="mini-title">一千年的雨季，落在没有名字的站台</b><span class="mini-artist">陈屿 · 未知专辑</span><div class="mini-prog"><i style="width:32%"></i></div><button class="mini-play"><svg class="icon"><use href="#i-play"/></svg></button><button class="mini-skip prev"><svg class="icon"><use href="#i-prev"/></svg></button><button class="mini-skip next"><svg class="icon"><use href="#i-next"/></svg></button><button class="mini-heart"><svg class="icon"><use href="#i-heart"/></svg></button></div><div class="mini-cap"><b>紧凑 · 长标题 · 无封面</b><span>COMPACT / ELLIPSIS / NO ART</span></div></div>
+
+    <div class="mini-state"><div class="mini light cover drag"><div class="mini-head"><button class="ma on"><svg class="icon"><use href="#i-pin"/></svg></button><button class="ma"><svg class="icon"><use href="#i-lyrics"/></svg></button><button class="ma"><svg class="icon"><use href="#i-expand"/></svg></button><button class="ma"><svg class="icon"><use href="#i-close"/></svg></button></div><div class="mini-art"><div class="mini-cover"><span class="mono">林俊杰 · 2005</span><b>89757</b></div></div><b class="mini-title">一千年以后</b><span class="mini-artist">林俊杰 · 编号 89757</span><div class="mini-prog"><i style="width:76%"></i></div><button class="mini-play"><svg class="icon"><use href="#i-pause"/></svg></button><button class="mini-skip prev"><svg class="icon"><use href="#i-prev"/></svg></button><button class="mini-skip next"><svg class="icon"><use href="#i-next"/></svg></button><button class="mini-heart"><svg class="icon"><use href="#i-heart"/></svg></button></div><div class="mini-cap"><b>经典 · 悬停 / 拖动</b><span>HOVER 100% · DRAG 0.96</span></div></div>
+  </div>
+
+  <div class="s2-mini-notes">
+    <div><span class="s2-kicker">GEOMETRY</span><b>410 × 146 / R16</b><p>经典封面 92×92、内边 12；紧凑不保留封面位，标题左移 14。</p></div>
+    <div><span class="s2-kicker">TYPE</span><b>14.5 / 600 · MAX 250</b><p>标题单行省略，悬停给完整 title；艺人 9 / 400，未知时显示“未知艺术家”。</p></div>
+    <div><span class="s2-kicker">CONTROLS</span><b>4 × 24 / PLAY 28</b><p>悬停前动作组 55% 透明；拖动时 0.96 不透明度 + 阴影，不旋转。</p></div>
+    <div class="s2-mini-callout"><b>紧凑永不显示封面占位。</b><span>没有封面数据时，经典用 92×92 note 占位，紧凑直接让标题占满；不出现“未找到封面”文案。</span></div>
+  </div>
+
+  <div class="s2-foot"><span>STATUS · 已补充 D15 / 8 状态 + 悬停拖动</span><span>MINI PLAYER · 410 × 146</span></div>
+</section>
+
+<!-- 03 · LIBRARY TOOLS -->
+<section class="plate" id="library-tools">
+  <div class="ph">
+    <div>
+      <div class="eyebrow">DESIGN GAPS · 03 / LIBRARY TOOLS</div>
+      <h1>先看问题，再给动作。</h1>
+      <p class="lede">健康检查和重复清理都不是“批量删除器”。它们先说明发生了什么，再把可逆的动作放在手边。</p>
+    </div>
+    <div class="ph-right"><span class="mono">D5 · D6</span><span>720 × 340 / 1×</span><span>1600 × 1000</span></div>
+  </div>
+
+  <div class="s2-tools-grid">
+    <div>
+      <div class="block-label"><span>A / 曲库健康检查</span><span class="mono">720 × 340</span></div>
+      <div class="tool-panel health-panel">
+        <div class="tp-head"><div><div class="s2-kicker">LIBRARY HEALTH</div><h3>曲库健康检查</h3><p>已扫描 8 首 · 2 项需要关注</p></div><button class="tp-x"><svg class="icon"><use href="#i-close"/></svg></button></div>
+        <div class="health-stats">
+          <div class="hs issue"><b>1</b><span>缺失文件</span></div>
+          <div class="hs issue"><b>1</b><span>空标签</span></div>
+          <div class="hs"><b>1</b><span>重复候选</span></div>
+        </div>
+        <div class="health-list">
+          <div class="hrow"><svg class="icon warn"><use href="#i-warn"/></svg><div><b>2 首歌曲找不到文件</b><span>D:\Music\Jay\龙卷风.flac</span></div><button>定位</button></div>
+          <div class="hrow"><svg class="icon"><use href="#i-note"/></svg><div><b>3 首缺少流派</b><span>可批量补“华语流行”</span></div><button>去编辑</button></div>
+          <div class="hrow"><svg class="icon"><use href="#i-trash"/></svg><div><b>1 组重复候选</b><span>同一标题 / 艺术家 / 时长</span></div><button>查看</button></div>
+        </div>
+        <div class="tp-foot"><span>检查不会解码音频，也不会自动删除文件。</span><button class="btn quiet">重新检查</button></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="block-label"><span>B / 重复歌曲</span><span class="mono">720 × 340</span></div>
+      <div class="tool-panel dup-panel">
+        <div class="tp-head"><div><div class="s2-kicker">DUPLICATES</div><h3>重复歌曲</h3><p>1 组 · 2 个文件候选</p></div><button class="tp-x"><svg class="icon"><use href="#i-close"/></svg></button></div>
+        <div class="dup-group">
+          <div class="dup-title"><b>龙卷风 — 周杰伦</b><span class="mono">1 GROUP / 2 FILES</span></div>
+          <div class="dup-row keep"><span class="radio on"></span><div><b>龙卷风.flac</b><span>FLAC · 4:04 · 28.4 MB</span><i>D:\Music\Jay\龙卷风.flac</i></div><em>保留</em></div>
+          <div class="dup-row"><span class="radio"></span><div><b>龙卷风.mp3</b><span>MP3 · 4:04 · 8.2 MB</span><i>D:\Archive\龙卷风.mp3</i></div><em>忽略</em></div>
+          <div class="dup-actions"><button>仅保留此首</button><button>定位</button><span>只保留勾选的文件；其余移出曲库，不删磁盘文件。</span></div>
+        </div>
+        <div class="tp-foot"><button class="btn text">忽略本组</button><div><button class="btn quiet">取消</button><button class="btn danger">删除 1 个重复项</button></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="s2-health-states">
+    <div class="s2-hs-card"><div class="s2-kicker">EMPTY / 健康</div><div class="s2-hs-inline"><svg class="icon check"><use href="#i-check"/></svg><b>没有发现明显问题</b></div><p>已扫描 8 首，缺失文件 0 · 空标签 0 · 重复候选 0。</p></div>
+    <div class="s2-hs-card"><div class="s2-kicker">SCANNING / 62%</div><div class="s2-hs-progress"><i style="width:62%"></i></div><p>1,240 / 2,018 首 · 可继续播放，扫描在后台完成。</p></div>
+    <div class="s2-hs-card error"><div class="s2-kicker">ERROR / 无法读取</div><b>D:\\Archive 无法读取</b><p>跳过该目录，其余曲库继续扫描。</p><span class="s2-inline-actions"><button>重试</button><button>忽略</button></span></div>
+  </div>
+
+  <div class="s2-notes-row">
+    <div><span class="s2-kicker">HEALTH RULES</span><b>数字先于列表</b><p>三张指标卡只显示需要行动的数字；空态用一句“没有发现明显问题”，不画插画。</p><p>每行最多一个动作，危险动作永远在底部右侧。</p></div>
+    <div><span class="s2-kicker">DUPLICATE RULES</span><b>不自动删</b><p>分组按标题 / 艺术家 / 时长；保留项默认 FLAC，用户可改。删除只移出曲库，并写入可撤销记录。</p></div>
+  </div>
+  <div class="s2-foot"><span>STATUS · 已补充 D5 / D6</span><span>LIBRARY TOOLS · 720 × 430</span></div>
+</section>
+<!-- 04 · EDIT TOOLS -->
+<section class="plate" id="edit-tools">
+  <div class="ph">
+    <div>
+      <div class="eyebrow">DESIGN GAPS · 04 / EDIT TOOLS</div>
+      <h1>工具，保持同一种密度。</h1>
+      <p class="lede">歌词编辑器、智能歌单和均衡器不是三套产品。它们共用 36px 行、8px 圆角和同一条底部动作带。</p>
+    </div>
+    <div class="ph-right"><span class="mono">D7 · D8 · D9</span><span>820 / 620 / 820</span><span>1600 × 1000</span></div>
+  </div>
+
+  <div class="s2-edit-top">
+    <div>
+      <div class="block-label"><span>A / 编辑歌词 · 逐句</span><span class="mono">820 × 430</span></div>
+      <div class="lyric-editor">
+        <div class="le-head"><div><div class="s2-kicker">LYRICS EDITOR</div><h3>编辑歌词</h3><p>一千年以后 · 林俊杰 · 本地编辑</p></div><span class="dirty">未保存</span><button class="tp-x"><svg class="icon"><use href="#i-close"/></svg></button></div>
+        <div class="le-table-head"><span>时间</span><span>歌词</span><span></span></div>
+        <div class="le-row"><span class="le-time mono">00:12.40</span><p>心跳乱了节奏 梦也不自由</p><button class="le-play"><svg class="icon"><use href="#i-play"/></svg></button><button class="le-del"><svg class="icon"><use href="#i-trash"/></svg></button></div>
+        <div class="le-row"><span class="le-time mono">00:18.20</span><p>爱是个绝对承诺 不说</p><button class="le-play"><svg class="icon"><use href="#i-play"/></svg></button><button class="le-del"><svg class="icon"><use href="#i-trash"/></svg></button></div>
+        <div class="le-row current"><span class="le-time mono">00:23.80</span><p>浅吻着你额头</p><button class="le-play"><svg class="icon"><use href="#i-play"/></svg></button><button class="le-del"><svg class="icon"><use href="#i-trash"/></svg></button></div>
+        <div class="le-row"><span class="le-time mono">00:29.10</span><p>别等到一千年以后</p><button class="le-play"><svg class="icon"><use href="#i-play"/></svg></button><button class="le-del"><svg class="icon"><use href="#i-trash"/></svg></button></div>
+        <div class="le-row"><span class="le-time mono">00:35.60</span><p>所有人都遗忘了我</p><button class="le-play"><svg class="icon"><use href="#i-play"/></svg></button><button class="le-del"><svg class="icon"><use href="#i-trash"/></svg></button></div>
+        <div class="le-row"><span class="le-time mono">00:41.20</span><p>那时红色黄昏的沙漠</p><button class="le-play"><svg class="icon"><use href="#i-play"/></svg></button><button class="le-del"><svg class="icon"><use href="#i-trash"/></svg></button></div>        <div class="le-row"><span class="le-time mono">00:47.50</span><p>能有谁 解开缠绕千年的寂寞</p><button class="le-play"><svg class="icon"><use href="#i-play"/></svg></button><button class="le-del"><svg class="icon"><use href="#i-trash"/></svg></button></div><button class="le-add">＋ 新增一句</button>
+        <div class="le-foot"><span class="mono">TIME 00:00.00 / 空文本 = 纯文本行</span><div><button class="btn quiet">取消</button><button class="btn primary">保存歌词</button></div></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="block-label"><span>B / 智能歌单 · 构建器</span><span class="mono">620 × 430</span></div>
+      <div class="smart-panel">
+        <div class="tp-head"><div><div class="s2-kicker">SMART PLAYLIST</div><h3>新建智能歌单</h3><p>规则实时计算，保存后自动更新</p></div><button class="tp-x"><svg class="icon"><use href="#i-close"/></svg></button></div>
+        <label class="sp-label">名称<input value="深夜，慢一点"></label>
+        <div class="sp-mode"><button class="on">全部条件</button><button>任一条件</button><span class="mono">0 首 · 限制 0</span></div>
+        <div class="sp-rule"><span class="sp-idx">01</span><select><option>评分</option></select><select><option>≥</option></select><input value="4 星"></div>
+        <div class="sp-rule"><span class="sp-idx">02</span><select><option>最近播放</option></select><select><option>≤</option></select><input value="30 天"></div>
+        <div class="sp-rule"><span class="sp-idx">03</span><select><option>流派</option></select><select><option>包含</option></select><input value="华语流行"></div>
+        <button class="sp-add">＋ 添加条件</button>
+        <div class="sp-preview"><div><span class="mono">PREVIEW</span><b>0 首匹配</b></div><p>补全第 3 条规则后才能保存。规则会随评分与播放统计实时更新。</p></div>
+        <div class="sp-foot"><button class="btn quiet">取消</button><button class="btn primary" disabled>保存智能歌单</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="s2-edit-bottom">
+    <div>
+      <div class="block-label"><span>C / 均衡器</span><span class="mono">820 × 250 / DARK</span></div>
+      <div class="eq-panel">
+        <div class="eq-head"><div><div class="s2-kicker">EQUALIZER</div><b>均衡器</b><span>10 段 · 仅作用于当前输出</span></div><div class="eq-on">已启用<i></i></div><button class="tp-x"><svg class="icon"><use href="#i-close"/></svg></button></div>
+        <div class="eq-presets"><button class="on">平直</button><button>流行</button><button>摇滚</button><button>爵士</button><button>低音</button><button>人声</button><button>古典</button><button>电子</button></div>
+        <div class="eq-sliders">
+          <div><i style="--v:.78"></i><span>31</span></div><div><i style="--v:.45"></i><span>62</span></div><div><i style="--v:.62"></i><span>125</span></div><div><i style="--v:.72"></i><span>250</span></div><div><i style="--v:.80"></i><span>500</span></div><div><i style="--v:.74"></i><span>1K</span></div><div><i style="--v:.66"></i><span>2K</span></div><div><i style="--v:.58"></i><span>4K</span></div><div><i style="--v:.52"></i><span>8K</span></div><div><i style="--v:.50"></i><span>16K</span></div>
+        </div>
+        <div class="eq-foot"><span class="mono">PREAMP +0.0 dB</span><span>修改即时生效，不写入音频文件</span><button>重置</button></div>
+      </div>
+    </div>
+    <div class="s2-edit-notes">
+      <div class="s2-edit-quote">“每一行都能被键盘走完。”</div>
+      <div class="s2-edit-rule"><span class="mono">D7</span><b>时间戳等宽</b><p>00:00.00 固定在 58px 列；非法时间只标红该行，不弹窗。</p></div>
+      <div class="s2-edit-rule"><span class="mono">D8</span><b>规则三段</b><p>字段 116 / 操作 88 / 值 flex；空值禁用保存，错误只出现一次。</p></div>
+      <div class="s2-edit-rule"><span class="mono">D9</span><b>推子不滚动</b><p>10 段固定 62px 间距；预设横向滚动而非折行。</p></div>
+    </div>
+  </div>
+  <div class="s2-foot"><span>STATUS · 已补充 D7 / D8 / D9</span><span>EDIT TOOLS · 820 / 620 / 820</span></div>
+</section>
+
+<!-- 05 · SYSTEM DIALOGS -->
+<section class="plate" id="system-ui">
+  <div class="ph">
+    <div>
+      <div class="eyebrow">DESIGN GAPS · 05 / DIALOGS & SYSTEM</div>
+      <h1>快捷键、关于、拖入、错误。</h1>
+      <p class="lede">四个小面沿用同一套标题、行高和底部动作带；错误详情在应用内展开，不另开日志窗口。</p>
+    </div>
+    <div class="ph-right"><span class="mono">D10 · D11 · D12</span><span>820 / 380</span><span>1600 × 1000</span></div>
+  </div>
+
+  <div class="su-grid">
+    <div>
+      <div class="block-label"><span>A / 键盘快捷键</span><span class="mono">820 × 460</span></div>
+      <div class="shortcut-panel">
+        <div class="su-head"><div><div class="s2-kicker">KEYBOARD</div><h3>键盘快捷键</h3><p>焦点在控件上时，Space 激活控件，不触发全局播放。</p></div><button class="tp-x"><svg class="icon"><use href="#i-close"/></svg></button></div>
+        <div class="sc-cols">
+          <div class="sc-col">
+            <div class="sc-group">全局</div>
+            <div class="sc-row"><kbd>Ctrl K</kbd><span>打开命令面板</span></div>
+            <div class="sc-row"><kbd>Ctrl F</kbd><span>聚焦搜索</span></div>
+            <div class="sc-row"><kbd>Ctrl O</kbd><span>添加音乐文件夹</span></div>
+            <div class="sc-row"><kbd>Ctrl N</kbd><span>新建播放列表</span></div>
+            <div class="sc-row"><kbd>Ctrl ,</kbd><span>打开设置</span></div>
+            <div class="sc-row"><kbd>Ctrl T</kbd><span>切换 Paper / Nocturne</span></div>
+            <div class="sc-group">播放</div>
+            <div class="sc-row"><kbd>Space</kbd><span>播放 / 暂停（无焦点时）</span></div>
+            <div class="sc-row"><kbd>Ctrl E</kbd><span>打开均衡器</span></div>
+            <div class="sc-row"><kbd>Ctrl L</kbd><span>桌面歌词开关</span></div>
+            <div class="sc-row"><kbd>Ctrl M</kbd><span>迷你播放器开关</span></div>
+          </div>
+          <div class="sc-col">
+            <div class="sc-group">列表与选择</div>
+            <div class="sc-row"><kbd>↑ / ↓</kbd><span>移动焦点</span></div>
+            <div class="sc-row"><kbd>Home / End</kbd><span>跳到首行 / 末行</span></div>
+            <div class="sc-row"><kbd>PgUp / PgDn</kbd><span>翻页</span></div>
+            <div class="sc-row"><kbd>Ctrl A</kbd><span>全选当前列表</span></div>
+            <div class="sc-row"><kbd>Ctrl ← / →</kbd><span>上一首 / 下一首</span></div>
+            <div class="sc-row"><kbd>Delete</kbd><span>移除选中项</span></div>
+            <div class="sc-group">焦点</div>
+            <div class="sc-row"><kbd>Tab</kbd><span>下一个控件</span></div>
+            <div class="sc-row"><kbd>Shift Tab</kbd><span>上一个控件</span></div>
+            <div class="sc-row"><kbd>Enter</kbd><span>执行主操作</span></div>
+            <div class="sc-row"><kbd>Esc</kbd><span>关闭浮层 / 取消</span></div>
+            <p class="sc-note">不区分大小写；输入框内不拦截文字键。冲突时以当前焦点为准。</p>
+          </div>
+        </div>
+        <p class="sc-bottom">所有快捷键均可重绑；冲突时后设置者生效。Tab 顺序遵循视觉顺序。</p>        <div class="su-foot"><span class="mono">21 SHORTCUTS · 2 COLUMNS</span><button class="btn primary">关闭</button></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="block-label"><span>B / 关于</span><span class="mono">380 × 280</span></div>
+      <div class="about-panel">
+        <div class="su-head"><div><div class="s2-kicker">ABOUT</div><h3>关于 RPlayer</h3></div><button class="tp-x"><svg class="icon"><use href="#i-close"/></svg></button></div>
+        <div class="about-lock"><img src="brand/rplayer-mark.svg" width="44" height="44"><div><b>RPlayer</b><span>v2.0.17 · 本地优先</span></div></div>
+        <div class="about-rows">
+          <div><span>数据目录</span><code>%APPDATA%\RPlayer</code></div>
+          <div><span>开源许可</span><a>egui · Symphonia · LRCLIB</a></div>
+          <div><span>构建</span><code>windows-gnu · release</code></div>
+        </div>
+        <div class="su-foot"><span class="mono">NO LOGIN · NO UPLOAD</span><button class="btn primary">关闭</button></div>
+      </div>
+
+      <div class="block-label" style="margin-top:18px"><span>C / 播放列表拖入</span><span class="mono">380 × 220</span></div>
+      <div class="drag-panel">
+        <div class="dp-title">把 3 首歌拖到歌单上</div>
+        <div class="dp-row"><svg class="icon"><use href="#i-list"/></svg><span>深夜歌单</span><i>5</i></div>
+        <div class="dp-row drop"><svg class="icon"><use href="#i-list"/></svg><span>周末慢行</span><em>松开以添加</em><i class="badge">+3</i></div>
+        <div class="dp-row"><svg class="icon"><use href="#i-list"/></svg><span>中文独立 2025</span><i>6</i></div>
+        <div class="dp-line"></div>        <div class="dp-hint">拖到任意歌单行即可添加 · 不改变当前播放队列</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="err-block">
+    <div class="block-label"><span>D / 错误详情 · 应用内展开</span><span class="mono">820 × 200 / 420MS</span></div>
+    <div class="error-panel">
+      <div class="ep-head"><svg class="icon"><use href="#i-alert"/></svg><div><b>无法读取「Live at Blue Note.flac」</b><p>文件被占用或已移动；本曲暂时跳过，其余曲库继续扫描。</p></div><button class="tp-x"><svg class="icon"><use href="#i-close"/></svg></button></div>
+      <div class="ep-meta"><span><em>路径</em><code>D:\Archive\live-set.flac</code></span><span><em>错误码</em><code>E_IO_ACCESS</code></span><span><em>时间</em><code>22:41:08</code></span></div>
+      <div class="ep-detail"><span>DIAGNOSTIC</span><code>os error 32 · 文件被另一进程占用</code><em>已重试 2 次</em></div>      <div class="ep-actions"><button class="btn quiet">在文件夹中显示</button><button class="btn quiet">复制诊断信息</button><button class="btn primary">重试</button><span class="mono">详情在原位展开 · 不打开日志窗口</span></div>
+    </div>
+  </div>
+  <div class="s2-foot"><span>STATUS · 已补充 D10 / D11 / D12</span><span>DIALOGS · 21 SHORTCUTS · 380 / 820</span></div>
+</section>
+
+<!-- 06 · RESPONSIVE & COLOR KEY -->
+<section class="plate" id="responsive">
+  <div class="ph">
+    <div>
+      <div class="eyebrow">DESIGN GAPS · 06 / RESPONSIVE & CONTRAST</div>
+      <h1>窄的时候，先让内容活下来。</h1>
+      <p class="lede">200% DPI 不是把界面缩小，而是切换到逻辑 720 的紧凑骨架；歌词白边接受，用 1px 阴影压住。</p>
+    </div>
+    <div class="ph-right"><span class="mono">D13 · D14</span><span>1024 / 720</span><span>1600 × 1000</span></div>
+  </div>
+
+  <div class="rs-grid">
+    <div>
+      <div class="block-label"><span>A / 1024 × 720 · 紧凑骨架</span><span class="mono">SIDEBAR 72 · PLAYER 76</span></div>
+      <div class="compact-app">
+        <div class="c-top"><span class="c-menu"><svg class="icon"><use href="#i-list"/></svg></span><span class="c-word">RPlayer</span><span class="c-crumb">资料库 / 本地曲库</span><span class="c-search">搜索曲目、专辑或艺术家</span><span class="c-win">— □ ×</span></div>
+        <div class="c-body">
+          <div class="c-rail">
+            <img src="brand/rplayer-mark.svg" width="28" height="28">
+            <i class="on"><svg class="icon"><use href="#i-window"/></svg></i>
+            <i><svg class="icon"><use href="#i-lyrics"/></svg></i>
+            <i><svg class="icon"><use href="#i-folder"/></svg></i>
+            <i><svg class="icon"><use href="#i-list"/></svg></i>
+            <i class="bottom"><svg class="icon"><use href="#i-mini"/></svg></i>
+          </div>
+          <div class="c-main">
+            <div class="c-head"><span class="mono">LIBRARY 01</span><h3>本地曲库</h3><p>8 首歌曲 · 28 分钟</p></div>
+            <div class="c-tabs"><b>曲目</b><span>专辑</span><span>艺术家</span><em>列表视图</em></div>
+            <div class="c-table">
+              <div class="c-tr head"><span>#</span><span>曲目</span><span>时长</span></div>
+              <div class="c-tr"><span>01</span><div><b>Last Dance</b><em>徐薇</em></div><span>3:57</span></div>
+              <div class="c-tr on"><span>02</span><div><b>一千年以后</b><em>林俊杰</em></div><span>3:48</span></div>
+              <div class="c-tr"><span>03</span><div><b>午夜霓虹</b><em>林间电台</em></div><span>3:24</span></div>
+              <div class="c-tr"><span>04</span><div><b>夏日回声</b><em>橘子汽水</em></div><span>3:19</span></div>
+              <div class="c-tr"><span>05</span><div><b>星落入梦</b><em>漫游</em></div><span>3:31</span></div>
+              <div class="c-tr"><span>06</span><div><b>海风与旧信</b><em>苏晚</em></div><span>3:28</span></div>
+              <div class="c-tr"><span>07</span><div><b>雨后站台</b><em>陈屿</em></div><span>3:22</span></div>
+              <div class="c-tr"><span>08</span><div><b>龙卷风</b><em>周杰伦</em></div><span>4:04</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="c-player"><span class="c-art"></span><div class="c-pt"><b>一千年以后</b><em>林俊杰</em></div><div class="c-controls">◀◀ ▶ ▶▶</div><div class="c-progress"><i></i><span>2:59 / 3:48</span></div></div>
+      </div>
+    </div>
+
+    <div class="rs-notes">
+      <div class="block-label"><span>BREAKPOINTS</span><span class="mono">LOGICAL PX</span></div>
+      <div class="bp-row"><b>≥ 1280</b><span>236 侧栏 + 300 正在播放栏 + 主页</span></div>
+      <div class="bp-row"><b>1120–1279</b><span>隐藏右栏；侧栏 236 保留</span></div>
+      <div class="bp-row on"><b>840–1119</b><span>侧栏收为 72 图标；表隐藏专辑列；播放条 76</span></div>
+      <div class="bp-row"><b>&lt; 840</b><span>侧栏抽屉化；播放条两行 96；对话框 92vw</span></div>
+
+      <div class="block-label" style="margin-top:16px"><span>720 × 720 · 抽屉</span><span class="mono">200% DPI / 1440 PHYSICAL</span></div>
+      <div class="narrow-mock">
+        <div class="nm-top"><span>☰</span><span>本地曲库</span><span>搜索</span></div>
+        <div class="nm-body">
+          <div class="nm-lines"><i style="width:62%"></i><i style="width:84%"></i><i style="width:72%"></i><i style="width:90%"></i><i style="width:56%"></i></div>
+          <div class="nm-player"><b>一千年以后</b><span>2:59 ————— 3:48</span></div>
+        </div>
+        <div class="nm-drawer"><b>资料库</b><span>本地曲库</span><span>专辑</span><span>艺术家</span><span>我的收藏</span><span>设置</span></div>
+      </div>
+      <p class="rs-note">不缩字号。只换骨架、减少常驻列、把侧栏变成可关闭的抽屉；1280 以下右栏整体退出，不做压缩。</p>
+    </div>
+  </div>
+
+  <div class="ck-block">
+    <div class="block-label"><span>B / 桌面歌词 · color-key 1px 白边</span><span class="mono">D14 / ACCEPT + SHADOW</span></div>
+    <div class="ck-row">
+      <div class="ck-card"><div class="ck-wall light"><span class="lyric">浅吻着你额头</span><span class="lyric dim">别等到一千年以后</span></div><b>浅色桌面 · 当前 1px 白边</b><p>深色字在浅色壁纸上出现 1px 亮边，但可读。</p></div>
+      <div class="ck-card"><div class="ck-wall light shadow"><span class="lyric">浅吻着你额头</span><span class="lyric dim">别等到一千年以后</span></div><b>浅色桌面 · 1px 暗影</b><p>加 <code>0 0 1px rgba(0,0,0,.35)</code>，把白边压进轮廓，不改渲染路径。</p></div>
+      <div class="ck-card"><div class="ck-wall dark shadow"><span class="lyric">浅吻着你额头</span><span class="lyric dim">别等到一千年以后</span></div><b>深色桌面 · 1px 亮影</b><p>反相 <code>rgba(255,255,255,.22)</code>；不新增分层窗口。</p></div>
+    </div>
+  </div>
+  <div class="s2-foot"><span>STATUS · 已补充 D13 / D14</span><span>RESPONSIVE · 1120 → 720 · SHADOW 1PX</span></div>
+</section>
+
+<script>
+const plate = new URLSearchParams(location.search).get('plate') || 'tray';
+document.getElementById(plate)?.classList.add('active');
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,8 +1,8 @@
 # 缺设计稿清单
 
-基线：v2.0.17。设计依据分两类：**像素稿/画板**（`docs/qa/v0.2/*.png`、`RPlayer-v2-缺口设计补充.pdf`、`design-gap-*.png`）与**文字规格**（`docs/RPLAYER_V2_REDESIGN.md`、`docs/qa/v0.2/DESIGN_GAP_SPEC.md`）。
+基线：v2.0.17。补稿：2026-11-25，见 `DESIGN_SPEC_GAPS_SUPPLEMENT.md`；D1–D15 均已补像素稿与状态说明。设计依据分两类：**像素稿/画板**（`docs/qa/v0.2/*.png`、`RPlayer-v2-缺口设计补充.pdf`、`design-gap-*.png`）与**文字规格**（`docs/RPLAYER_V2_REDESIGN.md`、`docs/qa/v0.2/DESIGN_GAP_SPEC.md`）。
 
-原则：没有设计依据的面，实现只能"按相邻面的 token 自绘"，验收时只验一致性，不验"是否符合设计"。以下逐项登记，补稿后从本表移除。
+原则：没有设计依据的面，实现只能"按相邻面的 token 自绘"，验收时只验一致性，不验"是否符合设计"。以下逐项登记，保留为缺口审计记录；补稿后的状态见第 6 节。
 
 ## 1. 完全没有设计依据（必须补稿）
 
@@ -45,4 +45,19 @@
 - 已知的设计缺口（已有稿、待实现或已收口）见 `DESIGN_GAPS.md`；本表只记**没有稿**的部分，两者不重复。
 - 全量回归清单见 `V2_REGRESSION.md`；L 组（系统托盘）在本表 D1–D3 补稿前只能验"功能可用"，不能验"符合设计"。
 
+## 6. 补稿状态（2026-11-25）
+
+上表是缺口审计记录；本表是补稿后的状态。像素稿均在 `docs/qa/v0.2/`，合集 `RPlayer-v2-设计缺口补充-D1-D15.pdf`。
+
+| # | 补稿 | 稿 |
+| --- | --- | --- |
+| D1–D4 | 托盘菜单、图标、点击、通知 | `spec2-tray.png` |
+| D15 | 迷你播放器 8 态 | `spec2-mini.png` |
+| D5–D6 | 健康检查、重复歌曲 | `spec2-library-tools.png` |
+| D7–D9 | 歌词编辑器、智能歌单、均衡器 | `spec2-edit-tools.png` |
+| D10–D12 | 快捷键、关于、拖入、错误详情 | `spec2-system-ui.png` |
+| D13–D14 | 200% DPI / 窄布局、color-key 白边 | `spec2-responsive.png` |
+
+状态：**已补稿**。实现状态仍以 `SURFACE_MATRIX.md` 为准；有稿不等于实现完成。
+新标识见 `design/rplayer-v2/brand/brand-sheet.png` 与 `RPlayer-v2-品牌标识.pdf`。
 
