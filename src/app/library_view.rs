@@ -1143,22 +1143,29 @@ impl RPlayerApp {
         }
 
         ui.vertical_centered(|ui| {
+            let folders_empty = self.library.folders.is_empty();
             ui.add_space(30.0);
             let (rect, _) = ui.allocate_exact_size(Vec2::splat(96.0), Sense::hover());
             icons::logo(ui.painter(), rect);
             ui.add_space(18.0);
             ui.label(
-                RichText::new("让本地音乐，回到桌面")
-                    .size(25.0)
-                    .strong()
-                    .color(theme::c().text),
+                RichText::new(if folders_empty {
+                    "把音乐放回桌面。"
+                } else {
+                    "这个文件夹里没有音乐。"
+                })
+                .size(25.0)
+                .strong()
+                .color(theme::c().text),
             );
             ui.add_space(6.0);
             ui.add(
                 Label::new(
-                    RichText::new(
-                        "RPlayer 是一个纯粹、快速的本地播放器。\n添加音乐文件夹，它会把歌曲整理进你的音乐库。",
-                    )
+                    RichText::new(if folders_empty {
+                        "RPlayer 只读取你的文件夹，不上传、不联网也能播放。"
+                    } else {
+                        "已添加的文件夹里没有发现可播放的音频，检查扩展名，或换一个文件夹。"
+                    })
                     .size(12.5)
                     .color(theme::c().muted),
                 )
@@ -1166,31 +1173,42 @@ impl RPlayerApp {
             );
             ui.add_space(22.0);
 
-            let total_width = 300.0;
+            let total_width = if folders_empty { 190.0 } else { 250.0 };
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing.x = 10.0;
                 ui.add_space(((ui.available_width() - total_width) / 2.0).max(0.0));
-                if widgets::primary_button_icon(ui, crate::ui::icons::Icon::Folder, "添加音乐文件夹").clicked() {
-                    self.open_folder_picker();
-                }
-                if !self.library.folders.is_empty()
-                    && widgets::secondary_button(ui, "重新扫描").clicked()
-                {
-                    self.start_scan();
+                if folders_empty {
+                    if widgets::primary_button_icon(
+                        ui,
+                        crate::ui::icons::Icon::Folder,
+                        "添加音乐文件夹",
+                    )
+                    .clicked()
+                    {
+                        self.open_folder_picker();
+                    }
+                } else {
+                    if widgets::primary_button_icon(ui, crate::ui::icons::Icon::Repeat, "重新扫描")
+                        .clicked()
+                    {
+                        self.start_scan();
+                    }
+                    if widgets::secondary_button(ui, "管理文件夹").clicked() {
+                        self.view = View::Folders;
+                    }
                 }
             });
 
-            if !self.library.folders.is_empty() {
-                ui.add_space(10.0);
-                ui.label(
-                    RichText::new(format!(
-                        "已添加 {} 个文件夹，没有发现可播放的音频文件",
-                        self.library.folders.len()
-                    ))
-                    .size(11.0)
-                    .color(theme::c().faint),
-                );
-            }
+            ui.add_space(12.0);
+            ui.label(
+                RichText::new(if folders_empty {
+                    "MP3 · FLAC · WAV · OGG · M4A · AAC"
+                } else {
+                    "已添加的文件夹保留在音乐目录中，不会删除磁盘文件"
+                })
+                .size(10.0)
+                .color(theme::c().faint),
+            );
         });
     }
 
