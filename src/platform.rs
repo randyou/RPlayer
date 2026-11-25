@@ -204,6 +204,18 @@ pub fn main_window_handle() -> Option<isize> {
 /// "closed to tray", so the button is removed by marking the window a tool
 /// window while it sits in the tray and restored when it comes back.
 #[cfg(target_os = "windows")]
+/// Mirror the desktop-lyric lock into the native hit-test. Windows starts its
+/// own caption drag on HTCAPTION; when the strip is locked we must not offer
+/// that caption, or the lock is bypassed by the OS before egui sees the press.
+static LYRICS_LOCKED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+pub fn set_lyrics_locked(locked: bool) {
+    LYRICS_LOCKED.store(locked, std::sync::atomic::Ordering::Relaxed);
+}
+
+pub fn lyrics_locked() -> bool {
+    LYRICS_LOCKED.load(std::sync::atomic::Ordering::Relaxed)
+}
 pub fn set_taskbar_button_visible(visible: bool) -> bool {
     use winapi::um::winuser::{
         GetWindowLongPtrW, SetWindowLongPtrW, SetWindowPos, GWL_EXSTYLE, SWP_FRAMECHANGED,
@@ -1157,6 +1169,11 @@ unsafe extern "system" fn lyrics_native_proc(
                     }
                 }
             }
+        }
+        if lyrics_locked() {
+            // Locked: report a plain client area so Windows cannot start its
+            // own caption drag; egui keeps the double-click-to-unlock path.
+            return 1;
         }
         return 2; // HTCAPTION: drag the lyric strip.
     }

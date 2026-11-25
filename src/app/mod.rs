@@ -1879,7 +1879,10 @@ impl RPlayerApp {
             } else {
                 25.0
             },
-            lyrics_locked: self.library.desktop_lyrics_locked,
+            lyrics_locked: {
+                crate::platform::set_lyrics_locked(self.library.desktop_lyrics_locked);
+                self.library.desktop_lyrics_locked
+            },
             mini_style: if self.library.mini_style == "compact" {
                 "compact".to_string()
             } else {

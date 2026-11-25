@@ -305,6 +305,9 @@ pub fn show_lyrics(
                 );
 
                 let locked = snapshot.lyrics_locked;
+    // Publish the lock to the native hit-test so the OS stops offering its own
+    // caption drag while the strip is locked.
+    crate::platform::set_lyrics_locked(locked);
                 let lock_rect = Rect::from_min_size(
                     Pos2::new(capsule.right() - 64.0, capsule.top() + 10.0),
                     Vec2::splat(24.0),
