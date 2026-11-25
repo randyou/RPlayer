@@ -689,10 +689,6 @@ pub fn show_mini(
         }
         let mut close = false;
         let mut open_main = false;
-        let previous_theme = theme::preset();
-        if previous_theme != theme::ThemePreset::Forest {
-            theme::set_preset(theme::ThemePreset::Forest);
-        }
         egui::CentralPanel::default()
             .frame(Frame::NONE)
             .show(ctx, |ui| {
@@ -744,6 +740,8 @@ pub fn show_mini(
                                 ui.horizontal(|ui| {
                                     ui.vertical(|ui| {
                                         ui.spacing_mut().item_spacing.y = 1.0;
+                                        // Spec D15: one line, never wider than 250px.
+                                        ui.set_max_width(250.0);
                                         ui.add(
                                             egui::Label::new(
                                                 RichText::new(if snapshot.has_track {
@@ -882,10 +880,6 @@ pub fn show_mini(
                     snap_and_store_mini(ctx, &snapshot, &commands, pos, card.size());
                 }
             });
-
-        if previous_theme != theme::ThemePreset::Forest {
-            theme::set_preset(previous_theme);
-        }
 
         if close {
             if let Ok(mut queue) = commands.lock() {
