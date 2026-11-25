@@ -106,8 +106,8 @@ impl RPlayerApp {
         let edge = EDGE * ctx.pixels_per_point();
         let left = pos.x - start_rect.0 <= edge;
         let right = start_rect.0 + start_rect.2 - pos.x <= edge;
-        // The top strip belongs to the titlebar drag handle; once the window has
-        // moved, resizing from the top edge is ambiguous with window dragging.
+        // The top strip belongs to the titlebar drag handle; top-edge resizing
+        // remains intentionally disabled until hit-testing is reliable.
         let top = false;
         let bottom = start_rect.1 + start_rect.3 - pos.y <= edge;
 
