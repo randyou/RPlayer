@@ -39,6 +39,7 @@ fn main() -> eframe::Result<()> {
         .with_inner_size([1440.0, 900.0])
         .with_min_inner_size([1120.0, 720.0])
         .with_decorations(false)
+        .with_window_level(egui::WindowLevel::Normal)
         // The GL context needs alpha support for the transparent desktop
         // lyrics overlay, even though the main panels paint every pixel.
         .with_transparent(true);

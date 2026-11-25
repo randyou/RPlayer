@@ -255,7 +255,7 @@ impl RPlayerApp {
                         crate::ui::focus::ring_rect(ui, response.rect, 16);
                     }
 
-                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    let _actions = ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         self.topbar_actions(ui, compact);
                     });
                 });
@@ -275,12 +275,17 @@ impl RPlayerApp {
                 );
                 let top_strip = Rect::from_min_max(
                     bar_rect.min,
-                    Pos2::new(bar_rect.right(), bar_rect.top() + 6.0),
+                    Pos2::new(bar_rect.right(), bar_rect.top() + 10.0),
+                );
+                let bottom_strip = Rect::from_min_max(
+                    Pos2::new(bar_rect.left(), bar_rect.bottom() - 10.0),
+                    bar_rect.max,
                 );
                 for (id, rect, is_breadcrumb) in [
                     ("rplayer-titlebar-drag-breadcrumb", breadcrumb_rect, true),
                     ("rplayer-titlebar-drag-gap", gap_rect, false),
                     ("rplayer-titlebar-drag-top", top_strip, false),
+                    ("rplayer-titlebar-drag-bottom", bottom_strip, false),
                 ] {
                     if rect.width() <= 0.0 {
                         continue;
@@ -516,3 +521,4 @@ impl RPlayerApp {
         response
     }
 }
+
