@@ -251,9 +251,6 @@ impl RPlayerApp {
                     if std::mem::take(&mut self.focus_search) {
                         response.request_focus();
                     }
-                    if response.has_focus() {
-                        crate::ui::focus::ring_rect(ui, response.rect, 16);
-                    }
 
                     let _actions = ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         self.topbar_actions(ui, compact);

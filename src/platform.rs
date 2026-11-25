@@ -286,59 +286,6 @@ pub fn apply_titlebar(dark: bool) {
             let _ = DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE_PRE_20H1, value, 4);
         }
     }
-
-    // DWM recomputes the non-client frame when the caption colour changes, so
-    // the client rect shifts by the new frame thickness. The renderer only
-    // learns about that through a resize, and without one it keeps painting the
-    // old surface size — which left an unpainted strip right under the title
-    // bar. Re-posting WM_SIZE with the *current* client size makes winit hand
-    // eframe a resize it can rebuild the swap chain for, without touching the
-    // window's actual geometry (so a maximised window stays maximised).
-    #[link(name = "user32")]
-    extern "system" {
-        fn SetWindowPos(
-            hwnd: isize,
-            insert_after: isize,
-            x: i32,
-            y: i32,
-            cx: i32,
-            cy: i32,
-            flags: u32,
-        ) -> i32;
-        fn GetClientRect(hwnd: isize, rect: *mut RectI) -> i32;
-        fn PostMessageW(hwnd: isize, message: u32, wparam: usize, lparam: isize) -> i32;
-    }
-    const SWP_NOSIZE: u32 = 0x0001;
-    const SWP_NOMOVE: u32 = 0x0002;
-    const SWP_NOZORDER: u32 = 0x0004;
-    const SWP_NOACTIVATE: u32 = 0x0010;
-    const SWP_FRAMECHANGED: u32 = 0x0020;
-    const WM_SIZE: u32 = 0x0005;
-    unsafe {
-        SetWindowPos(
-            hwnd,
-            0,
-            0,
-            0,
-            0,
-            0,
-            SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED,
-        );
-        let mut rect = RectI {
-            left: 0,
-            top: 0,
-            right: 0,
-            bottom: 0,
-        };
-        if GetClientRect(hwnd, &mut rect) != 0 {
-            let width = rect.right - rect.left;
-            let height = rect.bottom - rect.top;
-            if width > 0 && height > 0 {
-                let packed = ((height as isize) << 16) | (width as isize & 0xFFFF);
-                PostMessageW(hwnd, WM_SIZE, 0, packed);
-            }
-        }
-    }
 }
 
 /// Applies a rounded native window region to a borderless overlay. Without

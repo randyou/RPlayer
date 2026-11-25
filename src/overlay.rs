@@ -506,8 +506,14 @@ pub fn show_lyrics(
                 }
                 let mut popup_rect = Rect::NOTHING;
                 if controls_open {
-                    let mut panel_value = snapshot.lyrics_opacity;
-                    let mut text_value = snapshot.lyrics_text_opacity;
+                    // While a slider is being dragged its value must not be taken
+                    // from the snapshot again: the command only reaches the player
+                    // a frame later, so re-seeding from it made the handle spring
+                    // back under the pointer (v2.1.0 issue).
+                    let drag_id = Id::new("lyrics-opacity-dragging");
+                    let dragging: Option<(f32, f32)> = ctx.data(|data| data.get_temp(drag_id));
+                    let (mut panel_value, mut text_value) = dragging
+                        .unwrap_or((snapshot.lyrics_opacity, snapshot.lyrics_text_opacity));
                     let area = egui::Area::new(Id::new("lyrics-opacity-controls"))
                         .fixed_pos(capsule.left_top() + Vec2::new(10.0, 34.0))
                         .order(egui::Order::Foreground)
@@ -524,14 +530,12 @@ pub fn show_lyrics(
                                             .size(10.0)
                                             .color(theme::c().muted),
                                     );
-                                    if ui
-                                        .add(
-                                            egui::Slider::new(&mut panel_value, 0.0..=1.0)
-                                                .show_value(false)
-                                                .trailing_fill(true),
-                                        )
-                                        .changed()
-                                    {
+                                    let panel = ui.add(
+                                        egui::Slider::new(&mut panel_value, 0.0..=1.0)
+                                            .show_value(false)
+                                            .trailing_fill(true),
+                                    );
+                                    if panel.changed() {
                                         if let Ok(mut queue) = commands.lock() {
                                             queue.push(OverlayCommand::SetLyricsOpacity(
                                                 panel_value,
@@ -543,19 +547,26 @@ pub fn show_lyrics(
                                             .size(10.0)
                                             .color(theme::c().muted),
                                     );
-                                    if ui
-                                        .add(
-                                            egui::Slider::new(&mut text_value, 0.0..=1.0)
-                                                .show_value(false)
-                                                .trailing_fill(true),
-                                        )
-                                        .changed()
-                                    {
+                                    let text = ui.add(
+                                        egui::Slider::new(&mut text_value, 0.0..=1.0)
+                                            .show_value(false)
+                                            .trailing_fill(true),
+                                    );
+                                    if text.changed() {
                                         if let Ok(mut queue) = commands.lock() {
                                             queue.push(OverlayCommand::SetLyricsTextOpacity(
                                                 text_value,
                                             ));
                                         }
+                                    }
+                                    if panel.dragged() || text.dragged() {
+                                        ctx.data_mut(|data| {
+                                            data.insert_temp(drag_id, (panel_value, text_value))
+                                        });
+                                    } else {
+                                        ctx.data_mut(|data| {
+                                            data.remove::<(f32, f32)>(drag_id)
+                                        });
                                     }
                                     ui.add_space(4.0);
                                     if widgets::secondary_button(ui, "打开桌面歌词设置").clicked() {

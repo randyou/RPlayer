@@ -223,6 +223,11 @@ pub struct RPlayerApp {
     view: View,
     /// 0..1 fade-in progress after a view switch.
     view_fade: f32,
+    /// Viewport whose `update` is running right now. The root viewport clears to
+    /// the theme background so a region the panels happen to miss reads as the
+    /// window background instead of letting the desktop show through; the
+    /// floating overlays keep a transparent framebuffer for their rounded cards.
+    active_viewport: egui::ViewportId,
     search: String,
     sort: SortState,
     selected: Option<u64>,
@@ -407,6 +412,7 @@ impl RPlayerApp {
             eq,
             view: View::Library,
             view_fade: 1.0,
+            active_viewport: egui::ViewportId::ROOT,
             search: String::new(),
             sort: SortState::default(),
             selected: None,
@@ -3288,6 +3294,7 @@ impl eframe::App for RPlayerApp {
 
 impl RPlayerApp {
     fn update_inner(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        self.active_viewport = ctx.viewport_id();
         // Remember the player HWND; the lyrics overlay is created non-activating
         // but can still be handed the foreground, and then every "which window is
         // the player?" lookup would answer with the overlay (v2.1.0 issue #2).
@@ -3306,10 +3313,14 @@ impl RPlayerApp {
             }
         }
 
-        let dark = self.theme_mode.is_dark();
-        if self.titlebar_dark != Some(dark) {
-            crate::platform::apply_titlebar(dark);
-            self.titlebar_dark = Some(dark);
+        // Only once, while the window is still being set up. Re-applying the
+        // dark-mode attribute later makes DWM recompute the non-client frame
+        // mid-session, which shifts the client rect and leaves an unpainted
+        // strip under the top bar (v2.1.0 issue). The caption itself is never
+        // visible here, so a stale attribute costs nothing.
+        if self.titlebar_dark.is_none() {
+            crate::platform::apply_titlebar(self.theme_mode.is_dark());
+            self.titlebar_dark = Some(self.theme_mode.is_dark());
         }
 
         self.window_resize_edges(ctx);
@@ -3437,8 +3448,20 @@ impl RPlayerApp {
     }
 
     fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
-        // The main panels paint every pixel; overlays need a genuinely
-        // transparent framebuffer for their rounded floating cards.
+        // The root viewport clears to the theme background: any 1–8px strip the
+        // panels do not cover then matches the UI instead of letting the desktop
+        // bleed through (v2.1.0 acceptance: "透明的缝隙" under the top bar).
+        // Overlays still need a genuinely transparent framebuffer for their
+        // rounded floating cards.
+        if self.active_viewport == egui::ViewportId::ROOT {
+            let bg = theme::c().bg;
+            return [
+                bg.r() as f32 / 255.0,
+                bg.g() as f32 / 255.0,
+                bg.b() as f32 / 255.0,
+                1.0,
+            ];
+        }
         [0.0, 0.0, 0.0, 0.0]
     }
 }

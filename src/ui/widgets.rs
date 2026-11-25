@@ -3,7 +3,7 @@
 
 use egui::{
     Align2, Button, Color32, CornerRadius, CursorIcon, FontId, Frame, Margin, Pos2, Rect, Response,
-    RichText, Sense, Stroke, TextEdit, Ui, Vec2, WidgetInfo, WidgetType,
+    RichText, Sense, Stroke, StrokeKind, TextEdit, Ui, Vec2, WidgetInfo, WidgetType,
 };
 
 use crate::theme;
@@ -412,7 +412,7 @@ pub fn section_label(ui: &mut Ui, text: &str) {
 
 pub fn search_box(ui: &mut Ui, query: &mut String, hint: &str) -> Response {
     let mut response = None;
-    Frame::NONE
+    let outer = Frame::NONE
         .fill(theme::c().card)
         .stroke(Stroke::new(1.0_f32, theme::c().border))
         .corner_radius(CornerRadius::same(10))
@@ -428,8 +428,20 @@ pub fn search_box(ui: &mut Ui, query: &mut String, hint: &str) -> Response {
                     .desired_width(ui.available_width());
                 response = Some(ui.add(edit));
             });
-        });
+        })
+        .response
+        .rect;
     let response = response.expect("search box always adds a text edit");
+    // Focus shows as the pill's own border turning accent, rather than a second
+    // rectangle drawn inside it.
+    if response.has_focus() {
+        ui.painter().rect_stroke(
+            outer.shrink(0.5),
+            CornerRadius::same(10),
+            Stroke::new(1.0_f32, theme::c().accent),
+            StrokeKind::Inside,
+        );
+    }
     response.widget_info(|| WidgetInfo::labeled(WidgetType::TextEdit, true, hint));
     response
 }
