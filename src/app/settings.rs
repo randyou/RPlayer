@@ -181,7 +181,7 @@ impl RPlayerApp {
                                     .allocate_exact_size(Vec2::new(220.0, 64.0), Sense::click());
                                 let (canvas, ink, accent) = if preset.is_dark() {
                                     (
-                                        crate::theme::brand::INK,
+                                        crate::theme::brand::NOCTURNE,
                                         crate::theme::brand::CREAM,
                                         crate::theme::brand::SAGE,
                                     )
@@ -228,9 +228,9 @@ impl RPlayerApp {
                                     if preset.is_dark() { "Nocturne" } else { "Paper" },
                                     crate::ui::tokens::mono(8.5),
                                     if preset.is_dark() {
-                                        crate::theme::brand::MUTED
+                                        crate::theme::brand::ON_DARK_MUTED
                                     } else {
-                                        crate::theme::brand::INK_MUTED
+                                        crate::theme::brand::MUTED
                                     },
                                 );
                                 crate::ui::focus::focus_on_click(&response);

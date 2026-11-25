@@ -3,7 +3,7 @@
 //! RPlayer deliberately avoids an icon font: every glyph is drawn from lines
 //! and polygons so it stays crisp at any DPI and inherits the mint accent.
 
-use egui::{Align2, Color32, FontId, Painter, Pos2, Rect, Shape, Stroke, Vec2};
+use egui::{Color32, Painter, Pos2, Rect, Shape, Stroke, Vec2};
 
 use crate::theme;
 
@@ -507,23 +507,54 @@ pub fn paint(painter: &Painter, rect: Rect, icon: Icon, color: Color32) {
     }
 }
 
-/// The RPlayer mark: a mint squircle with a dark "R" and two waveform bars.
+/// The Sleeve R mark: a forest squircle holding a paper "R" cut like a record
+/// sleeve (`design/rplayer-v2/brand/rplayer-mark.svg`, 64-unit grid).
+///
+/// Geometry, in grid units: tile inset 2 with radius 11; stem `16..28 × 14..50`;
+/// bowl `28..54 × 14..38` rounded 12 on the right; counter `28..44 × 22..30`
+/// rounded 4; leg `38.5,38 → 53,51 → 42,51 → 30.5,42`.
 pub fn logo(painter: &Painter, rect: Rect) {
-    painter.rect_filled(rect, rect.width() * 0.28, theme::c().accent);
-    let glyph = rect.shrink(rect.width() * 0.14);
-    painter.text(
-        glyph.center() + Vec2::new(-rect.width() * 0.10, 0.0),
-        Align2::CENTER_CENTER,
-        "R",
-        FontId::proportional(rect.width() * 0.46),
-        theme::c().on_accent,
+    let unit = rect.width() / 64.0;
+    let at = |x: f32, y: f32| rect.min + Vec2::new(x * unit, y * unit);
+
+    painter.rect_filled(rect, unit * 11.0, theme::brand::FOREST);
+
+    let paper = theme::brand::PAPER;
+    painter.rect_filled(
+        Rect::from_min_max(at(16.0, 14.0), at(28.0, 50.0)),
+        egui::CornerRadius::ZERO,
+        paper,
     );
-    for (i, h) in [0.16f32, 0.27, 0.20].iter().enumerate() {
-        let x = glyph.right() - rect.width() * 0.12 + i as f32 * rect.width() * 0.07;
-        let bar = Rect::from_center_size(
-            Pos2::new(x, glyph.center().y),
-            Vec2::new(rect.width() * 0.032, rect.height() * h),
-        );
-        painter.rect_filled(bar, rect.width() * 0.02, theme::c().on_accent);
-    }
+    painter.rect_filled(
+        Rect::from_min_max(at(28.0, 14.0), at(54.0, 38.0)),
+        egui::CornerRadius {
+            nw: 0,
+            ne: (unit * 12.0) as u8,
+            se: (unit * 12.0) as u8,
+            sw: 0,
+        },
+        paper,
+    );
+    // The counter is punched with the tile colour: it always sits inside the
+    // forest squircle, so this reads as a hole without needing a stencil.
+    painter.rect_filled(
+        Rect::from_min_max(at(28.0, 22.0), at(44.0, 30.0)),
+        egui::CornerRadius {
+            nw: 0,
+            ne: (unit * 4.0) as u8,
+            se: (unit * 4.0) as u8,
+            sw: 0,
+        },
+        theme::brand::FOREST,
+    );
+    painter.add(egui::Shape::convex_polygon(
+        vec![
+            at(38.5, 38.0),
+            at(53.0, 51.0),
+            at(42.0, 51.0),
+            at(30.5, 42.0),
+        ],
+        paper,
+        egui::Stroke::NONE,
+    ));
 }

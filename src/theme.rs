@@ -342,18 +342,42 @@ pub fn scrim(alpha: u8) -> Color32 {
     Color32::from_black_alpha(alpha)
 }
 
-/// Sleeve R brand colours. Used by the settings preview card and the tray
-/// artwork so the identity stays fixed even when the UI theme changes.
+/// Sleeve R brand colours, mirroring `design/rplayer-v2/brand/brand.css`.
+///
+/// The identity is fixed: it must not move when the UI theme changes, so these
+/// values are deliberately independent of [`Palette`].
 pub mod brand {
     use eframe::egui::Color32;
 
-    pub const INK: Color32 = Color32::from_rgb(0x0F, 0x12, 0x0F);
+    /// `--ink`: type on paper.
+    pub const INK: Color32 = Color32::from_rgb(0x1D, 0x1B, 0x16);
+    /// `--ink-2`: secondary type.
+    pub const INK_2: Color32 = Color32::from_rgb(0x37, 0x33, 0x2B);
+    /// `--muted`: labels on paper.
+    pub const MUTED: Color32 = Color32::from_rgb(0x6B, 0x64, 0x57);
+    /// `--faint`: the quietest type on paper.
+    pub const FAINT: Color32 = Color32::from_rgb(0x93, 0x89, 0x75);
+    /// `--paper`: the default sheet.
     pub const PAPER: Color32 = Color32::from_rgb(0xF4, 0xEF, 0xE5);
-    pub const CREAM: Color32 = Color32::from_rgb(0xF0, 0xE9, 0xDA);
+    /// `--paper-hi`: raised sheet.
+    pub const PAPER_HI: Color32 = Color32::from_rgb(0xFA, 0xF6, 0xED);
+    /// `--paper-sunk`: inset sheet.
+    pub const PAPER_SUNK: Color32 = Color32::from_rgb(0xEF, 0xE8, 0xDB);
+    /// `--forest`: the mark tile and the only brand fill.
     pub const FOREST: Color32 = Color32::from_rgb(0x2E, 0x5B, 0x44);
+    /// `--forest-deep`: pressed forest.
+    pub const FOREST_DEEP: Color32 = Color32::from_rgb(0x25, 0x4A, 0x37);
+    /// `--signal`: destructive accent, never used as a fill for the mark.
+    pub const SIGNAL: Color32 = Color32::from_rgb(0xB6, 0x4B, 0x31);
+    /// `--nocturne`: the dark canvas.
+    pub const NOCTURNE: Color32 = Color32::from_rgb(0x0F, 0x12, 0x0F);
+    /// Warm paper tint used on the nocturne canvas.
+    pub const CREAM: Color32 = Color32::from_rgb(0xF0, 0xE9, 0xDA);
+    /// Sage highlight that reads on forest.
     pub const SAGE: Color32 = Color32::from_rgb(0x8F, 0xB7, 0x9A);
-    pub const MUTED: Color32 = Color32::from_rgb(0xB0, 0xA5, 0x94);
-    pub const INK_MUTED: Color32 = Color32::from_rgb(0x6B, 0x64, 0x57);
+    /// Muted type on the nocturne canvas (no brand.css equivalent: it is the
+    /// nocturne counterpart of `--muted`).
+    pub const ON_DARK_MUTED: Color32 = Color32::from_rgb(0xB0, 0xA5, 0x94);
 }
 
 /// Gradient stops and ink used by the expanded now-playing scene. The scene is

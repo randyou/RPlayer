@@ -54,6 +54,8 @@ Copy-Item 'D:\Workspace\RPlayer\target\release\rplayer.exe' 'D:\Workspace\RPlaye
 Copy-Item 'D:\Workspace\RPlayer\README.md' 'D:\Workspace\RPlayer\dist\RPlayer\README.md' -Force
 Remove-Item 'D:\Workspace\RPlayer\dist\RPlayer\docs' -Recurse -Force -ErrorAction SilentlyContinue
 Copy-Item 'D:\Workspace\RPlayer\docs' 'D:\Workspace\RPlayer\dist\RPlayer\docs' -Recurse -Force
+Remove-Item 'D:\Workspace\RPlayer\dist\RPlayer\brand' -Recurse -Force -ErrorAction SilentlyContinue
+Copy-Item 'D:\Workspace\RPlayer\assets\brand' 'D:\Workspace\RPlayer\dist\RPlayer\brand' -Recurse -Force
 Remove-Item 'D:\Workspace\RPlayer\dist\RPlayer-windows-x64.zip' -Force -ErrorAction SilentlyContinue
 ```
 

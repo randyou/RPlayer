@@ -1,8 +1,17 @@
 # RPlayer v2 设计面验收矩阵
 
-基线：v2.0.17。状态：`已完成` / `部分` / `未验收`。
+基线：v2.1.4（S3 品牌落地已并入）。状态：`已完成` / `部分` / `未验收`。
 本矩阵只记录可核对的证据；没有截图或代码证据的面不写“已完成”。D1–D15 缺稿已于 2026-11-25 补齐（`DESIGN_SPEC_GAPS_SUPPLEMENT.md`、`spec2-*.png`）；有稿不改变本表实现状态。
 
+## 品牌（5）
+
+| 设计面 | 代码 | 状态 | 证据 / 剩余 |
+| --- | --- | --- | --- |
+| Sleeve R mark | `src/ui/icons.rs` `logo()` | 已完成 | 按 `design/rplayer-v2/brand/rplayer-mark.svg` 的 64 单位网格重画：forest 底 + paper 竖干/右侧圆角碗形/内孔/腿；`v220-S3-sidebar.png`、`v220-S3-about.png` |
+| 窗口 / 任务栏 / 托盘图标 | `assets/icon.ico`、`assets/icon.png`、`build.rs` | 已完成 | `tools/qa/gen-brand-icons.py` 生成 1024/256/48/32/24/16 与多尺寸 ico；`build.rs` 用 `winresource` 嵌入 exe，托盘 `ExtractIconExW` 取同一资源，换 `icon.ico` 即三处同步 |
+| 侧栏 lockup | `src/app/sidebar.rs` | 已完成 | mark + serif `RPlayer` + `LOCAL LISTENING · 本地音乐`，深底直接用 mark 不描边（符合 brand sheet「深底必须反白」） |
+| 品牌资产归档 | `assets/brand/` | 已完成 | `favicon-32.png`、`apple-touch-180.png`、`og-1200x630.png`、`brand-sheet.png`、四个 lockup SVG、mark SVG、`brand.css`、品牌 PDF |
+| 品牌色 token 对表 | `src/theme.rs` `theme::brand` | 已完成 | 与 `brand.css` 一一对应：`INK 1D1B16`、`INK_2 37332B`、`MUTED 6B6457`、`FAINT 938975`、`PAPER F4EFE5`、`PAPER_HI FAF6ED`、`PAPER_SUNK EFE8DB`、`FOREST 2E5B44`、`FOREST_DEEP 254A37`、`SIGNAL B64B31`、`NOCTURNE 0F120F`；`ON_DARK_MUTED B0A594` 为 nocturne 专供，无 brand.css 对应值 |
 ## 视图（11）
 
 | 设计面 | 代码 | 状态 | 证据 / 剩余 |

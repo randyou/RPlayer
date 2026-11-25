@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 80" role="img" aria-label="RPlayer">
+  <g transform="translate(8 8)">
+    <rect x="2" y="2" width="60" height="60" rx="11" fill="#2E5B44"/>
+    <path fill="#F4EFE5" d="M16 14h12v36H16zM28 14h12c9.4 0 14 5.3 14 12s-4.6 12-14 12H28v-8h11c3.2 0 5-1.5 5-4s-1.8-4-5-4H28zM38.5 38 53 51H42L30.5 42z"/>
+  </g>
+  <text x="88" y="43" fill="#1D1B16" font-family="'Noto Serif SC','Source Han Serif SC',Georgia,serif" font-size="34" font-weight="600" letter-spacing="0.2">RPlayer</text>
+  <text x="90" y="60" fill="#6F685C" font-family="'Cascadia Mono','Consolas',monospace" font-size="7.5" letter-spacing="2.2">LOCAL LISTENING · 本地音乐</text>
+</svg>
+

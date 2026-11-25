@@ -42,16 +42,14 @@ v2 的功能面已经关掉，剩下的两件事性质完全不同：
 
 **验收**：`spec2-mini.png` 八态截图与稿一一对应。
 
-### S3 品牌落地（S，1 天）
+### S3 品牌落地（S，1 天）· **已完成**
 
-资产已就位（`design/rplayer-v2/brand/`：mark / mono / lockup ×4 / favicon / apple-touch / og / brand-sheet / 品牌 PDF）。要做的：
+- 窗口 / 任务栏 / 托盘图标：`tools/qa/gen-brand-icons.py` 按 `rplayer-mark.svg` 的 64 单位网格用 Pillow 生成 1024/256/48/32/24/16 与多尺寸 `assets/icon.ico`；`build.rs` 仍用 `winresource` 嵌入，托盘经 `ExtractIconExW` 取同一资源，换 ico 即三处同步。
+- 应用内 logo：`src/ui/icons.rs` 的 `logo()` 从「字体 R + 三竖条」改为品牌 mark（forest 底 + paper 竖干/碗形/内孔/腿），侧栏头部、关于对话框、空态页三处自动跟随，深底直接用 mark（符合「深底必须反白」）。
+- 品牌资产归档到 `assets/brand/`（favicon / apple-touch / og / brand-sheet / 四个 lockup SVG / mark SVG / brand.css / 品牌 PDF），`docs/RELEASE_CHECKLIST.md` 的打包步骤新增 `assets/brand → dist/RPlayer/brand`。
+- `theme::brand` 与 `brand.css` 逐项对表：`INK 1D1B16`、`INK_2 37332B`、`MUTED 6B6457`、`FAINT 938975`、`PAPER F4EFE5`、`PAPER_HI FAF6ED`、`PAPER_SUNK EFE8DB`、`FOREST 2E5B44`、`FOREST_DEEP 254A37`、`SIGNAL B64B31`、`NOCTURNE 0F120F`；原 `INK=0F120F` 的语义错位已修正（那其实是 `--nocturne`），另立 `ON_DARK_MUTED B0A594` 给 nocturne 上的次级文字。
 
-- 窗口图标与任务栏图标换成 `rplayer-mark`（16/24/32 三档，不随状态换脸）；
-- 应用内 logo 位（侧栏头部、关于对话框、空态页）改用 lockup，深底用 reversed；
-- `favicon-32.png` / `apple-touch-180.png` / `og-1200x630.png` 进安装包与仓库根；
-- `brand.css` 里的色值与本项目 `theme::brand::*` 对表，确认 `#2E5B44` / `#F4EFE5` 一致。
-
-**验收**：`brand-sheet.png` 与本应用截图的并排核对图；`brand/README.md` 的禁用项（不加投影、不用渐变、16px 以下不描边）逐条确认。
+**验收**：`docs/qa/v0.2/v220-S3-sidebar.png`、`v220-S3-about.png` 与 `brand-sheet.png` 并排核对；`assets/brand/brand-sheet.png` 的禁用项（不加投影、不用渐变、16px 以下不描边）逐条确认已满足。
 
 ### S4 曲库工具 D5–D6（M，2–3 天）
 
