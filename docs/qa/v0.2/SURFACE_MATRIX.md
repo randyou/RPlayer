@@ -57,11 +57,11 @@
 
 | 设计面 | 代码 | 状态 | 证据 / 剩余 |
 | --- | --- | --- | --- |
-| 桌面歌词 · 默认 | `src/overlay.rs` | 已完成 | v2.2.0 D14：`v220-S8-lyrics-paper-screen.png`（Paper，黑 halo 0.35） |
+| 桌面歌词 · 默认 | `src/overlay.rs` | 已完成 | v2.2.0 D14：`v220-S8-lyrics-paper-print.png`（Paper，黑 halo 0.35） |
 | 桌面歌词 · 悬停 | `src/overlay.rs` | 已完成 | `v202-lyrics-hover.png`，0.78 深色面板 |
-| 桌面歌词 · 锁定 | `src/overlay.rs` | 已完成 | `v202-lyrics-locked.png`，提示走设置 |
+| 桌面歌词 · 锁定 | `src/overlay.rs` | 已完成 | 锁定态隐藏齿轮与关闭，提示走设置 |
 | 桌面歌词 · 无歌词 | `src/overlay.rs` | 已完成 | `v2017-lyrics-empty.png`；空态 CTA + 切歌回归无上一首残留 |
-| 桌面歌词 · 深色壁纸 | `src/overlay.rs` | 已完成 | v2.2.0 D14：`v220-S8-lyrics-forest-screen.png`（Nocturne，白 halo 0.22） |
+| 桌面歌词 · 深色壁纸 | `src/overlay.rs` | 已完成 | v2.2.0 D14：`v220-S8-lyrics-forest-print.png`（Nocturne，白 halo 0.22） |
 | 迷你播放器 · 经典 | `src/overlay.rs` | 已完成 | v2.2.0 D15 对稿（`v220-S2-mini-classic-paper-art-screen.png` 等四态 + `-hover` / `-drag` / `-empty` / `-longtitle`）：410×146/R16、左上 5px accent 竖条、封面 92 用音符占位、标题 14.5 单行、副行 9（`艺术家 · 编号`）、顶部 4×24 动作间距 8 静止 55% / 悬停 100%、底部 28 圆播放 + 26 前后键、收藏右下、拖动 1px accent 虚线、松手回写位置 |
 | 迷你播放器 · 紧凑 | `src/overlay.rs` | 已完成 | v2.2.0 D15 对稿（`v220-S2-mini-compact-paper-noart-screen.png` / `-forest-noart` / `-longtitle` / `-empty`）：无封面、左内边距 12、标题 250px 单行上限 + 悬停显示全名、副行 9、传输区居中（28 圆播放）、收藏右下、四动作静止 55% / 悬停 100%；去掉稿外的「迷你播放器」角标 |
 | 系统托盘菜单 | `src/app/tray.rs`、`src/platform/tray.rs` | 已完成 | v2.1.0 自绘弹窗（`v210-tray-menu-light.png` / `v210-tray-menu-dark.png`）：280×366 圆角 8 面板（v2.2.0 S1 对稿：抬头 58 + 2px 只读进度、两条分隔线、35% 禁用行、140ms 淡入上移、三态提示、双击播放暂停），抬头含 36px 封面缩略（无封面用音符灰块）+ `RPLAYER` + 曲名/艺人 + `已播 / 总时长`；9 行按「传输 → 收藏/桌面歌词/迷你播放器 → 设置 → 退出」分组，带图标、快捷键提示与三组分隔；收藏/桌面歌词/迷你播放器显示选中勾，无曲目时传输与收藏置灰不可点；命令走 `TrayAction::OpenMenu` + 主线程 viewport，点行即关、外部左键按下即关（弹窗锚在托盘图标上，不按悬停收起） |

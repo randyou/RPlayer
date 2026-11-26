@@ -197,8 +197,8 @@ v2 的功能面已经关掉，剩下的两件事性质完全不同：
 
 - `src/overlay.rs`：歌词阴影按主题取色——Paper 下 `black_alpha(0.35)`，Nocturne 下 `white_alpha(0.22)`；`shadow_text` 由单个 (1,2) 硬投影改成 8 向 halo（正交 ±0.75px、对角 ±0.55px），近似稿面的 `0 0 1px` 柔边。1px 白边沿用既有 `lyrics_stroke` 逻辑，未再加粗。
 - 证据（1440×900 主机，歌词窗 860×158 直接压在壁纸上）：
-  - `docs/qa/v0.2/v220-S8-lyrics-paper-screen.png`：Paper 主题，深色字 + 黑色 halo。
-  - `docs/qa/v0.2/v220-S8-lyrics-forest-screen.png`：Nocturne 主题，浅色字 + 白色 halo。
+  - `docs/qa/v0.2/v220-S8-lyrics-paper-print.png`：Paper 主题，深色字 + 黑色 halo。
+  - `docs/qa/v0.2/v220-S8-lyrics-forest-print.png`：Nocturne 主题，浅色字 + 白色 halo。
 - 取舍（记录）：稿面按壁纸明暗选阴影，实现按主题明暗选（应用无法采样壁纸）；面板透明度仍由用户设置决定，取证时面板透明度为 0，只有文字与 halo。
 
 ### S9 可访问性补齐（S，1–2 天）· **已完成**

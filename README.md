@@ -32,7 +32,7 @@ v2.1.x 已完成：全量回归（A–O 十五组、约 90 项）与随之而来
 
 ![RPlayer v2 迷你播放器](docs/qa/v0.2/v2-mini.png)
 
-![RPlayer v2 桌面歌词](docs/qa/v0.2/v2-desktop.png)
+![RPlayer 桌面歌词与迷你播放器设计](design/rplayer-v2/shots/sys-01-desktop.png)
 
 ## 特性
 
