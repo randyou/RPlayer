@@ -461,12 +461,6 @@ pub fn playlist_item(ui: &mut Ui, name: &str, selected: bool) -> Response {
     response
 }
 
-pub fn section_label(ui: &mut Ui, text: &str) {
-    ui.add_space(10.0);
-    ui.label(RichText::new(text).color(theme::c().faint).size(11.0).strong());
-    ui.add_space(2.0);
-}
-
 pub fn search_box(ui: &mut Ui, query: &mut String, hint: &str) -> Response {
     let mut response = None;
     let outer = Frame::NONE
@@ -655,29 +649,6 @@ pub fn primary_button(ui: &mut Ui, text: &str) -> Response {
         .corner_radius(10)
         .min_size(Vec2::new(96.0, 40.0));
     let response = ui.add(button).on_hover_cursor(CursorIcon::PointingHand);
-    crate::ui::focus::focus_on_click(&response);
-    crate::ui::focus::ring(ui, &response);
-    response
-}
-
-pub fn primary_button_full(ui: &mut Ui, text: &str) -> Response {
-    let width = ui.available_width().max(120.0);
-    let (rect, response) = ui.allocate_exact_size(Vec2::new(width, 42.0), Sense::click());
-    let fill = if response.hovered() {
-        theme::c().accent.gamma_multiply(1.06)
-    } else {
-        theme::c().accent
-    };
-    ui.painter().rect_filled(rect, CornerRadius::same(10), fill);
-    ui.painter().text(
-        rect.center(),
-        Align2::CENTER_CENTER,
-        text,
-        FontId::proportional(14.0),
-        theme::c().on_accent,
-    );
-    let response = response.on_hover_cursor(CursorIcon::PointingHand);
-    mark(&response, WidgetType::Button, text, None);
     crate::ui::focus::focus_on_click(&response);
     crate::ui::focus::ring(ui, &response);
     response
@@ -1065,43 +1036,6 @@ pub fn secondary_button_icon(ui: &mut Ui, icon: Icon, text: &str) -> Response {
         theme::c().text,
         13.0,
         false,
-    );
-    let response = response.on_hover_cursor(CursorIcon::PointingHand);
-    mark(&response, WidgetType::Button, text, None);
-    crate::ui::focus::focus_on_click(&response);
-    crate::ui::focus::ring(ui, &response);
-    response
-}
-
-/// Full-width primary button with an icon, used by the sidebar.
-pub fn primary_button_full_icon(ui: &mut Ui, icon: Icon, text: &str) -> Response {
-    let width = ui.available_width().max(120.0);
-    let (rect, response) = ui.allocate_exact_size(Vec2::new(width, 42.0), Sense::click());
-    let hovered = response.hovered();
-    let fill = if hovered {
-        theme::c().accent.gamma_multiply(1.06)
-    } else {
-        theme::c().accent
-    };
-    let press = ui.ctx().animate_bool_with_time(
-        ui.id().with(("press", text)),
-        response.is_pointer_button_down_on(),
-        crate::ui::motion::duration(crate::ui::motion::PRESS),
-    );
-    let paint_rect = Rect::from_center_size(
-        rect.center(),
-        rect.size() * (1.0 - 0.025 * press),
-    );
-    ui.painter()
-        .rect_filled(paint_rect, CornerRadius::same(10), fill);
-    paint_icon_label(
-        ui,
-        paint_rect,
-        icon,
-        text,
-        theme::c().on_accent,
-        14.0,
-        true,
     );
     let response = response.on_hover_cursor(CursorIcon::PointingHand);
     mark(&response, WidgetType::Button, text, None);

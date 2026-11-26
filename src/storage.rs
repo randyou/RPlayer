@@ -22,10 +22,6 @@ pub fn data_dir() -> PathBuf {
         .join(APP_DIR_NAME)
 }
 
-pub fn library_path() -> PathBuf {
-    data_dir().join(LIBRARY_FILE)
-}
-
 pub fn library_db_path() -> PathBuf {
     data_dir().join("library.db")
 }

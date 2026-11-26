@@ -5,7 +5,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 pub const PRESS: f32 = 0.09;
 pub const FAST: f32 = 0.14;
 pub const PAGE: f32 = 0.28;
-pub const SLOW: f32 = 0.52;
 
 static REDUCED: AtomicBool = AtomicBool::new(false);
 

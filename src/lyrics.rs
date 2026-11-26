@@ -88,11 +88,7 @@ impl LyricsEditor {
         (0..self.rows.len()).any(|index| self.invalid_row(index))
     }
 
-    pub fn first_invalid_row(&self) -> Option<usize> {
-        (0..self.rows.len()).find(|index| self.invalid_row(*index))
-    }
-
-    /// Row highlighted for the current playback position.
+     /// Row highlighted for the current playback position.
     pub fn current_index(&self, position: f64) -> Option<usize> {
         let mut active = None;
         for (index, row) in self.rows.iter().enumerate() {
@@ -428,7 +424,6 @@ mod tests {
         assert!(editor.is_dirty());
         editor.rows[0].time = "0:0x".into();
         assert!(editor.invalid_row(0));
-        assert_eq!(editor.first_invalid_row(), Some(0));
         assert!(editor.build().is_none());
     }
 

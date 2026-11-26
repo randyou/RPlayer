@@ -75,10 +75,7 @@ impl EqSettings {
         self
     }
 
-    pub fn is_flat(&self) -> bool {
-        self.gains.iter().all(|gain| gain.abs() < 0.01) && self.preamp.abs() < 0.01
-    }
-}
+ }
 
 /// Settings shared with the audio thread.
 pub struct EqShared {

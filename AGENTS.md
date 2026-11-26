@@ -123,7 +123,7 @@ src/ui/focus.rs      2px focus rings for custom controls
 
 ## Verification
 
-- Unit tests: `cargo test --release` (currently 78; update this line when it moves).
+- Unit tests: `cargo test --release` (currently 71; update this line when it moves).
 - `cargo test` does **not** rebuild `target/release/rplayer.exe`; always run
   `cargo build --release` before UI screenshots.
 - Windows UI automation: `agent-desktop snapshot --window-id <id>`, then click

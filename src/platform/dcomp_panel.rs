@@ -31,8 +31,8 @@ use windows::Win32::Graphics::Dxgi::{IDXGIDevice, IDXGISurface};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::UI::Input::KeyboardAndMouse::{GetCapture, GetKeyState, ReleaseCapture, SetCapture};
 use windows::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExW, DefWindowProcW, FindWindowW, GetClientRect, GetCursorPos, GetWindowRect, PostMessageW, RegisterClassW, SendMessageW, SetWindowPos, ShowWindow, HCURSOR, HICON,
-    SWP_NOACTIVATE, SWP_SHOWWINDOW, SW_SHOWNOACTIVATE, WM_ERASEBKGND, WNDCLASSW, WNDPROC,
+    CreateWindowExW, DefWindowProcW, FindWindowW, GetClientRect, GetCursorPos, GetWindowRect, PostMessageW, RegisterClassW, SetWindowPos, ShowWindow, HCURSOR, HICON,
+    SWP_NOACTIVATE, SWP_SHOWWINDOW, SW_SHOWNOACTIVATE, WM_ERASEBKGND, WNDCLASSW,
     WS_EX_NOACTIVATE, WS_EX_NOREDIRECTIONBITMAP, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT, WS_POPUP,
 };
 

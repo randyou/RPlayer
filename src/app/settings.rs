@@ -198,7 +198,7 @@ impl RPlayerApp {
                                     rect,
                                     CornerRadius::same(8),
                                     Stroke::new(
-                                        if self.theme_preset == preset { 2.0 } else { 1.0 },
+                                        if self.theme_preset == preset { 2.0_f32 } else { 1.0_f32 },
                                         if self.theme_preset == preset {
                                             theme::c().accent
                                         } else {
@@ -769,10 +769,6 @@ impl RPlayerApp {
                             Some(NetFailure::RateLimited) => (
                                 "请求过于频繁",
                                 "服务暂时限制了请求；稍后再试，当前播放不受影响。",
-                            ),
-                            Some(NetFailure::Offline) => (
-                                "当前离线",
-                                "这是手动发起的联网请求；可以保持离线，或仅本次联网。",
                             ),
                         };
                         ui.horizontal(|ui| {

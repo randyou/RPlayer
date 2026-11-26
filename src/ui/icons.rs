@@ -29,8 +29,6 @@ pub enum Icon {
     More,
     ChevronDown,
     ChevronUp,
-    ChevronLeft,
-    ChevronRight,
     Trash,
     Edit,
     Warning,
@@ -40,7 +38,6 @@ pub enum Icon {
     Album,
     Artist,
     Check,
-    Grid,
     Queue,
     Heart,
     HeartFilled,
@@ -252,12 +249,6 @@ pub fn paint(painter: &Painter, rect: Rect, icon: Icon, color: Color32) {
         Icon::ChevronUp => {
             c.polyline(&[(0.24, 0.60), (0.50, 0.36), (0.76, 0.60)]);
         }
-        Icon::ChevronLeft => {
-            c.polyline(&[(0.60, 0.22), (0.36, 0.50), (0.60, 0.78)]);
-        }
-        Icon::ChevronRight => {
-            c.polyline(&[(0.40, 0.22), (0.64, 0.50), (0.40, 0.78)]);
-        }
         Icon::Trash => {
             c.line((0.18, 0.29), (0.82, 0.29));
             c.polyline(&[(0.38, 0.29), (0.40, 0.20), (0.60, 0.20), (0.62, 0.29)]);
@@ -319,17 +310,6 @@ pub fn paint(painter: &Painter, rect: Rect, icon: Icon, color: Color32) {
         }
         Icon::Check => {
             c.polyline(&[(0.20, 0.52), (0.42, 0.73), (0.81, 0.27)]);
-        }
-        Icon::Grid => {
-            for (x, y) in [(0.16, 0.16), (0.56, 0.16), (0.16, 0.56), (0.56, 0.56)] {
-                let r = Rect::from_min_size(c.p(x, y), Vec2::splat(side * 0.28));
-                c.painter.rect_stroke(
-                    r,
-                    side * 0.03,
-                    Stroke::new(c.stroke, c.color),
-                    egui::StrokeKind::Inside,
-                );
-            }
         }
         Icon::Queue => {
             c.polyline(&[(0.12, 0.30), (0.62, 0.30)]);

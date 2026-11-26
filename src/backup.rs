@@ -42,7 +42,6 @@ pub struct BackupInfo {
 pub struct RestoreReport {
     pub settings_only: bool,
     pub files: usize,
-    pub auto_backup: PathBuf,
 }
 
 /// Creates a new backup directory under `dest_parent`.
@@ -168,7 +167,6 @@ pub fn restore(data: &Path, backup: &Path, settings_only: bool) -> Result<Restor
     Ok(RestoreReport {
         settings_only,
         files: if settings_only { 1 } else { info.manifest.files.len() },
-        auto_backup,
     })
 }
 
@@ -343,7 +341,6 @@ mod tests {
         drop(conn);
         let report = restore(&data, &backup, false).unwrap();
         assert_eq!(report.files, 4);
-        assert!(report.auto_backup.join("manifest.json").is_file());
         assert_eq!(track_count(&data.join("library.db")), 2);
         assert!(serde_json::from_slice::<crate::model::Library>(
             &fs::read(data.join("library.json")).unwrap()

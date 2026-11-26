@@ -7,7 +7,6 @@ use egui::{Align, Frame, Key, Layout, Margin, RichText, Stroke, Vec2};
 
 use super::{RPlayerApp, View};
 use crate::theme;
-use crate::ui::widgets;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Command {

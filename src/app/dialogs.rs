@@ -135,9 +135,6 @@ enum Outcome {
         genre: String,
         year: String,
     },
-    AddFolder,
-    RemoveFolder(PathBuf),
-    Rescan,
     LyricsSearch {
         id: u64,
         title: String,
@@ -759,104 +756,6 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                         };
                     }
                 }
-                Dialog::Folders => {
-                    dialog_header(
-                        ui,
-                        "音乐文件夹",
-                        "RPlayer 会递归扫描这些文件夹中的音频文件。",
-                    );
-                    ui.add_space(12.0);
-
-                    let folders = app.library.folders.clone();
-                    if folders.is_empty() {
-                        Frame::NONE
-                            .fill(theme::c().card)
-                            .corner_radius(CornerRadius::same(10))
-                            .inner_margin(Margin::symmetric(14, 18))
-                            .show(ui, |ui| {
-                                ui.set_min_width(ui.available_width());
-                                ui.vertical_centered(|ui| {
-                                    ui.label(
-                                        RichText::new("还没有添加音乐文件夹")
-                                            .size(12.0)
-                                            .color(theme::c().muted),
-                                    );
-                                    ui.label(
-                                        RichText::new("支持 MP3 / FLAC / WAV / OGG / M4A / AAC")
-                                            .size(10.5)
-                                            .color(theme::c().faint),
-                                    );
-                                });
-                            });
-                    } else {
-                        ScrollArea::vertical()
-                            .id_salt("rplayer-folders")
-                            .max_height(224.0)
-                            .auto_shrink([false, true])
-                            .show(ui, |ui| {
-                                for folder in &folders {
-                                    ui.horizontal(|ui| {
-                                        let (rect, _) = ui.allocate_exact_size(
-                                            Vec2::splat(17.0),
-                                            Sense::hover(),
-                                        );
-                                        icons::paint(
-                                            ui.painter(),
-                                            rect,
-                                            Icon::Folder,
-                                            theme::c().muted,
-                                        );
-                                        let available = (ui.available_width() - 34.0).max(60.0);
-                                        ui.allocate_ui_with_layout(
-                                            Vec2::new(available, 20.0),
-                                            Layout::left_to_right(Align::Center),
-                                            |ui| {
-                                                ui.add(
-                                                    Label::new(
-                                                        RichText::new(
-                                                            folder.display().to_string(),
-                                                        )
-                                                        .size(11.0)
-                                                        .color(theme::c().muted),
-                                                    )
-                                                    .truncate(),
-                                                );
-                                            },
-                                        );
-                                        if widgets::icon_button(
-                                            ui,
-                                            Icon::Trash,
-                                            26.0,
-                                            "移除这个文件夹",
-                                        )
-                                        .clicked()
-                                        {
-                                            outcome = Outcome::RemoveFolder(folder.clone());
-                                        }
-                                    });
-                                    ui.add_space(2.0);
-                                }
-                            });
-                    }
-
-                    ui.add_space(14.0);
-                    ui.horizontal(|ui| {
-                        if widgets::secondary_button(ui, "添加文件夹").clicked() {
-                            outcome = Outcome::AddFolder;
-                        }
-                        if !folders.is_empty()
-                            && widgets::secondary_button(ui, "重新扫描").clicked()
-                        {
-                            outcome = Outcome::Rescan;
-                        }
-                        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                            if widgets::secondary_button(ui, "关闭").clicked() {
-                                outcome = Outcome::Close;
-                            }
-                        });
-                    });
-                }
-
                 Dialog::Shortcuts => {
                     ui.set_width(780.0);
                     if dialog_header_close(
@@ -1080,16 +979,6 @@ pub(super) fn show(app: &mut RPlayerApp, ctx: &egui::Context) {
                     super::ToastKind::Error
                 },
             );
-            app.dialog = Dialog::None;
-        }
-        Outcome::AddFolder => {
-            app.open_folder_picker();
-        }
-        Outcome::RemoveFolder(folder) => {
-            app.remove_folder(&folder);
-        }
-        Outcome::Rescan => {
-            app.start_scan();
             app.dialog = Dialog::None;
         }
         Outcome::Close => {

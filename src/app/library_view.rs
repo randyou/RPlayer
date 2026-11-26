@@ -54,10 +54,6 @@ struct Columns {
 }
 
 impl Columns {
-    fn for_width(width: f32) -> Self {
-        Self::for_width_opt(width, true)
-    }
-
     /// `show_album = false` collapses the album column (D13 compact tier).
     fn for_width_opt(width: f32, show_album: bool) -> Self {
         let index = 40.0;
@@ -1654,22 +1650,9 @@ fn table_scroll_offset(index: usize, viewport: f32, row_height: f32) -> f32 {
 #[cfg(test)]
 mod tests {
     use super::{
-        batch_bar_mode, table_scroll_offset, table_target, BatchBarMode, Columns, TableMove,
+        batch_bar_mode, table_scroll_offset, table_target, BatchBarMode, TableMove,
         BATCH_LARGE_THRESHOLD,
     };
-
-    #[test]
-    fn table_columns_clamp_album_to_design_bounds() {
-        assert_eq!(Columns::for_width(400.0).album, 180.0);
-        assert!((Columns::for_width(800.0).album - 216.0).abs() < 0.01);
-        assert_eq!(Columns::for_width(1600.0).album, 360.0);
-    }
-
-    #[test]
-    fn table_columns_keep_a_readable_title() {
-        assert!(Columns::for_width(800.0).title >= 180.0);
-        assert!(Columns::for_width(1600.0).title >= 180.0);
-    }
 
     #[test]
     fn table_navigation_clamps_at_edges() {

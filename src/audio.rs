@@ -210,11 +210,7 @@ impl AudioEngine {
         }
     }
 
-    pub fn has_queued_next(&self) -> bool {
-        self.queued_next
-    }
-
-    /// Current value of the gapless boundary counter.
+     /// Current value of the gapless boundary counter.
     pub fn boundary_count(&self) -> u64 {
         self.boundary.load(Ordering::SeqCst)
     }
@@ -314,13 +310,6 @@ impl AudioEngine {
         self.apply_volume();
     }
 
-    pub fn replaygain(&self) -> f32 {
-        self.replaygain
-    }
-
-    pub fn volume(&self) -> f32 {
-        self.volume
-    }
 
     /// Current playback position, in seconds.
     pub fn position(&self) -> f64 {

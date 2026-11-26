@@ -11,7 +11,7 @@ use std::sync::Arc;
 use egui::epaint::Shadow;
 use egui::style::{WidgetVisuals, Widgets};
 use egui::{
-    Color32, CornerRadius, FontData, FontDefinitions, FontFamily, FontId, Frame, Margin, Stroke,
+    Color32, CornerRadius, FontData, FontDefinitions, FontFamily, FontId, Margin, Stroke,
     TextStyle, Visuals,
 };
 
@@ -25,13 +25,6 @@ pub enum ThemeMode {
 }
 
 impl ThemeMode {
-    pub fn toggle(self) -> Self {
-        match self {
-            Self::Dark => Self::Light,
-            Self::Light => Self::Dark,
-        }
-    }
-
     pub fn is_dark(self) -> bool {
         matches!(self, Self::Dark)
     }
@@ -190,14 +183,6 @@ pub enum ThemePreset {
 }
 
 impl ThemePreset {
-    pub const ALL: [Self; 6] = [
-        Self::Paper,
-        Self::Sand,
-        Self::Mist,
-        Self::Forest,
-        Self::Midnight,
-        Self::Charcoal,
-    ];
 
     /// The only two themes exposed by the v2 design.
     pub const VISIBLE: [Self; 2] = [Self::Paper, Self::Forest];
@@ -231,14 +216,6 @@ impl ThemePreset {
             "paper" | "sand" | "mist" => Some(Self::Paper),
             "nocturne" | "forest" | "midnight" | "charcoal" => Some(Self::Forest),
             _ => None,
-        }
-    }
-
-    pub fn default_for_mode(mode: ThemeMode) -> Self {
-        if mode.is_dark() {
-            Self::Forest
-        } else {
-            Self::Paper
         }
     }
 
@@ -305,14 +282,6 @@ pub fn set_preset(preset: ThemePreset) {
     PRESET.store(index, Ordering::Relaxed);
 }
 
-pub fn mode() -> ThemeMode {
-    preset().mode()
-}
-
-pub fn set_mode(mode: ThemeMode) {
-    set_preset(ThemePreset::default_for_mode(mode));
-}
-
 thread_local! {
     /// Palette forced by [`scoped`] while a single surface is painted.
     static OVERRIDE: Cell<Option<&'static Palette>> = const { Cell::new(None) };
@@ -323,24 +292,6 @@ pub fn c() -> &'static Palette {
     OVERRIDE
         .with(Cell::get)
         .unwrap_or_else(|| preset().palette())
-}
-
-/// Paint one surface with a fixed palette, whatever the user picked.
-///
-/// The equalizer is always a Nocturne panel: it is a hardware-style tool, so it
-/// keeps its dark face on the paper theme too. The override lasts only for the
-/// closure and nests safely.
-pub fn scoped<R>(palette: &'static Palette, draw: impl FnOnce() -> R) -> R {
-    struct Restore(Option<&'static Palette>);
-    impl Drop for Restore {
-        fn drop(&mut self) {
-            OVERRIDE.with(|slot| slot.set(self.0));
-        }
-    }
-
-    let previous = OVERRIDE.with(|slot| slot.replace(Some(palette)));
-    let _restore = Restore(previous);
-    draw()
 }
 
 /// Text and glyphs drawn straight onto cover art. Media is unpredictable, so
@@ -377,24 +328,12 @@ pub mod brand {
 
     /// `--ink`: type on paper.
     pub const INK: Color32 = Color32::from_rgb(0x1D, 0x1B, 0x16);
-    /// `--ink-2`: secondary type.
-    pub const INK_2: Color32 = Color32::from_rgb(0x37, 0x33, 0x2B);
     /// `--muted`: labels on paper.
     pub const MUTED: Color32 = Color32::from_rgb(0x6B, 0x64, 0x57);
-    /// `--faint`: the quietest type on paper.
-    pub const FAINT: Color32 = Color32::from_rgb(0x93, 0x89, 0x75);
     /// `--paper`: the default sheet.
     pub const PAPER: Color32 = Color32::from_rgb(0xF4, 0xEF, 0xE5);
-    /// `--paper-hi`: raised sheet.
-    pub const PAPER_HI: Color32 = Color32::from_rgb(0xFA, 0xF6, 0xED);
-    /// `--paper-sunk`: inset sheet.
-    pub const PAPER_SUNK: Color32 = Color32::from_rgb(0xEF, 0xE8, 0xDB);
     /// `--forest`: the mark tile and the only brand fill.
     pub const FOREST: Color32 = Color32::from_rgb(0x2E, 0x5B, 0x44);
-    /// `--forest-deep`: pressed forest.
-    pub const FOREST_DEEP: Color32 = Color32::from_rgb(0x25, 0x4A, 0x37);
-    /// `--signal`: destructive accent, never used as a fill for the mark.
-    pub const SIGNAL: Color32 = Color32::from_rgb(0xB6, 0x4B, 0x31);
     /// `--nocturne`: the dark canvas.
     pub const NOCTURNE: Color32 = Color32::from_rgb(0x0F, 0x12, 0x0F);
     /// Warm paper tint used on the nocturne canvas.
@@ -425,14 +364,6 @@ pub fn sidebar_deep() -> Color32 {
         ThemePreset::Paper => Color32::from_rgb(0x1B, 0x20, 0x1B),
         ThemePreset::Forest => Color32::from_rgb(0x09, 0x0B, 0x09),
         _ => c().sidebar,
-    }
-}
-
-pub fn player_bg() -> Color32 {
-    match preset() {
-        ThemePreset::Paper => Color32::from_rgb(0x1B, 0x20, 0x1B),
-        ThemePreset::Forest => Color32::from_rgb(0x09, 0x0B, 0x09),
-        _ => c().panel,
     }
 }
 
@@ -507,22 +438,6 @@ pub fn signal_soft() -> Color32 {
     }
 }
 
-pub fn canvas() -> Color32 {
-    match preset() {
-        ThemePreset::Paper => Color32::from_rgb(0xE9, 0xE2, 0xD5),
-        ThemePreset::Forest => Color32::from_rgb(0x09, 0x0B, 0x09),
-        _ => c().bg,
-    }
-}
-
-pub fn ink_soft() -> Color32 {
-    match preset() {
-        ThemePreset::Paper => Color32::from_rgb(0x37, 0x33, 0x2B),
-        ThemePreset::Forest => Color32::from_rgb(0xD8, 0xD0, 0xC0),
-        _ => c().text,
-    }
-}
-
 pub fn serif_family() -> FontFamily {
     FontFamily::Name(Arc::from("rplayer-serif"))
 }
@@ -573,11 +488,6 @@ pub fn white_alpha(alpha: f32) -> Color32 {
 pub fn black_alpha(alpha: f32) -> Color32 {
     let alpha = alpha.clamp(0.0, 1.0);
     Color32::from_rgba_premultiplied(0, 0, 0, (alpha * 255.0).round() as u8)
-}
-
-/// Installs fonts once and applies the style for `mode`.
-pub fn install(ctx: &egui::Context, mode: ThemeMode) {
-    install_preset(ctx, ThemePreset::default_for_mode(mode));
 }
 
 /// Installs fonts once and applies a specific preset.
@@ -804,42 +714,6 @@ fn install_fonts(ctx: &egui::Context) {
     ctx.set_fonts(fonts);
 }
 
-/// Floating panel used for dialogs and the player bar.
-pub fn panel_frame() -> Frame {
-    Frame::NONE
-        .fill(c().panel)
-        .stroke(Stroke::new(1.0_f32, c().border))
-        .corner_radius(CornerRadius::same(18))
-        .inner_margin(Margin::same(18))
-}
-
-pub fn card_frame() -> Frame {
-    Frame::NONE
-        .fill(c().card)
-        .stroke(Stroke::new(1.0_f32, c().border_soft))
-        .corner_radius(CornerRadius::same(14))
-        .inner_margin(Margin::same(14))
-}
-
-pub fn pill_frame(selected: bool) -> Frame {
-    Frame::NONE
-        .fill(if selected {
-            accent_alpha(0.12)
-        } else {
-            Color32::TRANSPARENT
-        })
-        .stroke(Stroke::new(
-            1.0_f32,
-            if selected {
-                accent_alpha(0.45)
-            } else {
-                c().border
-            },
-        ))
-        .corner_radius(CornerRadius::same(99))
-        .inner_margin(Margin::symmetric(12, 5))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -893,19 +767,4 @@ mod tests {
         assert!(contrast(DARK.on_accent, DARK.accent) >= 4.5);
     }
 
-    #[test]
-    fn scoped_palette_is_restored_after_the_surface() {
-        // Palettes are `const`, so compare colours rather than pointers; other
-        // tests also flip the global preset in parallel.
-        let before = c().bg;
-        let inside = scoped(&DARK, || {
-            assert_eq!(c().bg, DARK.bg);
-            let nested = scoped(&LIGHT, || c().bg);
-            assert_eq!(nested, LIGHT.bg);
-            assert_eq!(c().bg, DARK.bg);
-            c().dark
-        });
-        assert!(inside);
-        assert_eq!(c().bg, before);
-    }
 }

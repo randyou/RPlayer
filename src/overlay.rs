@@ -59,12 +59,10 @@ pub enum OverlayCommand {
     Seek(f64),
     SetLyricsOpacity(f32),
     SetLyricsTextOpacity(f32),
-    SetLyricsFont(f32),
     SetLyricsLocked(bool),
     SetLyricsPosition(f32, f32),
     ToggleLyrics,
     SetMiniOnTop(bool),
-    SetMiniSnap(bool),
     SetMiniPosition(f32, f32),
     CloseLyrics,
     CloseMini,
@@ -303,7 +301,7 @@ pub fn show_lyrics(
                 }
                 }
 
-                let drag = ui.interact(
+                let _drag = ui.interact(
                     capsule,
                     Id::new("lyrics-drag"),
                     Sense::click_and_drag(),

@@ -78,11 +78,6 @@ pub fn set_tray_tooltip(text: &str) {
 pub enum TrayAction {
     Show,
     TogglePlay,
-    Previous,
-    Next,
-    DesktopLyrics,
-    Settings,
-    Exit,
     /// Right click: open the app-drawn menu at these screen coordinates.
     OpenMenu(i32, i32),
 }

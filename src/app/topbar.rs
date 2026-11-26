@@ -113,7 +113,6 @@ impl RPlayerApp {
 
         if down {
             if let Some(state) = ctx.data(|data| data.get_temp::<ResizeState>(id)) {
-                let delta = pos - state.start_pointer;
                 let left = matches!(
                     state.direction,
                     ResizeDirection::West

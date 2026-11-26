@@ -455,32 +455,13 @@ impl Library {
         self.tracks.iter().map(|t| t.duration).sum()
     }
 
-    pub fn track_count_for_playlist(&self, playlist_id: u64) -> usize {
-        self.playlist(playlist_id)
-            .map(|p| p.track_ids.len())
-            .unwrap_or(0)
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SortField {
     Title,
-    Artist,
     Album,
     Duration,
-    Added,
-}
-
-impl SortField {
-    pub fn label(self) -> &'static str {
-        match self {
-            Self::Title => "标题",
-            Self::Artist => "艺术家",
-            Self::Album => "专辑",
-            Self::Duration => "时长",
-            Self::Added => "添加时间",
-        }
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -635,10 +616,10 @@ mod tests {
         let pid = lib.create_playlist("Road trip");
         assert!(lib.add_to_playlist(pid, 7));
         assert!(!lib.add_to_playlist(pid, 7));
-        assert_eq!(lib.track_count_for_playlist(pid), 1);
+        assert_eq!(lib.playlist(pid).map(|p| p.track_ids.len()).unwrap_or(0), 1);
         lib.tracks.clear();
         lib.prune_playlists();
-        assert_eq!(lib.track_count_for_playlist(pid), 0);
+        assert_eq!(lib.playlist(pid).map(|p| p.track_ids.len()).unwrap_or(0), 0);
     }
 
     #[test]

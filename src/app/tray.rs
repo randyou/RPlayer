@@ -88,16 +88,6 @@ impl RPlayerApp {
                 match action {
                     crate::platform::tray::TrayAction::Show => self.show_main_window(ctx),
                     crate::platform::tray::TrayAction::TogglePlay => self.toggle_play(ctx),
-                    crate::platform::tray::TrayAction::Previous => self.previous_track(ctx),
-                    crate::platform::tray::TrayAction::Next => self.next_track(ctx, false),
-                    crate::platform::tray::TrayAction::DesktopLyrics => {
-                        self.toggle_desktop_lyrics(ctx)
-                    }
-                    crate::platform::tray::TrayAction::Settings => {
-                        self.show_main_window(ctx);
-                        self.settings_open = true;
-                    }
-                    crate::platform::tray::TrayAction::Exit => self.exit_from_tray(ctx),
                     crate::platform::tray::TrayAction::OpenMenu(x, y) => {
                         self.open_tray_menu(ctx, Pos2::new(x as f32, y as f32))
                     }
@@ -154,7 +144,7 @@ impl RPlayerApp {
         let Some(open) = self.tray_menu.as_ref() else {
             return;
         };
-        let (pos, origin, opened_at) = (open.pos, open.origin, open.opened_at);
+        let (pos, _origin, opened_at) = (open.pos, open.origin, open.opened_at);
         let commands = open.commands.clone();
         // The closure below owns a clone; this handle drains the results after
         // the viewport has drawn for this frame.

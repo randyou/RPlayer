@@ -159,7 +159,6 @@ pub(super) enum Dialog {
         searching: bool,
         error: Option<String>,
     },
-    Folders,
     Shortcuts,
     About,
 }
@@ -194,7 +193,6 @@ pub(crate) enum NetFailure {
     NotFound,
     Timeout,
     RateLimited,
-    Offline,
 }
 
 pub struct RPlayerApp {
@@ -1551,47 +1549,7 @@ impl RPlayerApp {
         }
     }
 
-    fn request_lyrics_custom(
-        &mut self,
-        ctx: &egui::Context,
-        track_id: u64,
-        title: String,
-        artist: String,
-        album: String,
-    ) {
-        if self.lyrics_fetching == Some(track_id) {
-            return;
-        }
-        let Some(mut track) = self.library.track(track_id).cloned() else {
-            return;
-        };
-        if title.trim().is_empty() {
-            self.toast("歌名不能为空", ToastKind::Error);
-            return;
-        }
-        track.title = title.trim().to_string();
-        track.artist = artist.trim().to_string();
-        track.album = album.trim().to_string();
-        // A wrong cached match must not survive a failed re-match.
-        let _ = std::fs::remove_file(crate::storage::lyrics_cache_path(track_id));
-        let _ = std::fs::remove_file(crate::storage::custom_lyrics_path(track_id));
-        self.lyrics_attempted.insert(track_id);
-        self.lyrics_fetching = Some(track_id);
-        self.toast("正在按新条件搜索歌词…", ToastKind::Info);
-        let sender = self.lyrics_tx.clone();
-        let ctx = ctx.clone();
-        std::thread::spawn(move || {
-            let result = lyrics_fetch::fetch(&track);
-            let _ = sender.send(LyricsFetchEvent {
-                track_id,
-                manual: true,
-                result,
-            });
-            ctx.request_repaint();
-        });
-    }
-
-    fn load_lyrics_for(&mut self, track: &Track, id: u64) {
+     fn load_lyrics_for(&mut self, track: &Track, id: u64) {
         if let Some(lyrics) = crate::lyrics::load_custom(id) {
             self.lyrics = Some(lyrics);
             self.lyrics_source = Some("编辑".to_string());
@@ -1986,10 +1944,6 @@ impl RPlayerApp {
                     self.library.desktop_lyrics_text_opacity = opacity.clamp(0.0, 1.0);
                     self.prefs_dirty = true;
                 }
-                OverlayCommand::SetLyricsFont(font) => {
-                    self.library.desktop_lyrics_font = font.clamp(18.0, 40.0);
-                    self.prefs_dirty = true;
-                }
                 OverlayCommand::SetLyricsLocked(locked) => {
                     self.library.desktop_lyrics_locked = locked;
                     self.prefs_dirty = true;
@@ -2012,10 +1966,6 @@ impl RPlayerApp {
                             egui::WindowLevel::Normal
                         }),
                     );
-                }
-                OverlayCommand::SetMiniSnap(snap) => {
-                    self.library.mini_snap = snap;
-                    self.prefs_dirty = true;
                 }
                 OverlayCommand::SetMiniPosition(x, y) => {
                     self.library.mini_pos = Some((x, y));
@@ -2278,15 +2228,6 @@ impl RPlayerApp {
         self.album_focus = None;
         self.artist_focus = None;
         self.view_fade = 0.0;
-    }
-
-    fn set_theme_mode(&mut self, ctx: &egui::Context, mode: ThemeMode) {
-        let preset = if self.theme_preset.mode() == mode {
-            self.theme_preset
-        } else {
-            self.theme_preset.toggle_mode()
-        };
-        self.set_theme_preset(ctx, preset);
     }
 
     fn set_theme_preset(&mut self, ctx: &egui::Context, preset: ThemePreset) {
@@ -3521,23 +3462,6 @@ impl RPlayerApp {
         self.request_repaint(ctx);
     }
 
-    fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
-        // The root viewport clears to the theme background: any 1–8px strip the
-        // panels do not cover then matches the UI instead of letting the desktop
-        // bleed through (v2.1.0 acceptance: "透明的缝隙" under the top bar).
-        // Overlays still need a genuinely transparent framebuffer for their
-        // rounded floating cards.
-        if self.active_viewport == egui::ViewportId::ROOT {
-            let bg = theme::c().bg;
-            return [
-                bg.r() as f32 / 255.0,
-                bg.g() as f32 / 255.0,
-                bg.b() as f32 / 255.0,
-                1.0,
-            ];
-        }
-        [0.0, 0.0, 0.0, 0.0]
-    }
 }
 
 impl Drop for RPlayerApp {
@@ -3551,11 +3475,6 @@ fn compare_tracks(a: &Track, b: &Track, sort: SortState) -> std::cmp::Ordering {
     use std::cmp::Ordering;
     let ordering = match sort.field {
         SortField::Title => a.title.to_lowercase().cmp(&b.title.to_lowercase()),
-        SortField::Artist => a
-            .artist
-            .to_lowercase()
-            .cmp(&b.artist.to_lowercase())
-            .then_with(|| a.title.to_lowercase().cmp(&b.title.to_lowercase())),
         SortField::Album => a
             .album
             .to_lowercase()
@@ -3565,7 +3484,6 @@ fn compare_tracks(a: &Track, b: &Track, sort: SortState) -> std::cmp::Ordering {
             .duration
             .partial_cmp(&b.duration)
             .unwrap_or(Ordering::Equal),
-        SortField::Added => a.added_at.cmp(&b.added_at),
     };
     if sort.ascending {
         ordering

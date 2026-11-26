@@ -5,7 +5,7 @@
 //! dangerous action at the end of the menu.
 
 use eframe::egui::{
-    self, Align2, Color32, CornerRadius, CursorIcon, FontId, Pos2, Response, RichText, Sense,
+    self, Align2, CornerRadius, CursorIcon, FontId, Pos2, Response, RichText, Sense,
     Stroke, Ui, Vec2, WidgetInfo, WidgetType,
 };
 
@@ -15,7 +15,6 @@ use super::focus;
 use super::icons::{self, Icon};
 
 pub const ROW_HEIGHT: f32 = 30.0;
-pub const MIN_WIDTH: f32 = 268.0;
 pub const MAX_WIDTH: f32 = 300.0;
 
 /// Prepare a context-menu body.
@@ -235,15 +234,6 @@ pub fn separator_sized(ui: &mut Ui, width: f32) {
     ui.add_space(4.0);
 }
 
-/// Small right-aligned value shown at the end of a settings-like menu row.
-pub fn value(ui: &mut Ui, text: &str) {
-    ui.label(
-        RichText::new(text)
-            .font(FontId::monospace(9.0))
-            .color(theme::c().faint),
-    );
-}
-
 /// Muted helper text inside a menu.
 pub fn hint(ui: &mut Ui, text: &str) {
     ui.label(
@@ -253,8 +243,3 @@ pub fn hint(ui: &mut Ui, text: &str) {
     );
 }
 
-/// A dot used by toggle rows.
-pub fn dot(ui: &mut Ui, color: Color32) {
-    let (rect, _) = ui.allocate_exact_size(Vec2::splat(6.0), Sense::hover());
-    ui.painter().circle_filled(rect.center(), 3.0, color);
-}
