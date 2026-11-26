@@ -251,7 +251,7 @@ cargo test --release                       # 单元测试
 ```
 
 - 只支持 Windows x64；需要 Rust stable（本地开发用 `stable-x86_64-pc-windows-gnu`，CI 用 MSVC 验证两套工具链都能编译）。
-- SMTC 助手是独立 crate：`cd tools/smtc-helper; cargo build --release`。
+- SMTC 助手是独立 crate：`cd tools/smtc-helper; cargo build --release`。主程序优先在自身旁边找 `rplayer-smtc.exe`，开发构建则在 `tools/smtc-helper/target/{release,debug}/` 找；助手意外退出会自动重启（最多 3 次），失败原因写入 `%TEMP%\rplayer-smtc.log`。
 - `main` 每次推送/PR 都会跑 [`.github/workflows/ci.yml`](.github/workflows/ci.yml)：`cargo test --release`、主程序与 SMTC 助手构建。
 - 发版：推一个 `v*` 标签（如 `git tag v2.2.1 && git push origin v2.2.1`），[`release.yml`](.github/workflows/release.yml) 会自动测试、打包 `RPlayer-<tag>-windows-x64.zip`（含 `RPlayer.exe`、`rplayer-smtc.exe`、文档与品牌资源）、生成 SHA-256 校验文件并发布到 Releases。
 

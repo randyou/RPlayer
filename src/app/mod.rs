@@ -2698,7 +2698,7 @@ impl RPlayerApp {
                 commands.push(command);
             }
         }
-        if let Some(smtc) = &self.smtc {
+        if let Some(smtc) = &mut self.smtc {
             commands.extend(smtc.poll());
         }
         for command in commands {
