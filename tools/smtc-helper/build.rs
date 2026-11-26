@@ -7,8 +7,8 @@ fn main() {
     resource.set_icon("../../assets/icon.ico");
     resource.set("ProductName", "RPlayer");
     resource.set("FileDescription", "RPlayer");
-    resource.set("FileVersion", "2.2.1.0");
-    resource.set("ProductVersion", "2.2.1.0");
+    resource.set("FileVersion", "2.2.2.0");
+    resource.set("ProductVersion", "2.2.2.0");
     resource.set("LegalCopyright", "MIT");
     if let Err(error) = resource.compile() {
         panic!("failed to embed SMTC helper resources: {error}");
