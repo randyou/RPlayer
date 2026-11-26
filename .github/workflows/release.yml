@@ -54,9 +54,10 @@ jobs:
           New-Item -ItemType Directory -Force -Path $stage | Out-Null
           Copy-Item "target/release/rplayer.exe" "$stage/RPlayer.exe"
           Copy-Item "tools/smtc-helper/target/release/rplayer-smtc.exe" "$stage/rplayer-smtc.exe"
-          Copy-Item README.md, LICENSE, "tools/register-aumid.ps1" $stage
-          Copy-Item "docs" "$stage/docs" -Recurse
-          Copy-Item "brand" "$stage/brand" -Recurse
+          Copy-Item README.md, LICENSE $stage
+          if (Test-Path "tools/register-aumid.ps1") {
+            Copy-Item "tools/register-aumid.ps1" $stage
+          }
 
           $ref = "${{ github.event.inputs.tag || github.ref_name }}"
           $zip = "dist/RPlayer-$ref-windows-x64.zip"
