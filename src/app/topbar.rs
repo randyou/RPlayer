@@ -207,20 +207,24 @@ impl RPlayerApp {
     pub(super) fn topbar_panel(&mut self, ctx: &egui::Context) {
         egui::TopBottomPanel::top("rplayer-topbar")
             .exact_height(tokens::TOPBAR_HEIGHT)
+            .show_separator_line(false)
             .frame(
                 Frame::NONE
                     .fill(theme::c().bg)
                     .inner_margin(Margin::symmetric(18, 0)),
             )
             .show(ctx, |ui| {
-                ui.painter().line_segment(
-                    [
-                        egui::Pos2::new(ui.max_rect().left(), ui.max_rect().bottom() - 0.5),
-                        egui::Pos2::new(ui.max_rect().right(), ui.max_rect().bottom() - 0.5),
-                    ],
+                let bar_rect = ui.max_rect();
+                // One hairline in the palette's soft border colour. egui's own
+                // panel separator is disabled above: it painted
+                // `noninteractive.bg_stroke` (a 10% border_soft blend, i.e.
+                // almost the bar's own fill) on top of this line and made the
+                // edge disappear.
+                ui.painter().hline(
+                    bar_rect.x_range(),
+                    bar_rect.bottom() - 1.0,
                     egui::Stroke::new(1.0_f32, theme::c().border_soft),
                 );
-                let bar_rect = ui.max_rect();
                 let on_edge = ctx
                     .input(|input| input.pointer.latest_pos())
                     .is_some_and(|pos| {

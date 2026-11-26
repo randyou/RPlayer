@@ -1755,6 +1755,9 @@ impl RPlayerApp {
 impl eframe::App for RPlayerApp {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         let started = std::time::Instant::now();
+        // eframe may re-apply its own theme after `new()`; make sure our
+        // palette visuals are the ones actually in use before anything draws.
+        theme::ensure_style(ctx);
         // A theme swap re-styles egui every frame until the blend finishes so
         // built-in widgets (menus, tooltips, text edits) fade with the custom
         // painted surfaces instead of snapping to the new palette.

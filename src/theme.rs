@@ -638,6 +638,19 @@ pub fn apply_style(ctx: &egui::Context) {
     ctx.set_style(style);
 }
 
+/// Re-installs the palette when something else (eframe's own theme handling on
+/// startup, or the OS theme notification) replaced our visuals behind our back.
+///
+/// Without this the app boots on egui's default visuals — grey separators,
+/// default panel fills — and only looks right after the first manual theme
+/// swap, which is exactly how the top-bar hairline went missing.
+pub fn ensure_style(ctx: &egui::Context) {
+    let palette = c();
+    if ctx.style().visuals.panel_fill != palette.bg {
+        apply_style(ctx);
+    }
+}
+
 fn visuals_for(palette: &Palette) -> Visuals {
     let mut visuals = if palette.dark {
         Visuals::dark()
