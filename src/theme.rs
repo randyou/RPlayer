@@ -7,6 +7,7 @@
 use std::cell::Cell;
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use egui::epaint::Shadow;
 use egui::style::{WidgetVisuals, Widgets};
@@ -270,28 +271,145 @@ pub fn preset() -> ThemePreset {
     }
 }
 
-pub fn set_preset(preset: ThemePreset) {
-    let index = match preset {
+fn preset_index(preset: ThemePreset) -> u8 {
+    match preset {
         ThemePreset::Paper => 0,
         ThemePreset::Sand => 1,
         ThemePreset::Mist => 2,
         ThemePreset::Forest => 3,
         ThemePreset::Midnight => 4,
         ThemePreset::Charcoal => 5,
-    };
-    PRESET.store(index, Ordering::Relaxed);
+    }
+}
+
+/// How long a theme swap takes to blend from one palette to the other.
+pub const TRANSITION: Duration = Duration::from_millis(320);
+
+#[derive(Clone, Copy)]
+struct Transition {
+    from: Palette,
+    from_preset: ThemePreset,
+    to: ThemePreset,
+    start: Instant,
+}
+
+impl Transition {
+    fn elapsed(self) -> f32 {
+        (self.start.elapsed().as_secs_f32() / TRANSITION.as_secs_f32()).clamp(0.0, 1.0)
+    }
+
+    /// Eased 0..1 progress of the swap.
+    fn progress(self) -> f32 {
+        ease(self.elapsed())
+    }
 }
 
 thread_local! {
-    /// Palette forced by [`scoped`] while a single surface is painted.
-    static OVERRIDE: Cell<Option<&'static Palette>> = const { Cell::new(None) };
+    static TRANSITION_STATE: Cell<Option<Transition>> = const { Cell::new(None) };
+}
+
+/// Switches the preset and starts a short colour blend. Callers should keep
+/// repainting until [`transition_active`] turns false.
+pub fn set_preset(preset: ThemePreset) {
+    let next = preset_index(preset);
+    if next == PRESET.load(Ordering::Relaxed) && !transition_active() {
+        return;
+    }
+    let from = c();
+    let from_preset = self::preset();
+    PRESET.store(next, Ordering::Relaxed);
+    TRANSITION_STATE.with(|slot| {
+        slot.set(Some(Transition {
+            from,
+            from_preset,
+            to: preset,
+            start: Instant::now(),
+        }))
+    });
+}
+
+/// Applies a preset without animating. Used while the window is being built.
+pub fn set_preset_instant(preset: ThemePreset) {
+    PRESET.store(preset_index(preset), Ordering::Relaxed);
+    TRANSITION_STATE.with(|slot| slot.set(None));
+}
+
+/// True while a theme swap is still blending; the frame loop should request
+/// another repaint and refresh the egui style.
+pub fn transition_active() -> bool {
+    TRANSITION_STATE.with(|slot| match slot.get() {
+        Some(t) => t.elapsed() < 1.0,
+        None => false,
+    })
+}
+
+fn current_transition() -> Option<Transition> {
+    TRANSITION_STATE.with(|slot| slot.get()).and_then(|t| {
+        if t.elapsed() < 1.0 {
+            Some(t)
+        } else {
+            TRANSITION_STATE.with(|slot| slot.set(None));
+            None
+        }
+    })
+}
+
+fn ease(t: f32) -> f32 {
+    let t = t.clamp(0.0, 1.0);
+    if t < 0.5 {
+        4.0 * t * t * t
+    } else {
+        1.0 - (-2.0 * t + 2.0).powi(3) / 2.0
+    }
+}
+
+fn mix_channel(a: u8, b: u8, t: f32) -> u8 {
+    (a as f32 + (b as f32 - a as f32) * t).round().clamp(0.0, 255.0) as u8
+}
+
+/// Blends two colours in premultiplied space; used for the theme cross-fade.
+pub fn mix_color(a: Color32, b: Color32, t: f32) -> Color32 {
+    let t = t.clamp(0.0, 1.0);
+    Color32::from_rgba_premultiplied(
+        mix_channel(a.r(), b.r(), t),
+        mix_channel(a.g(), b.g(), t),
+        mix_channel(a.b(), b.b(), t),
+        mix_channel(a.a(), b.a(), t),
+    )
+}
+
+fn blend_palette(from: &Palette, to: &Palette, t: f32) -> Palette {
+    Palette {
+        dark: if t < 0.5 { from.dark } else { to.dark },
+        bg: mix_color(from.bg, to.bg, t),
+        sidebar: mix_color(from.sidebar, to.sidebar, t),
+        panel: mix_color(from.panel, to.panel, t),
+        card: mix_color(from.card, to.card, t),
+        hover: mix_color(from.hover, to.hover, t),
+        selected: mix_color(from.selected, to.selected, t),
+        border: mix_color(from.border, to.border, t),
+        border_soft: mix_color(from.border_soft, to.border_soft, t),
+        text: mix_color(from.text, to.text, t),
+        muted: mix_color(from.muted, to.muted, t),
+        faint: mix_color(from.faint, to.faint, t),
+        accent: mix_color(from.accent, to.accent, t),
+        accent_dark: mix_color(from.accent_dark, to.accent_dark, t),
+        on_accent: mix_color(from.on_accent, to.on_accent, t),
+        danger: mix_color(from.danger, to.danger, t),
+        shadow: mix_color(from.shadow, to.shadow, t),
+    }
 }
 
 /// The active palette. Every custom-painted colour goes through this.
-pub fn c() -> &'static Palette {
-    OVERRIDE
-        .with(Cell::get)
-        .unwrap_or_else(|| preset().palette())
+///
+/// While a theme swap is running this returns the blended palette, so any
+/// surface that repaints during the 320 ms window fades with the rest of the
+/// UI instead of snapping.
+pub fn c() -> Palette {
+    if let Some(t) = current_transition() {
+        return blend_palette(&t.from, t.to.palette(), t.progress());
+    }
+    *preset().palette()
 }
 
 /// Text and glyphs drawn straight onto cover art. Media is unpredictable, so
@@ -357,53 +475,58 @@ pub mod scene {
     pub const SURFACE: Color32 = Color32::from_rgb(0x0E, 0x12, 0x11);
 }
 
+/// Resolves a per-preset accent through the running theme blend so the dark
+/// chrome fades with the rest of the window instead of snapping at mid-swap.
+fn themed(paper: Color32, forest: Color32) -> Color32 {
+    let pick = |p: ThemePreset| if p.is_dark() { forest } else { paper };
+    match current_transition() {
+        Some(t) => mix_color(pick(t.from_preset), pick(t.to), t.progress()),
+        None => pick(preset()),
+    }
+}
+
 /// Deep chrome used by the v2 sidebar and player bar. Kept outside [`Palette`]
 /// because the shell is always dark in both themes, even on Paper.
 pub fn sidebar_deep() -> Color32 {
-    match preset() {
-        ThemePreset::Paper => Color32::from_rgb(0x1B, 0x20, 0x1B),
-        ThemePreset::Forest => Color32::from_rgb(0x09, 0x0B, 0x09),
-        _ => c().sidebar,
-    }
+    themed(
+        Color32::from_rgb(0x1B, 0x20, 0x1B),
+        Color32::from_rgb(0x09, 0x0B, 0x09),
+    )
 }
 
 pub fn sidebar_text() -> Color32 {
-    match preset() {
-        ThemePreset::Paper => Color32::from_rgb(0xEC, 0xE5, 0xD5),
-        ThemePreset::Forest => Color32::from_rgb(0xF0, 0xE9, 0xDA),
-        _ => c().text,
-    }
+    themed(
+        Color32::from_rgb(0xEC, 0xE5, 0xD5),
+        Color32::from_rgb(0xF0, 0xE9, 0xDA),
+    )
 }
 
 pub fn sidebar_muted() -> Color32 {
-    match preset() {
-        ThemePreset::Paper => Color32::from_rgb(0xA3, 0x9A, 0x87),
-        ThemePreset::Forest => Color32::from_rgb(0x9C, 0x92, 0x80),
-        _ => c().muted,
-    }
+    themed(
+        Color32::from_rgb(0xA3, 0x9A, 0x87),
+        Color32::from_rgb(0x9C, 0x92, 0x80),
+    )
 }
 
 pub fn sidebar_faint() -> Color32 {
-    match preset() {
-        ThemePreset::Paper => Color32::from_rgb(0x75, 0x6D, 0x5F),
-        ThemePreset::Forest => Color32::from_rgb(0x6B, 0x63, 0x56),
-        _ => c().faint,
-    }
+    themed(
+        Color32::from_rgb(0x75, 0x6D, 0x5F),
+        Color32::from_rgb(0x6B, 0x63, 0x56),
+    )
 }
 
 pub fn sidebar_line() -> Color32 {
-    match preset() {
-        ThemePreset::Paper => Color32::from_rgba_unmultiplied(0xEC, 0xE5, 0xD5, 28),
-        ThemePreset::Forest => Color32::from_rgba_unmultiplied(0xF0, 0xE9, 0xDA, 26),
-        _ => c().border,
-    }
+    themed(
+        Color32::from_rgba_unmultiplied(0xEC, 0xE5, 0xD5, 28),
+        Color32::from_rgba_unmultiplied(0xF0, 0xE9, 0xDA, 26),
+    )
 }
 
 pub fn sidebar_selected() -> Color32 {
-    match preset() {
-        ThemePreset::Paper => Color32::from_rgb(0x26, 0x32, 0x29),
-        _ => Color32::from_rgb(0x23, 0x33, 0x28),
-    }
+    themed(
+        Color32::from_rgb(0x26, 0x32, 0x29),
+        Color32::from_rgb(0x23, 0x33, 0x28),
+    )
 }
 
 pub fn sidebar_accent() -> Color32 {
@@ -411,19 +534,17 @@ pub fn sidebar_accent() -> Color32 {
 }
 
 pub fn accent_soft() -> Color32 {
-    match preset() {
-        ThemePreset::Paper => Color32::from_rgb(0xE2, 0xEA, 0xDF),
-        ThemePreset::Forest => Color32::from_rgb(0x23, 0x33, 0x28),
-        _ => c().selected,
-    }
+    themed(
+        Color32::from_rgb(0xE2, 0xEA, 0xDF),
+        Color32::from_rgb(0x23, 0x33, 0x28),
+    )
 }
 
 pub fn accent_hover() -> Color32 {
-    match preset() {
-        ThemePreset::Paper => Color32::from_rgb(0x25, 0x4A, 0x37),
-        ThemePreset::Forest => Color32::from_rgb(0xA6, 0xC8, 0xAE),
-        _ => c().accent_dark,
-    }
+    themed(
+        Color32::from_rgb(0x25, 0x4A, 0x37),
+        Color32::from_rgb(0xA6, 0xC8, 0xAE),
+    )
 }
 
 pub fn signal() -> Color32 {
@@ -431,11 +552,10 @@ pub fn signal() -> Color32 {
 }
 
 pub fn signal_soft() -> Color32 {
-    match preset() {
-        ThemePreset::Paper => Color32::from_rgb(0xF3, 0xE1, 0xDA),
-        ThemePreset::Forest => Color32::from_rgb(0x35, 0x20, 0x19),
-        _ => with_alpha(c().danger, 0.16),
-    }
+    themed(
+        Color32::from_rgb(0xF3, 0xE1, 0xDA),
+        Color32::from_rgb(0x35, 0x20, 0x19),
+    )
 }
 
 pub fn serif_family() -> FontFamily {
@@ -492,7 +612,7 @@ pub fn black_alpha(alpha: f32) -> Color32 {
 
 /// Installs fonts once and applies a specific preset.
 pub fn install_preset(ctx: &egui::Context, preset: ThemePreset) {
-    set_preset(preset);
+    set_preset_instant(preset);
     if !FONTS_INSTALLED.swap(true, Ordering::Relaxed) {
         install_fonts(ctx);
     }
@@ -508,7 +628,7 @@ pub fn install_preset(ctx: &egui::Context, preset: ThemePreset) {
 /// acceptance report: the top bar and the lyric opacity panel changed layout
 /// after switching themes).
 pub fn apply_style(ctx: &egui::Context) {
-    let palette = *c();
+    let palette = c();
     let mut style = (*ctx.style()).clone();
     style.visuals = visuals_for(&palette);
     style.spacing.item_spacing = egui::vec2(10.0, 10.0);
@@ -717,6 +837,26 @@ fn install_fonts(ctx: &egui::Context) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn mix_color_blends_endpoints_and_midpoint() {
+        let a = Color32::from_rgb(10, 20, 30);
+        let b = Color32::from_rgb(200, 220, 240);
+        assert_eq!(mix_color(a, b, 0.0), a);
+        assert_eq!(mix_color(a, b, 1.0), b);
+        let mid = mix_color(a, b, 0.5);
+        assert_eq!((mid.r(), mid.g(), mid.b()), (105, 120, 135));
+    }
+
+    #[test]
+    fn ease_is_clamped_and_reaches_both_ends() {
+        assert_eq!(ease(-1.0), 0.0);
+        assert_eq!(ease(0.0), 0.0);
+        assert_eq!(ease(0.5), 0.5);
+        assert_eq!(ease(1.0), 1.0);
+        assert!(ease(0.25) < 0.25);
+        assert!(ease(0.75) > 0.75);
+    }
 
     fn linear(channel: u8) -> f32 {
         let value = f32::from(channel) / 255.0;

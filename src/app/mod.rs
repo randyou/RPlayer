@@ -1755,6 +1755,13 @@ impl RPlayerApp {
 impl eframe::App for RPlayerApp {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         let started = std::time::Instant::now();
+        // A theme swap re-styles egui every frame until the blend finishes so
+        // built-in widgets (menus, tooltips, text edits) fade with the custom
+        // painted surfaces instead of snapping to the new palette.
+        if theme::transition_active() {
+            theme::apply_style(ctx);
+            ctx.request_repaint_after(std::time::Duration::from_millis(16));
+        }
         self.update_inner(ctx, frame);
         if let Some(file) = &mut self.frame_log {
             use std::io::Write as _;

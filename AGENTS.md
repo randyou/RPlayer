@@ -125,6 +125,10 @@ src/ui/focus.rs      2px focus rings for custom controls
   <840 narrow (drawer sidebar, two-line 96px player). Never scale font sizes
   across tiers; drop columns first.
 - Visible themes are only Paper / Nocturne. Old preset ids alias into those two.
+- Theme swaps blend palettes for `theme::TRANSITION` (320 ms, cubic in-out);
+  `theme::c()` returns the blended palette and `set_preset` starts the blend.
+  Keep repainting (and calling `theme::apply_style`) while
+  `theme::transition_active()` until it finishes.
 - Primary buttons use accent; secondary use card + border; danger uses signal.
 - Window chrome is borderless: `src/app/topbar.rs` draws window buttons and the
   drag handle; side/bottom resize uses native `SetWindowPos`, never
@@ -141,7 +145,7 @@ src/ui/focus.rs      2px focus rings for custom controls
 
 ## Verification
 
-- Unit tests: `cargo test --release` (currently 71; update this line when it moves).
+- Unit tests: `cargo test --release` (currently 73; update this line when it moves).
 - `cargo test` does **not** rebuild `target/release/rplayer.exe`; always run
   `cargo build --release` before UI screenshots.
 - Windows UI automation: `agent-desktop snapshot --window-id <id>`, then click

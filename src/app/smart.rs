@@ -306,7 +306,7 @@ impl RPlayerApp {
 /// Mock styling: combos and drag values look like flat card boxes with a
 /// hairline border rather than egui's default tinted widgets.
 fn style_window(ui: &mut Ui) {
-    let palette = *theme::c();
+    let palette = theme::c();
     let style = ui.style_mut();
     style.text_styles.insert(
         egui::TextStyle::Button,
