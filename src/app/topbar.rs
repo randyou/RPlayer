@@ -215,13 +215,16 @@ impl RPlayerApp {
             )
             .show(ctx, |ui| {
                 let bar_rect = ui.max_rect();
-                // One hairline in the palette's soft border colour. egui's own
-                // panel separator is disabled above: it painted
+                // One hairline in the palette's soft border colour, spanning the
+                // whole window. The panel's inner margin insets `bar_rect` by
+                // 18px on each side, so the line is drawn against the screen
+                // rect instead — otherwise both ends stop short of the window
+                // edge. egui's own panel separator is disabled above: it painted
                 // `noninteractive.bg_stroke` (a 10% border_soft blend, i.e.
                 // almost the bar's own fill) on top of this line and made the
                 // edge disappear.
                 ui.painter().hline(
-                    bar_rect.x_range(),
+                    ui.ctx().screen_rect().x_range(),
                     bar_rect.bottom() - 1.0,
                     egui::Stroke::new(1.0_f32, theme::c().border_soft),
                 );
