@@ -265,6 +265,13 @@ v0.6 的曲库深度规划、专辑/艺术家视图、评分与统计、智能�
 
 ## 版本记录
 
+### v2.2.1
+
+- 托盘：通知区图标改用固定 GUID（`NIF_GUID`），更新后不再被 Windows 11 当成新图标塞回溢出区；监听 `TaskbarCreated`，Explorer 重启后自动重新注册。
+- SMTC：开发构建也会在 `tools/smtc-helper/target/{release,debug}/` 找到 `rplayer-smtc.exe`（此前只认 exe 同级，`cargo build` 的产物因此没有媒体卡）；助手 stderr 写入 `%TEMP%\rplayer-smtc.log`，异常退出最多自动重启 3 次并重新同步曲目与播放状态。
+- 清理：删掉未被引用的模块、token、theme 助手与对话框/托盘变体（25 个文件，+17/−712），依赖逐个核对后没有可删项。
+- `cargo test --release`：71 passed。
+
 ### v2.2.0
 
 - v2.2.0 完成 docs/V2_PLAN.md 的 S1–S9 按稿对齐：托盘（S1）、迷你播放器八态与 hover/拖动反馈（S2）、品牌落地（S3）、曲库健康检查与重复歌曲操作台（S4）、歌词编辑器 / 智能歌单 / 均衡器三窗按 D7–D9 重做（S5）、快捷键 / 关于 / 拖入提示 / 内联错误详情（S6）、响应式四档骨架（S7）、桌面歌词主题感知 halo 阴影（S8）、可访问性角色收敛（S9）。
