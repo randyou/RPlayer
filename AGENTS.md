@@ -129,6 +129,8 @@ src/ui/focus.rs      2px focus rings for custom controls
   `theme::c()` returns the blended palette and `set_preset` starts the blend.
   Keep repainting (and calling `theme::apply_style`) while
   `theme::transition_active()` until it finishes.
+  `theme::apply_style` must only replace `style.visuals` — never spacing,
+  text styles or menu metrics, or widgets resize the instant a theme changes.
 - Primary buttons use accent; secondary use card + border; danger uses signal.
 - Window chrome is borderless: `src/app/topbar.rs` draws window buttons and the
   drag handle; side/bottom resize uses native `SetWindowPos`, never

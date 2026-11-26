@@ -619,43 +619,22 @@ pub fn install_preset(ctx: &egui::Context, preset: ThemePreset) {
     apply_style(ctx);
 }
 
-/// Rebuilds the egui style from the active palette. Call after a live toggle.
+/// Applies the palette to the current egui style.
 ///
-/// The current style is the starting point rather than `Style::default()`:
-/// rebuilding from scratch dropped every spacing field this function does not
-/// set, so a live theme switch could shuffle widget sizes and leave panels
-/// laid out differently than they were when the window opened (v2.1.0
-/// acceptance report: the top bar and the lyric opacity panel changed layout
+/// Only the visuals are replaced: spacing, text styles, menu sizes and scroll
+/// metrics are left exactly as they were. A live theme swap must not move
+/// geometry — an earlier version also reset `item_spacing` / `interact_size` /
+/// `text_styles` here, and every TextEdit (the top-bar search pill in
+/// particular) grew the moment the theme changed because the running style had
+/// been built from egui's defaults (v2.2.x issue: search box height changed
 /// after switching themes).
+///
+/// Cloning the current style also keeps per-window tweaks that panels make with
+/// `ui.spacing_mut()` intact.
 pub fn apply_style(ctx: &egui::Context) {
     let palette = c();
     let mut style = (*ctx.style()).clone();
     style.visuals = visuals_for(&palette);
-    style.spacing.item_spacing = egui::vec2(10.0, 10.0);
-    style.spacing.button_padding = egui::vec2(16.0, 9.0);
-    style.spacing.interact_size = egui::vec2(40.0, 36.0);
-    style.spacing.menu_margin = Margin::same(6);
-    style.spacing.menu_width = 280.0;
-    let mut scroll = egui::style::ScrollStyle::floating();
-    scroll.foreground_color = false;
-    scroll.bar_width = 9.0;
-    scroll.floating_width = 4.0;
-    scroll.dormant_background_opacity = 0.0;
-    style.spacing.scroll = scroll;
-    style.text_styles = [
-        (TextStyle::Heading, serif(28.0)),
-        (TextStyle::Body, FontId::new(13.0, FontFamily::Proportional)),
-        (
-            TextStyle::Button,
-            FontId::new(13.0, FontFamily::Proportional),
-        ),
-        (
-            TextStyle::Small,
-            FontId::new(11.0, FontFamily::Proportional),
-        ),
-        (TextStyle::Monospace, mono(11.5)),
-    ]
-    .into();
     ctx.set_style(style);
 }
 
