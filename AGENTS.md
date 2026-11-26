@@ -27,13 +27,21 @@ cargo test --release --manifest-path D:\Workspace\RPlayer\Cargo.toml
 ```
 src/main.rs          eframe entry, viewport and renderer
 src/app/             app state, views, panels, dialogs
-  mod.rs             RPlayerApp, view switching, playback orchestration
-  library_view.rs    main library/album/artist pages
+  mod.rs             RPlayerApp, view switching, frame and overlays
+  playback.rs        transport, queue and play-mode logic
+  media.rs           cover/lyrics loading and fetch polling
+  scanning.rs        folder watcher, scan pipeline, drag-and-drop ingest
+  duplicates.rs      duplicate console actions
+  overlay_ui.rs      desktop lyrics / mini player command plumbing
+  library_view/      library, folder and empty pages
+    mod.rs           page shell, header, columns
+    table.rs         sortable track table, rows and navigation
+    batch.rs         multi-select bar
+    error_card.rs    inline scan error card
   topbar.rs          borderless window chrome, breadcrumb, search, window controls
   browse.rs          album/artist walls and detail pages
   sidebar.rs         navigation and playlists
   now_playing.rs     full-screen lyrics page
-  overlay.rs         desktop lyrics + mini player viewports
   settings.rs        settings window
 src/audio.rs         rodio playback, gapless queue, EQ chain
 src/playback.rs      CUE segment <-> whole-file position mapping
@@ -51,10 +59,20 @@ src/cover.rs         embedded -> sidecar -> cache cover priority
 src/cover_fetch.rs   manual online cover lookup
 src/lyrics_fetch.rs  manual LRCLIB lyrics lookup
 src/platform.rs      Windows-specific window/SMTC/tray integration
+src/overlay/         desktop lyrics + mini player viewports
+  mod.rs             state, commands and viewport ids
+  lyrics.rs          desktop lyrics window
+  mini.rs            mini player window
 src/theme.rs         Paper / Nocturne palettes, serif + mono font families
 src/ui/tokens.rs     v2 layout, type, radius and window tokens
-src/ui/components.rs shared eyebrow, page header, keycap and surface helpers
-src/ui/widgets.rs    shared controls and animations
+src/ui/widgets/      shared controls and animations
+  mod.rs             re-exports the control groups
+  buttons.rs         icon/primary/secondary/play buttons
+  nav.rs             sidebar navigation rows
+  inputs.rs          search, seek, volume and rating
+  chips.rs           chips and pills
+  toggles.rs         switches
+  shapes.rs          dividers, dashed frames, keycaps
 src/ui/motion.rs     motion tokens and reduced-motion switch
 src/ui/focus.rs      2px focus rings for custom controls
 ```
